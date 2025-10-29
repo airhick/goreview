@@ -14,6 +14,44 @@
   status = 200
   force = false
 
+[[redirects]]
+  from = "/config"
+  to = "/config.html"
+  status = 200
+  force = false
+
+[[redirects]]
+  from = "/config/"
+  to = "/config.html"
+  status = 200
+  force = false
+
+# Handle config with query params (id parameter)
+[[redirects]]
+  from = "/config/*"
+  to = "/config.html"
+  status = 200
+  force = false
+
+# Create account page
+[[redirects]]
+  from = "/create"
+  to = "/create.html"
+  status = 200
+  force = false
+
+[[redirects]]
+  from = "/create/"
+  to = "/create.html"
+  status = 200
+  force = false
+
+[[redirects]]
+  from = "/create/*"
+  to = "/create.html"
+  status = 200
+  force = false
+
 # SPA fallback (if needed in future)
 # [[redirects]]
 #   from = "/*"

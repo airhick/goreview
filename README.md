@@ -60,17 +60,34 @@ Edit `index.html` to customize:
 
 ### Local Development
 
-Simply open `index.html` in a web browser or use a local server:
+#### Option 1: Serveur Python avec redirects (Recommandé)
+
+Un serveur Python personnalisé est inclus pour gérer les redirects localement :
 
 ```bash
-# Python 3
-python3 -m http.server 8000
-
-# Node.js (with http-server)
-npx http-server -p 8000
-
-# Then visit http://localhost:8000
+python3 server.py
 ```
+
+Cela démarre un serveur sur `http://localhost:8000` qui gère :
+- `/config` et `/config/?id=X` → `config.html`
+- `/dashboard` → `dashboard.html`
+
+#### Option 2: Serveur Python standard
+
+```bash
+# Python 3 (sans redirects)
+python3 -m http.server 8000
+# Note: Les URLs /config et /dashboard ne fonctionneront pas avec ce serveur
+```
+
+#### Option 3: Node.js (avec http-server)
+
+```bash
+npx http-server -p 8000
+# Note: Les URLs /config et /dashboard ne fonctionneront pas avec ce serveur
+```
+
+**Important** : Pour que les routes `/config` et `/dashboard` fonctionnent en local, utilisez `server.py`.
 
 ### Production Deployment (Netlify)
 

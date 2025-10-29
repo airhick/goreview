@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Créez votre compte GoReview">
+    <title>Créer un compte - GoReview</title>
+    <style>
+        :root {
+            --primary-color: #6366f1;
+            --primary-dark: #4f46e5;
+            --spacing-xs: 0.5rem;
+            --spacing-sm: 1rem;
+            --spacing-md: 2rem;
+            --spacing-lg: 4rem;
+            --radius-md: 0.75rem;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh !important;
+            background: #ffffff !important;
+            color: #111827 !important;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            padding: 1.5rem 1rem;
+            line-height: 1.4;
+        }
+
+        .create-container {
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+            padding-top: 2rem;
+        }
+
+        .logo {
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+        }
+
+        .logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        h1 {
+            font-size: clamp(1.75rem, 5vw, 2rem);
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            color: #111827;
+        }
+
+        #signupForm {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            position: relative;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            color: #374151;
+            font-size: 0.9375rem;
+        }
+
+        .form-group input {
+            padding: 0.75rem 1rem;
+            border: 1px solid #d1d5db;
+            border-radius: var(--radius-md);
+            font-size: 1rem;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            color: #111827;
+            background: #ffffff;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .form-group input::placeholder {
+            color: #9ca3af;
+        }
+
+        .autocomplete-results {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            width: 100%;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: var(--radius-md);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            margin-top: 0.25rem;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+
+        .autocomplete-results.show {
+            display: block;
+        }
+
+        .autocomplete-item {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            border-bottom: 1px solid #f3f4f6;
+            transition: background-color 0.2s;
+            font-size: 0.9375rem;
+        }
+
+        .autocomplete-item:hover {
+            background-color: #f9fafb;
+        }
+
+        .autocomplete-item:last-child {
+            border-bottom: none;
+        }
+
+        .autocomplete-item strong {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        .autocomplete-secondary {
+            font-size: 0.8125rem;
+            color: #6b7280;
+            margin-top: 0.25rem;
+        }
+
+        .error-message {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 0.75rem 1rem;
+            border-radius: var(--radius-md);
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .error-message.hidden {
+            display: none;
+        }
+
+        .start-button {
+            background: var(--primary-color);
+            color: white;
+            padding: 0.875rem 2.5rem;
+            border-radius: var(--radius-md);
+            font-size: clamp(1rem, 2.5vw, 1.125rem);
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            box-shadow: 0 4px 14px 0 rgba(99, 102, 241, 0.39);
+            width: 100%;
+        }
+
+        .start-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px 0 rgba(99, 102, 241, 0.5);
+            background: var(--primary-dark);
+        }
+
+        .start-button:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .start-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .back-button {
+            margin-top: 1rem;
+            background: transparent;
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+            padding: 0.625rem 1.5rem;
+            border-radius: var(--radius-md);
+            font-size: 0.9375rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            width: 100%;
+        }
+
+        .back-button:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        /* Form Section */
+        #formSection.hidden {
+            display: none !important;
+        }
+
+        /* Success Section */
+        .success-section {
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .success-section.hidden {
+            display: none !important;
+        }
+
+        .success-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+            text-align: center;
+        }
+
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            background: #10b981;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .success-section h2 {
+            font-size: clamp(1.5rem, 4vw, 2rem);
+            font-weight: 700;
+            color: #111827;
+            margin: 0;
+        }
+
+        .success-message {
+            font-size: clamp(1rem, 2.5vw, 1.125rem);
+            color: #6b7280;
+            line-height: 1.6;
+            margin: 0;
+        }
+
+        @media (max-width: 640px) {
+            body {
+                padding: 1rem 0.75rem;
+            }
+
+            .create-container {
+                padding-top: 1rem;
+            }
+
+            .logo {
+                width: 60px;
+                height: 60px;
+                margin-bottom: 1rem;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+                margin-bottom: 1rem;
+            }
+
+            .form-group input {
+                padding: 0.625rem 0.875rem;
+                font-size: 0.9375rem;
+            }
+
+            .success-icon {
+                width: 70px;
+                height: 70px;
+                font-size: 2.75rem;
+            }
+        }
+
+        @media (max-width: 375px) {
+            body {
+                padding: 0.75rem 0.5rem;
+            }
+
+            .create-container {
+                padding-top: 0.5rem;
+            }
+
+            .logo {
+                width: 50px;
+                height: 50px;
+            }
+
+            h1 {
+                font-size: 1.25rem;
+            }
+
+            .success-icon {
+                width: 60px;
+                height: 60px;
+                font-size: 2.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="create-container">
+        <!-- Form Section -->
+        <div id="formSection">
+            <!-- Logo -->
+            <div class="logo">
+                <img src="logo.png" alt="GoReview Logo">
+            </div>
+
+            <h1>Créer un compte</h1>
+            
+            <form id="signupForm">
+                <div class="form-group">
+                    <label for="firstName">Prénom</label>
+                    <input type="text" id="firstName" name="firstName" required placeholder="Votre prénom" autocomplete="given-name">
+                </div>
+
+                <div class="form-group">
+                    <label for="lastName">Nom</label>
+                    <input type="text" id="lastName" name="lastName" required placeholder="Votre nom" autocomplete="family-name">
+                </div>
+
+                <div class="form-group">
+                    <label for="email">E-mail</label>
+                    <input type="email" id="email" name="email" required placeholder="votre@email.com" autocomplete="email">
+                </div>
+
+                <div class="form-group">
+                    <label for="companyName">Nom de l'entreprise</label>
+                    <input type="text" id="companyName" name="companyName" required placeholder="Recherchez votre entreprise" autocomplete="organization">
+                    <div id="autocompleteResults" class="autocomplete-results"></div>
+                </div>
+
+                <div id="formErrorMessage" class="error-message hidden"></div>
+
+                <button type="submit" class="start-button">Créer mon compte</button>
+            </form>
+
+            <button class="back-button" onclick="goBack()">← Retour</button>
+        </div>
+
+        <!-- Success Section -->
+        <div id="successSection" class="success-section hidden">
+            <div class="success-container">
+                <div class="success-icon">✓</div>
+                <h2>Votre carte est maintenant prête à l'emploi !</h2>
+                <p class="success-message">
+                    Posez à nouveau votre téléphone dessus pour l'essayer !
+                </p>
+                <button class="start-button" onclick="goToDashboard()">Accéder au dashboard</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Google Places API -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC1zqymSXocGXuCEVvpzXERWYwIzimV0Oo&libraries=places&callback=initAutocomplete" async defer></script>
+
+    <script>
+        let autocompleteService;
+        let autocompleteRequestTimeout;
+        let companyInput;
+        let autocompleteResults;
+
+        // Initialize Google Places Autocomplete
+        function initAutocomplete() {
+            if (typeof google !== 'undefined' && google.maps && google.maps.places) {
+                autocompleteService = new google.maps.places.AutocompleteService();
+            }
+        }
+
+        // Try to initialize if Google Maps is already loaded
+        if (typeof google !== 'undefined' && google.maps && google.maps.places) {
+            initAutocomplete();
+        }
+
+        // Handle company name autocomplete (wait for DOM)
+        window.addEventListener('DOMContentLoaded', () => {
+            companyInput = document.getElementById('companyName');
+            if (!companyInput) return;
+
+            autocompleteResults = document.getElementById('autocompleteResults');
+
+            companyInput.addEventListener('input', function(e) {
+                const query = e.target.value.trim();
+
+                // Clear previous timeout
+                clearTimeout(autocompleteRequestTimeout);
+
+                if (query.length < 2) {
+                    autocompleteResults.classList.remove('show');
+                    return;
+                }
+
+                // Debounce the API call
+                autocompleteRequestTimeout = setTimeout(() => {
+                    if (typeof google !== 'undefined' && google.maps && google.maps.places && autocompleteService) {
+                        autocompleteService.getPlacePredictions(
+                            {
+                                input: query,
+                                types: ['establishment'],
+                                componentRestrictions: { country: ['fr', 'ch'] }
+                            },
+                            displaySuggestions
+                        );
+                    }
+                }, 300);
+            });
+
+            // Close autocomplete when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!companyInput.contains(e.target) && !autocompleteResults.contains(e.target)) {
+                    autocompleteResults.classList.remove('show');
+                }
+            });
+        });
+
+        // Display autocomplete suggestions
+        function displaySuggestions(predictions, status) {
+            if (!autocompleteResults) return;
+            
+            autocompleteResults.innerHTML = '';
+
+            if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
+                predictions.forEach((prediction) => {
+                    const item = document.createElement('div');
+                    item.className = 'autocomplete-item';
+                    const secondaryText = prediction.structured_formatting.secondary_text || '';
+                    item.innerHTML = `
+                        <div><strong>${prediction.structured_formatting.main_text}</strong></div>
+                        ${secondaryText ? `<div class="autocomplete-secondary">${secondaryText}</div>` : ''}
+                    `;
+                    item.addEventListener('click', () => {
+                        companyInput.value = prediction.structured_formatting.main_text;
+                        autocompleteResults.classList.remove('show');
+                    });
+                    autocompleteResults.appendChild(item);
+                });
+                autocompleteResults.classList.add('show');
+            } else {
+                autocompleteResults.classList.remove('show');
+            }
+        }
+
+        // Go back to config page
+        function goBack() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const id = urlParams.get('id');
+            
+            if (id) {
+                window.location.href = `/config/?id=${id}`;
+            } else {
+                window.location.href = '/config';
+            }
+        }
+
+        // Handle form submission
+        document.getElementById('signupForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const formData = {
+                firstName: document.getElementById('firstName').value.trim(),
+                lastName: document.getElementById('lastName').value.trim(),
+                email: document.getElementById('email').value.trim(),
+                companyName: document.getElementById('companyName').value.trim()
+            };
+
+            // Get ID from URL if present
+            const urlParams = new URLSearchParams(window.location.search);
+            const id = urlParams.get('id');
+
+            // Validate form - ensure all fields are filled (check for empty strings)
+            const missingFields = [];
+            if (!formData.firstName) missingFields.push('Prénom');
+            if (!formData.lastName) missingFields.push('Nom');
+            if (!formData.email) missingFields.push('E-mail');
+            if (!formData.companyName) missingFields.push('Nom de l\'entreprise');
+
+            if (missingFields.length > 0) {
+                showFormError(`Veuillez remplir ${missingFields.length === 1 ? 'le champ' : 'les champs'} : ${missingFields.join(', ')}`);
+                return;
+            }
+
+            if (!validateEmail(formData.email)) {
+                showFormError('Veuillez entrer une adresse email valide');
+                return;
+            }
+
+            // Hide error message
+            document.getElementById('formErrorMessage').classList.add('hidden');
+
+            // Disable submit button and show loading
+            const submitButton = e.target.querySelector('button[type="submit"]');
+            const originalText = submitButton.textContent;
+            submitButton.disabled = true;
+            submitButton.textContent = 'Envoi en cours...';
+
+            try {
+                // Send data to webhook
+                const webhookUrl = 'https://n8n.goreview.fr/webhook-test/6d857fbd-8a06-4a50-b336-ebff1c6b1747';
+                
+                const payload = {
+                    firstName: formData.firstName,
+                    lastName: formData.lastName,
+                    email: formData.email,
+                    companyName: formData.companyName,
+                    id: id || null,
+                    timestamp: new Date().toISOString()
+                };
+
+                const response = await fetch(webhookUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                // Store ID for later use
+                window.currentConfigId = id;
+
+                // Show success section and hide form
+                document.getElementById('formSection').classList.add('hidden');
+                document.getElementById('successSection').classList.remove('hidden');
+                window.scrollTo(0, 0);
+
+            } catch (error) {
+                console.error('Error sending form data:', error);
+                showFormError('Erreur lors de l\'envoi. Veuillez réessayer.');
+                submitButton.disabled = false;
+                submitButton.textContent = originalText;
+            }
+        });
+
+        // Go to dashboard with ID
+        function goToDashboard() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const id = urlParams.get('id') || window.currentConfigId;
+            
+            if (id) {
+                window.location.href = `/dashboard.html?id=${id}`;
+            } else {
+                window.location.href = '/dashboard.html';
+            }
+        }
+
+        function showFormError(message) {
+            const errorDiv = document.getElementById('formErrorMessage');
+            errorDiv.textContent = message;
+            errorDiv.classList.remove('hidden');
+            window.scrollTo({ top: errorDiv.offsetTop - 20, behavior: 'smooth' });
+        }
+
+        function validateEmail(email) {
+            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return re.test(email);
+        }
+    </script>
+</body>
+</html>
+
