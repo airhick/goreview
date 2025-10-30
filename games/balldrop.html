@@ -5,9 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Configurer - Ball Drop</title>
   <link rel="stylesheet" href="../styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     .page { min-height:100vh; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,#f9fafb 0%, #ffffff 100%); }
-    .card { width:100%; max-width:720px; background:#fff; border:1px solid #e5e7eb; border-radius:18px; box-shadow:0 10px 25px -5px rgba(0,0,0,0.08); padding:1.5rem; }
+    .card { width:100%; max-width:780px; background:#ffffff; border:1px solid #e3eafc; border-radius:20px; box-shadow:0 20px 30px -15px rgba(37,99,235,0.25); padding:1.5rem; }
     .grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(260px,1fr)); gap:0.75rem; }
     label { font-weight:600; display:block; margin-bottom:0.35rem; }
     input { width:100%; padding:0.6rem 0.8rem; border:1px solid #e5e7eb; border-radius:10px; background:#ffffff; color:#111827; }
@@ -18,9 +19,9 @@
     .btn-primary { color:#fff; background:#6366f1; border-color:#6366f1; }
     .btn-primary:hover { background:#4f46e5; }
     .muted { color:#6b7280; font-size:0.95rem; }
-    .preview { margin-top:1rem; border:1px solid #e5e7eb; border-radius:12px; padding:0.75rem; background:#fafafa; }
+    .preview { margin-top:1rem; border:1px solid #dbe2ff; border-radius:16px; padding:0.9rem; background:linear-gradient(180deg,#ffffff 0%, #f8fbff 100%); }
     .slots { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:6px; }
-    .slot { padding:6px 10px; border-radius:10px; background:#eef2ff; border:1px solid #c7d2fe; color:#3730a3; font-size:12px; }
+    .slot { padding:6px 10px; border-radius:9999px; background:#e0e7ff; border:1px solid #c7d2fe; color:#1e3a8a; font-size:12px; }
   </style>
 </head>
 <body>
@@ -75,6 +76,9 @@
       const params = new URLSearchParams(window.location.search);
       const id = params.get('id');
       if (!id) { window.location.replace('/dashboardlogin.html'); return; }
+      const SUPABASE_URL = 'https://vigutqmfosxbpncussie.supabase.co';
+      const SUPABASE_SERVICE_ROLE = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ3V0cW1mb3N4YnBuY3Vzc2llIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTU4NDc1MiwiZXhwIjoyMDc3MTYwNzUyfQ.WPhspJ5LQ7E6k9sUFJsaISU6eVcJnIPGYv0GPGQfd98';
+      const sb = supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
       const key = (k) => `goreview_gamecfg_${id}_balldrop_${k}`;
       const get = (k,d=null)=> JSON.parse(localStorage.getItem(key(k)) ?? 'null') ?? d;
       const set = (k,v)=> localStorage.setItem(key(k), JSON.stringify(v));
@@ -92,9 +96,17 @@
       }
       renderPreview();
       ['winRate','slot1','slot2','slot3'].forEach(id=> $('#'+id).addEventListener('input', renderPreview));
-      document.getElementById('save').addEventListener('click', ()=>{
+      document.getElementById('save').addEventListener('click', async ()=>{
         ['reward','winRate','slot1','slot2','slot3'].forEach(f=> set(f, $(f).value));
-        alert('Configuration enregistrée localement.');
+        const reward = $('#reward').value || '';
+        const winRate = $('#winRate').value || '';
+        const slot1 = $('#slot1').value || '';
+        const slot2 = $('#slot2').value || '';
+        const slot3 = $('#slot3').value || '';
+        const paramsStr = new URLSearchParams({ id, game:'balldrop', reward, wr: winRate, slot1, slot2, slot3 }).toString();
+        const redir = `${location.origin}/company.html?${paramsStr}`;
+        try { await sb.from('accounts').update({ games:true, wich_game:'balldrop', redirection_url: redir }).eq('id', id);} catch(_){}
+        alert('Configuration enregistrée.');
       });
       document.getElementById('reset').addEventListener('click', ()=>{
         ['reward','winRate','slot1','slot2','slot3'].forEach(f=> set(f,''));

@@ -5,9 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Configurer - Roue de la chance</title>
   <link rel="stylesheet" href="../styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     .page { min-height:100vh; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,#f9fafb 0%, #ffffff 100%); }
-    .card { width:100%; max-width:720px; background:#fff; border:1px solid #e5e7eb; border-radius:18px; box-shadow:0 10px 25px -5px rgba(0,0,0,0.08); padding:1.5rem; }
+    .card { width:100%; max-width:780px; background:#ffffff; border:1px solid #e3eafc; border-radius:20px; box-shadow:0 20px 30px -15px rgba(37,99,235,0.25); padding:1.5rem; }
     .row { display:flex; gap:0.75rem; }
     .grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(260px,1fr)); gap:0.75rem; }
     label { font-weight:600; display:block; margin-bottom:0.35rem; }
@@ -19,11 +20,11 @@
     .btn-primary { color:#fff; background:#6366f1; border-color:#6366f1; }
     .btn-primary:hover { background:#4f46e5; }
     .muted { color:#6b7280; font-size:0.95rem; }
-    .preview { margin-top:1rem; border:1px solid #e5e7eb; border-radius:12px; padding:0.75rem; background:#fafafa; }
-    .wheel { width:140px; height:140px; border-radius:9999px; background:conic-gradient(#22c55e 0 var(--win), #ef4444 var(--win) 100%); margin:0 auto 10px; position:relative; }
-    .wheel::after { content:''; position:absolute; top:-10px; left:50%; transform:translateX(-50%); width:0; height:0; border-left:8px solid transparent; border-right:8px solid transparent; border-bottom:12px solid #374151; }
+    .preview { margin-top:1rem; border:1px solid #dbe2ff; border-radius:16px; padding:0.9rem; background:linear-gradient(180deg,#ffffff 0%, #f8fbff 100%); }
+    .wheel { width:160px; height:160px; border-radius:9999px; background:conic-gradient(#60a5fa 0 var(--win), #93c5fd var(--win) 100%); margin:0 auto 10px; position:relative; box-shadow:inset 0 0 0 8px #e0e7ff; }
+    .wheel::after { content:''; position:absolute; top:-12px; left:50%; transform:translateX(-50%); width:0; height:0; border-left:10px solid transparent; border-right:10px solid transparent; border-bottom:14px solid #1e3a8a; }
     .chips { display:flex; gap:6px; flex-wrap:wrap; justify-content:center; }
-    .chip { background:#eef2ff; color:#3730a3; border:1px solid #c7d2fe; padding:4px 8px; border-radius:9999px; font-size:12px; }
+    .chip { background:#e0e7ff; color:#1e3a8a; border:1px solid #c7d2fe; padding:4px 8px; border-radius:9999px; font-size:12px; }
   </style>
 </head>
 <body>
@@ -83,6 +84,9 @@
       const params = new URLSearchParams(window.location.search);
       const id = params.get('id');
       if (!id) { window.location.replace('/dashboardlogin.html'); return; }
+      const SUPABASE_URL = 'https://vigutqmfosxbpncussie.supabase.co';
+      const SUPABASE_SERVICE_ROLE = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ3V0cW1mb3N4YnBuY3Vzc2llIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTU4NDc1MiwiZXhwIjoyMDc3MTYwNzUyfQ.WPhspJ5LQ7E6k9sUFJsaISU6eVcJnIPGYv0GPGQfd98';
+      const sb = supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
       const key = (k) => `goreview_gamecfg_${id}_roulette_${k}`;
       const get = (k,d=null)=> JSON.parse(localStorage.getItem(key(k)) ?? 'null') ?? d;
       const set = (k,v)=> localStorage.setItem(key(k), JSON.stringify(v));
@@ -110,9 +114,16 @@
         $('#'+id).addEventListener('input', renderPreview);
       });
 
-      document.getElementById('save').addEventListener('click', ()=>{
+      document.getElementById('save').addEventListener('click', async ()=>{
         fields.forEach(f=> set(f, $(f).value));
-        alert('Configuration enregistrée localement.');
+        const reward = $('#reward').value || '';
+        const winRate = $('#winRate').value || '';
+        const paramsStr = new URLSearchParams({ id, game:'roulette', reward, wr: winRate }).toString();
+        const redir = `${location.origin}/company.html?${paramsStr}`;
+        try {
+          await sb.from('accounts').update({ games: true, wich_game: 'roulette', redirection_url: redir }).eq('id', id);
+        } catch(_){}
+        alert('Configuration enregistrée.');
       });
       document.getElementById('reset').addEventListener('click', ()=>{
         fields.forEach(f=> set(f,''));

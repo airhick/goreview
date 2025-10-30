@@ -39,3 +39,4 @@ yarn-error.log*
 *.tmp
 .cache/
 
+key.txt

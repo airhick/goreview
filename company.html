@@ -191,26 +191,31 @@
         return null;
       }
 
+      // 1) Try Supabase first (business_id on accounts)
+      try {
+        const { data } = await sb.from('accounts').select('business_id, place_id').eq('id', configId).limit(1).maybeSingle();
+        if (data && (data.business_id || data.place_id)) {
+          return data.business_id || data.place_id;
+        }
+      } catch (e) {
+        console.warn('Supabase place id lookup failed', e);
+      }
+
+      // 2) Fallback to webhook and tolerate non-JSON responses
       try {
         const response = await fetch("https://n8n.goreview.fr/webhook/configuration", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ id: configId })
         });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        // Le webhook peut retourner le place_id directement ou dans un objet
-        return data.place_id || data.placeId || data.pid || null;
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        let data = null;
+        try { data = await response.json(); } catch (_) { data = null; }
+        if (data) return data.place_id || data.placeId || data.pid || null;
       } catch (error) {
         console.error("Erreur lors de la récupération du place_id:", error);
-        return null;
       }
+      return null;
     }
 
     // Render game if configured to show before review; otherwise show Google button
@@ -238,7 +243,7 @@
       }
 
       google.accounts.id.initialize({
-        client_id: "827291340220-7qs48dqg7uv1eqbiif81qo7net6jvsga.apps.googleusercontent.com",
+        client_id: "343360455562-t9deta89vmmm5jftdujo4bjsven90990.apps.googleusercontent.com",
         callback: handleCredentialResponse
       });
 
@@ -304,7 +309,7 @@
         gameContainer.style.display = 'none';
         loginContainer.style.display = 'block';
         google.accounts.id.initialize({
-          client_id: "827291340220-7qs48dqg7uv1eqbiif81qo7net6jvsga.apps.googleusercontent.com",
+          client_id: "343360455562-t9deta89vmmm5jftdujo4bjsven90990.apps.googleusercontent.com",
           callback: handleCredentialResponse
         });
         google.accounts.id.renderButton(document.getElementById("googleBtn"), { theme: "outline", size: "large", width: 320 });
