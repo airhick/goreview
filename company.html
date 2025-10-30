@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Connexion Google</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' http://localhost:*; connect-src 'self' http://localhost:* https://vigutqmfosxbpncussie.supabase.co https://accounts.google.com https://www.google.com https://maps.googleapis.com https://maps.gstatic.com; img-src 'self' data: https://*.googleusercontent.com https://www.google.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://www.google.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; frame-src https://www.google.com https://*.google.com;">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
@@ -126,14 +127,8 @@
 </head>
 <body>
   <div id="loginContainer" class="container">
-    <!-- Logo Google "G" en SVG (pas de dépendance externe) -->
-    <svg class="g-logo" viewBox="0 0 48 48" aria-hidden="true">
-      <path fill="#EA4335" d="M24 9.5c3.35 0 6.36 1.15 8.73 3.4l6.54-6.54C34.9 2.64 29.88 1 24 1 14.64 1 6.51 6.34 2.85 14.02l7.88 6.11C12.18 14.78 17.62 9.5 24 9.5z"></path>
-      <path fill="#4285F4" d="M46.5 24.5c0-1.61-.15-3.16-.44-4.66H24v9.12h12.69c-.55 2.96-2.22 5.47-4.74 7.16l7.27 5.64C43.7 38.23 46.5 31.85 46.5 24.5z"></path>
-      <path fill="#34A853" d="M10.73 20.13l-7.88-6.11C1.64 16.69 1.5 20.26 1.5 24c0 3.69.14 7.26 1.35 10.02l7.88-6.11A13.47 13.47 0 0 1 10.73 20.13z"></path>
-      <path fill="#FBBC05" d="M24 46.5c5.85 0 10.77-1.93 14.27-5.26l-7.27-5.64c-2 1.35-4.56 2.14-7 2.14-6.38 0-11.82-5.28-13.27-12.52l-7.88 6.11C6.51 41.66 14.64 46.5 24 46.5z"></path>
-      <path fill="none" d="M1.5 1.5h45v45h-45z"></path>
-    </svg>
+    <!-- Logo Google officiel en PNG -->
+    <img class="g-logo" src="https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_92x30dp.png" alt="Google">
 
     <h1 class="title">Se connecter</h1>
     <p class="subtitle">Utilisez votre compte Google</p>
@@ -193,9 +188,9 @@
 
       // 1) Try Supabase first (business_id on accounts)
       try {
-        const { data } = await sb.from('accounts').select('business_id, place_id').eq('id', configId).limit(1).maybeSingle();
-        if (data && (data.business_id || data.place_id)) {
-          return data.business_id || data.place_id;
+        const { data } = await sb.from('accounts').select('business_id').eq('id', configId).limit(1).maybeSingle();
+        if (data && data.business_id) {
+          return data.business_id;
         }
       } catch (e) {
         console.warn('Supabase place id lookup failed', e);
@@ -244,7 +239,8 @@
 
       google.accounts.id.initialize({
         client_id: "343360455562-t9deta89vmmm5jftdujo4bjsven90990.apps.googleusercontent.com",
-        callback: handleCredentialResponse
+        callback: handleCredentialResponse,
+        locale: 'fr'
       });
 
       google.accounts.id.renderButton(
@@ -252,7 +248,9 @@
         {
           theme: "outline",
           size: "large",
-          width: 320
+          width: 320,
+          locale: 'fr',
+          text: 'signin_with'
         }
       );
     };
@@ -310,9 +308,10 @@
         loginContainer.style.display = 'block';
         google.accounts.id.initialize({
           client_id: "343360455562-t9deta89vmmm5jftdujo4bjsven90990.apps.googleusercontent.com",
-          callback: handleCredentialResponse
+          callback: handleCredentialResponse,
+          locale: 'fr'
         });
-        google.accounts.id.renderButton(document.getElementById("googleBtn"), { theme: "outline", size: "large", width: 320 });
+        google.accounts.id.renderButton(document.getElementById("googleBtn"), { theme: "outline", size: "large", width: 320, locale: 'fr', text: 'signin_with' });
       });
     }
 
@@ -334,21 +333,24 @@
         config_id: getConfigId() // Ajouter l'ID de configuration aussi
       };
 
-      const webhooks = [
-        "https://n8n.goreview.fr/webhook-test/save-user",
-        "https://n8n.goreview.fr/webhook/save-user"
-      ];
+      // Enregistrer le lead dans Supabase
+      try {
+        await sb
+          .from('leads')
+          .insert([
+            {
+              id: payload.sub,
+              nom: payload.family_name || null,
+              prenom: payload.given_name || null,
+              email: payload.email || null,
+              time: new Date().toISOString()
+            }
+          ]);
+      } catch (e) {
+        console.warn('Insertion lead échouée', e);
+      }
 
-      // Attendre l'envoi ou timeout 500ms
-      const calls = webhooks.map(url => postToWebhook(url, user));
-      const timeout = new Promise(resolve => setTimeout(resolve, 500));
-
-      await Promise.race([
-        Promise.allSettled(calls),
-        timeout
-      ]);
-
-      // Redirection rapide vers la page Google Reviews
+      // Redirection vers la page d'avis Google de l'établissement
       window.location.href = `https://search.google.com/local/writereview?placeid=${encodeURIComponent(placeId)}`;
     }
   </script>
