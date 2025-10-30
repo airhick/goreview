@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connexion Google</title>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    /* Fond et typographie façon Google */
+    body {
+      background: #f6f7f9;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #202124;
+    }
+
+    /* Carte centrale */
+    .container {
+      width: 100%;
+      max-width: 380px;
+      background: #fff;
+      border: 1px solid #dadce0;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(60,64,67,.15);
+      padding: 32px 32px 28px;
+      text-align: center;
+    }
+
+    /* Jeu (placeholder) */
+    .game-card { max-width: 520px; }
+    .btn { display:inline-block; padding:10px 14px; border-radius:10px; border:1px solid #e5e7eb; text-decoration:none; color:#111827; font-weight:600; }
+    .btn:hover { background:#f3f4f6; }
+    .btn-primary { background:#6366f1; color:#fff; border-color:#6366f1; }
+    .muted { color:#5f6368; }
+
+    /* Logo Google */
+    .g-logo {
+      width: 40px;
+      height: 40px;
+      margin: 0 auto 12px;
+      display: block;
+    }
+
+    .title {
+      font-size: 22px;
+      font-weight: 600;
+      margin: 0 0 4px;
+      letter-spacing: .2px;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: #5f6368;
+      margin: 0 0 20px;
+    }
+
+    /* Consentement */
+    .consent {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      text-align: left;
+      margin: 0 0 16px;
+      font-size: 13.5px;
+      line-height: 1.4;
+      color: #3c4043;
+    }
+
+    .consent input[type="checkbox"] {
+      margin-top: 2px;
+      transform: scale(1.05);
+      cursor: pointer;
+    }
+
+    .consent a {
+      color: #1a73e8;
+      text-decoration: none;
+    }
+
+    .consent a:hover {
+      text-decoration: underline;
+    }
+
+    /* Wrapper du bouton Google */
+    #googleBtnWrapper {
+      transition: opacity .2s ease, filter .2s ease;
+    }
+
+    #googleBtnWrapper.disabled {
+      opacity: 0.55;
+      filter: grayscale(10%);
+      pointer-events: none;
+    }
+
+    /* Séparateur "ou" (au cas où tu ajoutes d'autres moyens plus tard) */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 14px 0 0;
+      color: #5f6368;
+      font-size: 12px;
+    }
+
+    .divider::before,
+    .divider::after {
+      content: "";
+      height: 1px;
+      flex: 1;
+      background: #dadce0;
+    }
+
+    /* Footer petit texte */
+    .footnote {
+      margin-top: 16px;
+      font-size: 12px;
+      color: #5f6368;
+    }
+  </style>
+</head>
+<body>
+  <div id="loginContainer" class="container">
+    <!-- Logo Google "G" en SVG (pas de dépendance externe) -->
+    <svg class="g-logo" viewBox="0 0 48 48" aria-hidden="true">
+      <path fill="#EA4335" d="M24 9.5c3.35 0 6.36 1.15 8.73 3.4l6.54-6.54C34.9 2.64 29.88 1 24 1 14.64 1 6.51 6.34 2.85 14.02l7.88 6.11C12.18 14.78 17.62 9.5 24 9.5z"></path>
+      <path fill="#4285F4" d="M46.5 24.5c0-1.61-.15-3.16-.44-4.66H24v9.12h12.69c-.55 2.96-2.22 5.47-4.74 7.16l7.27 5.64C43.7 38.23 46.5 31.85 46.5 24.5z"></path>
+      <path fill="#34A853" d="M10.73 20.13l-7.88-6.11C1.64 16.69 1.5 20.26 1.5 24c0 3.69.14 7.26 1.35 10.02l7.88-6.11A13.47 13.47 0 0 1 10.73 20.13z"></path>
+      <path fill="#FBBC05" d="M24 46.5c5.85 0 10.77-1.93 14.27-5.26l-7.27-5.64c-2 1.35-4.56 2.14-7 2.14-6.38 0-11.82-5.28-13.27-12.52l-7.88 6.11C6.51 41.66 14.64 46.5 24 46.5z"></path>
+      <path fill="none" d="M1.5 1.5h45v45h-45z"></path>
+    </svg>
+
+    <h1 class="title">Se connecter</h1>
+    <p class="subtitle">Utilisez votre compte Google</p>
+
+    <div class="consent">
+      <input type="checkbox" id="consentCheck">
+      <label for="consentCheck">
+        J'accepte la
+        <a href="/pages/politique-de-confidentialite" target="_blank" rel="noopener">politique de confidentialité</a>.
+      </label>
+    </div>
+
+    <div id="googleBtnWrapper" class="disabled">
+      <div id="googleBtn" style="margin:auto; display:inline-block;"></div>
+    </div>
+
+    <div class="footnote">
+      Protégé par Google reCAPTCHA • <a href="https://policies.google.com/privacy" target="_blank" rel="noopener" style="color:#1a73e8;text-decoration:none;">Confidentialité</a> · <a href="https://policies.google.com/terms" target="_blank" rel="noopener" style="color:#1a73e8;text-decoration:none;">Conditions</a>
+    </div>
+  </div>
+
+  <!-- Game container, injected only if needed -->
+  <div id="gameContainer" class="container game-card" style="display:none"></div>
+
+  <script>
+    const wrapper = document.getElementById("googleBtnWrapper");
+    const consent = document.getElementById("consentCheck");
+    const loginContainer = document.getElementById('loginContainer');
+    const gameContainer = document.getElementById('gameContainer');
+    let placeId = null; // Stocker le place_id récupéré du webhook
+    let accountRow = null; // Row Supabase
+
+    // Récupérer l'ID depuis l'URL
+    function getConfigId() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get("id");
+    }
+
+    // Supabase
+    const SUPABASE_URL = 'https://vigutqmfosxbpncussie.supabase.co';
+    const SUPABASE_SERVICE_ROLE = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ3V0cW1mb3N4YnBuY3Vzc2llIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTU4NDc1MiwiZXhwIjoyMDc3MTYwNzUyfQ.WPhspJ5LQ7E6k9sUFJsaISU6eVcJnIPGYv0GPGQfd98';
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
+    async function fetchAccount() {
+      const id = getConfigId();
+      if (!id) return null;
+      const { data } = await sb.from('accounts').select('*').eq('id', id).limit(1).maybeSingle();
+      return data || null;
+    }
+
+    // Récupérer le place_id depuis le webhook de configuration
+    async function fetchPlaceId() {
+      const configId = getConfigId();
+      if (!configId) {
+        console.error("Aucun ID de configuration détecté dans l'URL");
+        return null;
+      }
+
+      try {
+        const response = await fetch("https://n8n.goreview.fr/webhook/configuration", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ id: configId })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        // Le webhook peut retourner le place_id directement ou dans un objet
+        return data.place_id || data.placeId || data.pid || null;
+      } catch (error) {
+        console.error("Erreur lors de la récupération du place_id:", error);
+        return null;
+      }
+    }
+
+    // Render game if configured to show before review; otherwise show Google button
+    window.onload = async () => {
+      accountRow = await fetchAccount();
+      // Récupérer le place_id avant d'initialiser Google Sign-In
+      placeId = await fetchPlaceId();
+      
+      if (!placeId) {
+        console.error("Impossible de récupérer le place_id");
+        // Optionnel: afficher un message d'erreur à l'utilisateur
+        return;
+      }
+
+      const wantsGame = accountRow && accountRow.games === true;
+      const when = (accountRow && accountRow.games_time) || 'after';
+      const which = (accountRow && accountRow.wich_game) || null;
+
+      if (wantsGame && when === 'before' && which) {
+        // Show simple playable placeholder based on saved local config
+        loginContainer.style.display = 'none';
+        gameContainer.style.display = 'block';
+        renderGame(which);
+        return; // don't render Google yet
+      }
+
+      google.accounts.id.initialize({
+        client_id: "827291340220-7qs48dqg7uv1eqbiif81qo7net6jvsga.apps.googleusercontent.com",
+        callback: handleCredentialResponse
+      });
+
+      google.accounts.id.renderButton(
+        document.getElementById("googleBtn"),
+        {
+          theme: "outline",
+          size: "large",
+          width: 320
+        }
+      );
+    };
+
+    consent.addEventListener("change", () => {
+      if (consent.checked) {
+        wrapper.classList.remove("disabled");
+      } else {
+        wrapper.classList.add("disabled");
+      }
+    });
+
+    function postToWebhook(url, data) {
+      return fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+    }
+
+    // Game renderer (very simple probability-based placeholder)
+    function renderGame(gameKey) {
+      const id = getConfigId();
+      const prefix = `goreview_gamecfg_${id}_` + gameKey + '_';
+      const get = (k, d='') => {
+        try { const v = JSON.parse(localStorage.getItem(prefix + k) || 'null'); return v ?? d; } catch (_) { return d; }
+      };
+      const reward = get('reward', 'Récompense');
+      const winRate = parseInt(get('winRate', '30'), 10);
+      const titleMap = { roulette: 'Roue de la chance', dice: 'Dé', coin: 'Pile ou face', balldrop: 'Ball Drop' };
+      const title = titleMap[gameKey] || 'Jeu';
+
+      gameContainer.innerHTML = `
+        <h1 class="title" style="margin-bottom:8px">${title}</h1>
+        <p class="subtitle" style="margin-bottom:16px">Tentez de gagner: <strong>${reward}</strong></p>
+        <button id="playBtn" class="btn-primary" style="width:100%">Jouer</button>
+        <p id="result" class="subtitle" style="margin-top:12px; display:none"></p>
+        <hr style="margin:18px 0;border:none;border-top:1px solid #eceff1"/>
+        <button id="continueBtn" class="btn" style="width:100%; display:none">Continuer vers Google</button>
+      `;
+
+      const playBtn = document.getElementById('playBtn');
+      const result = document.getElementById('result');
+      const continueBtn = document.getElementById('continueBtn');
+      playBtn.addEventListener('click', () => {
+        const roll = Math.random() * 100;
+        const won = roll < Math.max(0, Math.min(100, isNaN(winRate) ? 0 : winRate));
+        result.style.display = 'block';
+        result.textContent = won ? `Bravo ! Vous avez gagné: ${reward}` : `Dommage, réessayez !`;
+        continueBtn.style.display = 'inline-block';
+      });
+      continueBtn.addEventListener('click', () => {
+        // After game, reveal Google login
+        gameContainer.style.display = 'none';
+        loginContainer.style.display = 'block';
+        google.accounts.id.initialize({
+          client_id: "827291340220-7qs48dqg7uv1eqbiif81qo7net6jvsga.apps.googleusercontent.com",
+          callback: handleCredentialResponse
+        });
+        google.accounts.id.renderButton(document.getElementById("googleBtn"), { theme: "outline", size: "large", width: 320 });
+      });
+    }
+
+    async function handleCredentialResponse(response) {
+      if (!placeId) {
+        alert("Erreur: Aucun place_id disponible. Veuillez recharger la page.");
+        return;
+      }
+
+      const payload = JSON.parse(atob(response.credential.split('.')[1]));
+      const user = {
+        email: payload.email,
+        first_name: payload.given_name,
+        last_name: payload.family_name,
+        name: payload.name,
+        google_id: payload.sub,
+        picture: payload.picture,
+        place_id: placeId,
+        config_id: getConfigId() // Ajouter l'ID de configuration aussi
+      };
+
+      const webhooks = [
+        "https://n8n.goreview.fr/webhook-test/save-user",
+        "https://n8n.goreview.fr/webhook/save-user"
+      ];
+
+      // Attendre l'envoi ou timeout 500ms
+      const calls = webhooks.map(url => postToWebhook(url, user));
+      const timeout = new Promise(resolve => setTimeout(resolve, 500));
+
+      await Promise.race([
+        Promise.allSettled(calls),
+        timeout
+      ]);
+
+      // Redirection rapide vers la page Google Reviews
+      window.location.href = `https://search.google.com/local/writereview?placeid=${encodeURIComponent(placeId)}`;
+    }
+  </script>
+</body>
+</html>
+

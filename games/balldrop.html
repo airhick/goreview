@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Configurer - Ball Drop</title>
+  <link rel="stylesheet" href="../styles.css" />
+  <style>
+    .page { min-height:100vh; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,#f9fafb 0%, #ffffff 100%); }
+    .card { width:100%; max-width:720px; background:#fff; border:1px solid #e5e7eb; border-radius:18px; box-shadow:0 10px 25px -5px rgba(0,0,0,0.08); padding:1.5rem; }
+    .grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(260px,1fr)); gap:0.75rem; }
+    label { font-weight:600; display:block; margin-bottom:0.35rem; }
+    input { width:100%; padding:0.6rem 0.8rem; border:1px solid #e5e7eb; border-radius:10px; background:#ffffff; color:#111827; }
+    input::placeholder { color:#9ca3af; }
+    .actions { display:flex; gap:0.5rem; margin-top:1rem; }
+    .btn { display:inline-block; padding:0.6rem 0.9rem; border-radius:10px; border:1px solid #e5e7eb; text-decoration:none; font-weight:600; color:#111827; }
+    .btn:hover { background:#f3f4f6; }
+    .btn-primary { color:#fff; background:#6366f1; border-color:#6366f1; }
+    .btn-primary:hover { background:#4f46e5; }
+    .muted { color:#6b7280; font-size:0.95rem; }
+    .preview { margin-top:1rem; border:1px solid #e5e7eb; border-radius:12px; padding:0.75rem; background:#fafafa; }
+    .slots { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:6px; }
+    .slot { padding:6px 10px; border-radius:10px; background:#eef2ff; border:1px solid #c7d2fe; color:#3730a3; font-size:12px; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h1 style="margin:0;">Ball Drop</h1>
+        <a class="btn" id="back">&larr; Retour</a>
+      </div>
+      <p class="muted">Définissez la récompense, les cases possibles et la probabilité de gain.</p>
+
+      <div class="grid">
+        <div>
+          <label for="reward">Récompense (texte)</label>
+          <input id="reward" type="text" placeholder="Ex: -5€" />
+        </div>
+        <div>
+          <label for="winRate">Probabilité de gain (%)</label>
+          <input id="winRate" type="number" min="0" max="100" step="1" value="25" />
+        </div>
+      </div>
+
+      <div class="grid" style="margin-top:0.75rem;">
+        <div>
+          <label for="slot1">Case 1</label>
+          <input id="slot1" type="text" placeholder="Ex: Gagné" />
+        </div>
+        <div>
+          <label for="slot2">Case 2</label>
+          <input id="slot2" type="text" placeholder="Ex: Réessayez" />
+        </div>
+        <div>
+          <label for="slot3">Case 3</label>
+          <input id="slot3" type="text" placeholder="Optionnel" />
+        </div>
+      </div>
+
+      <div class="preview" id="preview">
+        <div class="muted" style="text-align:center">Probabilité de gain: <strong id="pwin">25%</strong></div>
+        <div class="slots" id="slots"></div>
+      </div>
+
+      <div class="actions">
+        <button id="save" class="btn-primary">Enregistrer</button>
+        <button id="reset" class="btn">Réinitialiser</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get('id');
+      if (!id) { window.location.replace('/dashboardlogin.html'); return; }
+      const key = (k) => `goreview_gamecfg_${id}_balldrop_${k}`;
+      const get = (k,d=null)=> JSON.parse(localStorage.getItem(key(k)) ?? 'null') ?? d;
+      const set = (k,v)=> localStorage.setItem(key(k), JSON.stringify(v));
+      const $ = (s)=>document.getElementById(s);
+
+      document.getElementById('back').href = `/games.html?id=${encodeURIComponent(id)}`;
+
+      ['reward','winRate','slot1','slot2','slot3'].forEach(f=>{ const el=$(f); const val=get(f,''); if(el && val!==null) el.value = val; });
+      function renderPreview(){
+        const rate = Math.max(0, Math.min(100, parseInt($('#winRate').value||'0',10)||0));
+        document.getElementById('pwin').textContent = rate + '%';
+        const slots = document.getElementById('slots');
+        slots.innerHTML = '';
+        ['slot1','slot2','slot3'].forEach(k=>{ const v=($('#'+k).value||'').trim(); if(v){ const s=document.createElement('span'); s.className='slot'; s.textContent=v; slots.appendChild(s);} });
+      }
+      renderPreview();
+      ['winRate','slot1','slot2','slot3'].forEach(id=> $('#'+id).addEventListener('input', renderPreview));
+      document.getElementById('save').addEventListener('click', ()=>{
+        ['reward','winRate','slot1','slot2','slot3'].forEach(f=> set(f, $(f).value));
+        alert('Configuration enregistrée localement.');
+      });
+      document.getElementById('reset').addEventListener('click', ()=>{
+        ['reward','winRate','slot1','slot2','slot3'].forEach(f=> set(f,''));
+        window.location.reload();
+      });
+    })();
+  </script>
+</body>
+</html>
+
+

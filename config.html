@@ -5,6 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Activez votre plaque NFC GoReview en 3 étapes simples">
     <title>Configuration - GoReview</title>
+    <script>
+        (function() {
+            const params = new URLSearchParams(window.location.search);
+            const id = params.get('id');
+            if (!id) {
+                window.pageLocked = true;
+                document.addEventListener('DOMContentLoaded', function() {
+                    document.body.setAttribute('style', "min-height:100vh;background:#ffffff;color:#111827;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;display:flex;align-items:center;justify-content:center;padding:2rem;margin:0;");
+                    document.body.innerHTML = `
+                        <div style="max-width:640px;text-align:center;border:1px solid #e5e7eb;border-radius:12px;padding:24px;background:#fff;box-shadow:0 10px 25px -5px rgba(0,0,0,0.08)">
+                            <div style="margin-bottom:12px;font-size:28px">🚫</div>
+                            <h1 style="font-size:20px;margin:0 0 8px 0">Accès restreint</h1>
+                            <p style="color:#6b7280;margin:0 0 16px 0">Vous devez accéder à cette page via un lien personnel contenant un identifiant (<code>?id=...</code>).</p>
+                            <a href="/" style="display:inline-block;padding:10px 16px;border-radius:8px;border:1px solid #e5e7eb;text-decoration:none;color:#111827">Retour à l'accueil</a>
+                        </div>
+                    `;
+                });
+            }
+        })();
+    </script>
     <style>
         :root {
             --primary-color: #6366f1;
@@ -295,6 +315,9 @@
     </div>
 
     <script>
+        if (window.pageLocked) {
+            // Stop further script execution on this page if locked
+        } else {
         // Go to create account page
         function goToCreate() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -332,6 +355,7 @@
                 }
             }
         });
+        }
     </script>
 </body>
 </html>

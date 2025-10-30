@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion au dashboard - GoReview</title>
+    
+    <style>
+        :root {
+            --primary-color: #6366f1;
+            --primary-dark: #4f46e5;
+            --border-color: #e5e7eb;
+            --radius-md: 0.75rem;
+        }
+        * { box-sizing: border-box; }
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+            color: #111827;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+        .card {
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+            padding: 2rem;
+            width: 100%;
+            max-width: 440px;
+        }
+        .logo {
+            width: 72px;
+            height: 72px;
+            margin: 0 auto 1rem;
+        }
+        .logo img { width: 100%; height: 100%; object-fit: contain; }
+        h1 { text-align: center; font-size: 1.75rem; margin: 0 0 0.5rem 0; }
+        p.subtitle { text-align: center; color: #6b7280; margin: 0 0 1.25rem 0; }
+        .form-group { margin-bottom: 1rem; }
+        label { display: block; font-weight: 600; margin-bottom: 0.5rem; }
+        input[type="email"] {
+            width: 100%; padding: 0.75rem 1rem; border: 1px solid #d1d5db; border-radius: var(--radius-md);
+            font-size: 1rem; background: #fff; color: #111827;
+        }
+        input[type="email"]:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
+        .btn-primary {
+            width: 100%; border: none; cursor: pointer; font-size: 1rem; font-weight: 600; border-radius: var(--radius-md);
+            padding: 0.875rem 1.25rem; color: #fff; background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            box-shadow: 0 4px 14px 0 rgba(99,102,241,0.39); transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px 0 rgba(99,102,241,0.5); }
+        .status { display: none; margin-top: 0.75rem; font-size: 0.9375rem; text-align: center; }
+        .status.error { color: #991b1b; background: #fee2e2; padding: 0.5rem 0.75rem; border-radius: 8px; }
+        .status.success { color: #065f46; background: #d1fae5; padding: 0.5rem 0.75rem; border-radius: 8px; }
+        .status.show { display: block; }
+        .note { font-size: 0.875rem; color: #6b7280; text-align: center; margin-top: 0.75rem; }
+        @media (max-width: 400px) { .card { padding: 1.25rem; } }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="logo"><img src="logo.png" alt="GoReview Logo"></div>
+        <h1>Connexion</h1>
+        <p class="subtitle">Connectez-vous à votre tableau de bord GoReview</p>
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="email">Adresse email</label>
+                <input type="email" id="email" name="email" required placeholder="votre@email.com" autocomplete="email">
+            </div>
+            <button type="submit" class="btn-primary">Se connecter</button>
+            <div id="status" class="status"></div>
+            <p class="note">Nous vous enverrons le lien de connexion par email.</p>
+        </form>
+    </div>
+
+    <script>
+            const WEBHOOK_URL = 'https://n8n.goreview.fr/webhook-test/3351a327-1158-43e5-9759-9459e81dc947';
+            const form = document.getElementById('loginForm');
+            const statusEl = document.getElementById('status');
+
+            function showStatus(message, type) {
+                statusEl.textContent = message;
+                statusEl.className = 'status show ' + (type === 'error' ? 'error' : 'success');
+            }
+
+            function validateEmail(email) {
+                const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                return re.test(email);
+            }
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                statusEl.className = 'status';
+
+                const params = new URLSearchParams(window.location.search);
+                const urlId = params.get('id');
+                const email = (document.getElementById('email').value || '').trim();
+
+                if (!validateEmail(email)) {
+                    showStatus("Veuillez entrer une adresse email valide.", 'error');
+                    return;
+                }
+                showStatus("connexion en cours", 'success');
+                try {
+                    const payload = { email, id: urlId, timestamp: new Date().toISOString() };
+                    const resp = await fetch(WEBHOOK_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                    let data = await resp.json();
+                    if (Array.isArray(data) && data[0]) data = data[0];
+                    let finalId = null;
+                    if (data) {
+                        if (data.id) finalId = data.id;
+                        else if (typeof data.redirection_url === 'string') {
+                            // Extract id param from redirection_url (eg. ...?id=2)
+                            try {
+                                const match = data.redirection_url.match(/id=(\w+)/);
+                                if (match) finalId = match[1];
+                            } catch(e){}
+                        }
+                    }
+                    if (!finalId) throw new Error('Aucune ID retournée');
+                    window.location.href = `/dashboard.html?id=${encodeURIComponent(finalId)}`;
+                } catch (err) {
+                    console.error(err);
+                    showStatus("Une erreur est survenue. Veuillez réessayer.", 'error');
+                }
+            });
+    </script>
+</body>
+</html>
+
+

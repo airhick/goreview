@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Configurer - Dé</title>
+  <link rel="stylesheet" href="../styles.css" />
+  <style>
+    .page { min-height:100vh; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,#f9fafb 0%, #ffffff 100%); }
+    .card { width:100%; max-width:720px; background:#fff; border:1px solid #e5e7eb; border-radius:18px; box-shadow:0 10px 25px -5px rgba(0,0,0,0.08); padding:1.5rem; }
+    .grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(260px,1fr)); gap:0.75rem; }
+    label { font-weight:600; display:block; margin-bottom:0.35rem; }
+    input, select { width:100%; padding:0.6rem 0.8rem; border:1px solid #e5e7eb; border-radius:10px; background:#ffffff; color:#111827; }
+    input::placeholder { color:#9ca3af; }
+    .actions { display:flex; gap:0.5rem; margin-top:1rem; }
+    .btn { display:inline-block; padding:0.6rem 0.9rem; border-radius:10px; border:1px solid #e5e7eb; text-decoration:none; font-weight:600; color:#111827; }
+    .btn:hover { background:#f3f4f6; }
+    .btn-primary { color:#fff; background:#6366f1; border-color:#6366f1; }
+    .btn-primary:hover { background:#4f46e5; }
+    .muted { color:#6b7280; font-size:0.95rem; }
+    .preview { margin-top:1rem; border:1px solid #e5e7eb; border-radius:12px; padding:0.75rem; background:#fafafa; text-align:center; }
+    .die { width:80px; height:80px; margin:0 auto 8px; border-radius:12px; background:#fff; border:1px solid #e5e7eb; display:grid; grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(3,1fr); padding:8px; gap:4px; }
+    .pip { width:14px; height:14px; border-radius:50%; background:#111827; margin:auto; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h1 style="margin:0;">Dé</h1>
+        <a class="btn" id="back">&larr; Retour</a>
+      </div>
+      <p class="muted">Définissez la récompense et la probabilité de gain. Exemple: gagner si le dé affiche 6.</p>
+
+      <div class="grid">
+        <div>
+          <label for="reward">Récompense (texte)</label>
+          <input id="reward" type="text" placeholder="Ex: Boisson offerte" />
+        </div>
+        <div>
+          <label for="winRate">Probabilité de gain (%)</label>
+          <input id="winRate" type="number" min="0" max="100" step="1" value="16" />
+        </div>
+        <div>
+          <label for="winOn">Gagne si le dé affiche</label>
+          <input id="winOn" type="number" min="1" max="6" step="1" value="6" />
+        </div>
+      </div>
+
+      <div class="preview" id="preview">
+        <div class="die" id="die"></div>
+        <div class="muted">Gagne si: <strong id="winText">6</strong> • Probabilité: <strong id="pwin">16%</strong></div>
+      </div>
+
+      <div class="actions">
+        <button id="save" class="btn-primary">Enregistrer</button>
+        <button id="reset" class="btn">Réinitialiser</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get('id');
+      if (!id) { window.location.replace('/dashboardlogin.html'); return; }
+      const key = (k) => `goreview_gamecfg_${id}_dice_${k}`;
+      const get = (k,d=null)=> JSON.parse(localStorage.getItem(key(k)) ?? 'null') ?? d;
+      const set = (k,v)=> localStorage.setItem(key(k), JSON.stringify(v));
+      const $ = (s)=>document.getElementById(s);
+
+      document.getElementById('back').href = `/games.html?id=${encodeURIComponent(id)}`;
+
+      ['reward','winRate','winOn'].forEach(f=>{ const el=$(f); const val=get(f,''); if(el && val!==null) el.value = val; });
+
+      function renderDie(n){
+        const die = document.getElementById('die');
+        die.innerHTML = '';
+        const p = ()=>{ const d=document.createElement('div'); d.className='pip'; return d; };
+        const layout = {1:[5],2:[1,9],3:[1,5,9],4:[1,3,7,9],5:[1,3,5,7,9],6:[1,3,4,6,7,9]}[n]||[];
+        for(let i=1;i<=9;i++){ die.appendChild(layout.includes(i)?p():document.createElement('div')); }
+      }
+      function renderPreview(){
+        const winOn = Math.max(1, Math.min(6, parseInt($('#winOn').value||'6',10)||6));
+        const rate = Math.max(0, Math.min(100, parseInt($('#winRate').value||'0',10) || 0));
+        renderDie(winOn);
+        document.getElementById('winText').textContent = String(winOn);
+        document.getElementById('pwin').textContent = rate + '%';
+      }
+      renderPreview();
+      ['winRate','winOn'].forEach(id=> $('#'+id).addEventListener('input', renderPreview));
+      document.getElementById('save').addEventListener('click', ()=>{
+        ['reward','winRate','winOn'].forEach(f=> set(f, $(f).value));
+        alert('Configuration enregistrée localement.');
+      });
+      document.getElementById('reset').addEventListener('click', ()=>{
+        ['reward','winRate','winOn'].forEach(f=> set(f,''));
+        window.location.reload();
+      });
+    })();
+  </script>
+</body>
+</html>
+
+

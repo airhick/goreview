@@ -54,6 +54,16 @@ class RedirectHandler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             return
         
+        # Handle /company redirects
+        if path in ['/company', '/company/']:
+            redirect_url = '/company.html'
+            if query:
+                redirect_url += '?' + query
+            self.send_response(301)
+            self.send_header('Location', redirect_url)
+            self.end_headers()
+            return
+        
         # Default: serve files normally
         return super().do_GET()
     
@@ -72,6 +82,7 @@ if __name__ == "__main__":
             print(f"📊 Dashboard: http://localhost:{PORT}/dashboard")
             print(f"⚙️  Config: http://localhost:{PORT}/config/?id=100")
             print(f"📝 Create: http://localhost:{PORT}/create/?id=100")
+            print(f"🏢 Company: http://localhost:{PORT}/company?id=2")
             print("\nAppuyez sur Ctrl+C pour arrêter le serveur\n")
             
             try:

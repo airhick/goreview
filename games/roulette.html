@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Configurer - Roue de la chance</title>
+  <link rel="stylesheet" href="../styles.css" />
+  <style>
+    .page { min-height:100vh; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,#f9fafb 0%, #ffffff 100%); }
+    .card { width:100%; max-width:720px; background:#fff; border:1px solid #e5e7eb; border-radius:18px; box-shadow:0 10px 25px -5px rgba(0,0,0,0.08); padding:1.5rem; }
+    .row { display:flex; gap:0.75rem; }
+    .grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(260px,1fr)); gap:0.75rem; }
+    label { font-weight:600; display:block; margin-bottom:0.35rem; }
+    input, select { width:100%; padding:0.6rem 0.8rem; border:1px solid #e5e7eb; border-radius:10px; background:#ffffff; color:#111827; }
+    input::placeholder { color:#9ca3af; }
+    .actions { display:flex; gap:0.5rem; margin-top:1rem; }
+    .btn { display:inline-block; padding:0.6rem 0.9rem; border-radius:10px; border:1px solid #e5e7eb; text-decoration:none; font-weight:600; color:#111827; }
+    .btn:hover { background:#f3f4f6; }
+    .btn-primary { color:#fff; background:#6366f1; border-color:#6366f1; }
+    .btn-primary:hover { background:#4f46e5; }
+    .muted { color:#6b7280; font-size:0.95rem; }
+    .preview { margin-top:1rem; border:1px solid #e5e7eb; border-radius:12px; padding:0.75rem; background:#fafafa; }
+    .wheel { width:140px; height:140px; border-radius:9999px; background:conic-gradient(#22c55e 0 var(--win), #ef4444 var(--win) 100%); margin:0 auto 10px; position:relative; }
+    .wheel::after { content:''; position:absolute; top:-10px; left:50%; transform:translateX(-50%); width:0; height:0; border-left:8px solid transparent; border-right:8px solid transparent; border-bottom:12px solid #374151; }
+    .chips { display:flex; gap:6px; flex-wrap:wrap; justify-content:center; }
+    .chip { background:#eef2ff; color:#3730a3; border:1px solid #c7d2fe; padding:4px 8px; border-radius:9999px; font-size:12px; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="card">
+      <div class="row" style="justify-content:space-between; align-items:center;">
+        <h1 style="margin:0;">Roue de la chance</h1>
+        <a class="btn" id="back">&larr; Retour</a>
+      </div>
+      <p class="muted">Définissez les issues possibles et la probabilité de gain. Les clients gagnent une récompense de votre choix.</p>
+
+      <div class="grid">
+        <div>
+          <label for="reward">Récompense (texte)</label>
+          <input id="reward" type="text" placeholder="Ex: Café offert, -10%, Goodie, ..." />
+        </div>
+        <div>
+          <label for="winRate">Probabilité de gain (%)</label>
+          <input id="winRate" type="number" min="0" max="100" step="1" value="30" />
+        </div>
+      </div>
+
+      <div class="grid" style="margin-top:0.75rem;">
+        <div>
+          <label for="slot1">Issue 1</label>
+          <input id="slot1" type="text" placeholder="Ex: Gagné" />
+        </div>
+        <div>
+          <label for="slot2">Issue 2</label>
+          <input id="slot2" type="text" placeholder="Ex: Réessayez" />
+        </div>
+        <div>
+          <label for="slot3">Issue 3</label>
+          <input id="slot3" type="text" placeholder="Ex: Presque !" />
+        </div>
+        <div>
+          <label for="slot4">Issue 4</label>
+          <input id="slot4" type="text" placeholder="Optionnel" />
+        </div>
+      </div>
+
+      <div class="preview" id="preview">
+        <div class="wheel" id="wheel" style="--win:30%"></div>
+        <div class="muted" style="text-align:center;margin-bottom:6px">Probabilité de gain: <span id="pwin">30%</span></div>
+        <div class="chips" id="chips"></div>
+      </div>
+
+      <div class="actions">
+        <button id="save" class="btn-primary">Enregistrer</button>
+        <button id="reset" class="btn">Réinitialiser</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get('id');
+      if (!id) { window.location.replace('/dashboardlogin.html'); return; }
+      const key = (k) => `goreview_gamecfg_${id}_roulette_${k}`;
+      const get = (k,d=null)=> JSON.parse(localStorage.getItem(key(k)) ?? 'null') ?? d;
+      const set = (k,v)=> localStorage.setItem(key(k), JSON.stringify(v));
+      const $ = (s)=>document.getElementById(s);
+
+      const back = document.getElementById('back');
+      back.href = `/games.html?id=${encodeURIComponent(id)}`;
+
+      const fields = ['reward','winRate','slot1','slot2','slot3','slot4'];
+      fields.forEach(f=>{ const el=$(f); const val=get(f,''); if(el && val!==null) el.value = val; });
+
+      function renderPreview(){
+        const rate = Math.max(0, Math.min(100, parseInt($('#winRate').value||'0',10) || 0));
+        document.getElementById('pwin').textContent = rate + '%';
+        document.getElementById('wheel').style.setProperty('--win', rate+'%');
+        const chips = document.getElementById('chips');
+        chips.innerHTML = '';
+        ['slot1','slot2','slot3','slot4'].forEach(k=>{
+          const v = ($('#'+k).value||'').trim();
+          if (v) { const s=document.createElement('span'); s.className='chip'; s.textContent=v; chips.appendChild(s);} 
+        });
+      }
+      renderPreview();
+      ['winRate','slot1','slot2','slot3','slot4'].forEach(id=>{
+        $('#'+id).addEventListener('input', renderPreview);
+      });
+
+      document.getElementById('save').addEventListener('click', ()=>{
+        fields.forEach(f=> set(f, $(f).value));
+        alert('Configuration enregistrée localement.');
+      });
+      document.getElementById('reset').addEventListener('click', ()=>{
+        fields.forEach(f=> set(f,''));
+        window.location.reload();
+      });
+    })();
+  </script>
+</body>
+</html>
+
+

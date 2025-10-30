@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jeux - GoReview</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .centered-card { min-height: 100vh; display:flex; align-items:center; justify-content:center; background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%); }
+        .wrap { background:#fff; border:1px solid #e5e7eb; border-radius:18px; box-shadow:0 10px 25px -5px rgba(0,0,0,0.08); width:100%; max-width:720px; padding:2rem; }
+        .header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; }
+        .title { margin:0; font-size:1.5rem; }
+        .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); gap:1rem; }
+        .option { border:1px solid #e5e7eb; border-radius:14px; padding:1rem; display:flex; flex-direction:column; gap:0.6rem; }
+        .option-head { display:flex; align-items:center; justify-content:space-between; gap:0.5rem; }
+        .option-title { display:flex; align-items:center; gap:0.6rem; }
+        .icon { width:36px; height:36px; display:inline-flex; align-items:center; justify-content:center; border-radius:10px; background:#f3f4f6; }
+        .option h3 { margin:0 0 0.35rem 0; font-size:1.125rem; }
+        .btn { display:inline-block; padding:0.5rem 0.9rem; border-radius:10px; border:1px solid #e5e7eb; text-decoration:none; font-weight:600; color:#111827; }
+        .btn:hover { background:#f3f4f6; }
+        .btn-primary { color:#fff; background:#6366f1; border-color:#6366f1; }
+        .btn-primary:hover { background:#4f46e5; }
+        .muted { color:#6b7280; font-size:0.95rem; }
+        /* Toggle switch */
+        .toggle { position:relative; width:56px; height:32px; background:#e5e7eb; border-radius:9999px; cursor:pointer; display:inline-flex; align-items:center; padding:4px; transition:background .2s, box-shadow .2s; box-shadow: inset 0 0 0 1px #d1d5db; }
+        .toggle[aria-checked="true"] { background:#6366f1; box-shadow: inset 0 0 0 1px #6366f1; }
+        .toggle:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(99,102,241,0.35), inset 0 0 0 1px #6366f1; }
+        .knob { width:24px; height:24px; background:#ffffff; border-radius:9999px; transform:translateX(0); transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,.15); }
+        .toggle[aria-checked="true"] .knob { transform: translateX(24px); }
+        .row { display:flex; align-items:center; justify-content:space-between; gap:0.75rem; }
+        .section { border:1px solid #e5e7eb; border-radius:14px; padding:1rem; margin-bottom:1rem; }
+        .badge { display:inline-block; padding:0.25rem 0.5rem; background:#f3f4f6; border-radius:9999px; font-size:0.85rem; color:#374151; }
+    </style>
+</head>
+<body>
+<div class="centered-card" id="root"></div>
+<script>
+(function(){
+  const root = document.getElementById('root');
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get('id');
+  if (!id) {
+    window.location.replace('/dashboardlogin.html');
+    return;
+  }
+  const link = (path) => `${path}?id=${encodeURIComponent(id)}`;
+  root.innerHTML = `
+    <div class='wrap'>
+      <div class='header'>
+        <h1 class='title'>Choisissez un jeu</h1>
+        <a class='btn' href='/dashboard.html?id=${encodeURIComponent(id)}'>&larr; Dashboard</a>
+      </div>
+      <div class='section row'>
+        <div>
+          <strong>Position du jeu</strong>
+          <div class='muted'>Afficher le jeu <span id='posLabel' class='badge'>après l'avis</span></div>
+        </div>
+        <div id='togglePosition' class='toggle' role='switch' aria-checked='false' tabindex='0'>
+          <div class='knob'></div>
+        </div>
+      </div>
+      <p class='muted' style='margin-bottom:1rem'>Les jeux permettent d'offrir une récompense de votre choix pour inciter les clients à laisser un avis.</p>
+      <div class='grid'>
+        <div class='option' data-game='roulette'>
+          <div class='option-head'>
+            <div class='option-title'>
+              <div class='icon'>🎡</div>
+              <h3>Roue de la chance</h3>
+            </div>
+            <div class='row'>
+              <div class='toggle' role='switch' aria-checked='false' tabindex='0' title='Activer ce jeu'></div>
+            </div>
+          </div>
+          <p class='muted'>Tournez la roue pour tenter de gagner une récompense.</p>
+          <a class='btn-primary btn' href='${link('/games/roulette.html')}'>Configurer</a>
+        </div>
+        <div class='option' data-game='dice'>
+          <div class='option-head'>
+            <div class='option-title'>
+              <div class='icon'>🎲</div>
+              <h3>Dé</h3>
+            </div>
+            <div class='row'>
+              <div class='toggle' role='switch' aria-checked='false' tabindex='0' title='Activer ce jeu'></div>
+            </div>
+          </div>
+          <p class='muted'>Lancez un dé pour tenter de gagner une récompense.</p>
+          <a class='btn-primary btn' href='${link('/games/dice.html')}'>Configurer</a>
+        </div>
+        <div class='option' data-game='coin'>
+          <div class='option-head'>
+            <div class='option-title'>
+              <div class='icon'>🪙</div>
+              <h3>Pile ou face</h3>
+            </div>
+            <div class='row'>
+              <div class='toggle' role='switch' aria-checked='false' tabindex='0' title='Activer ce jeu'></div>
+            </div>
+          </div>
+          <p class='muted'>Pile ou face pour tenter de gagner une récompense.</p>
+          <a class='btn-primary btn' href='${link('/games/coin.html')}'>Configurer</a>
+        </div>
+        <div class='option' data-game='balldrop'>
+          <div class='option-head'>
+            <div class='option-title'>
+              <div class='icon'>🏀</div>
+              <h3>Ball Drop</h3>
+            </div>
+            <div class='row'>
+              <div class='toggle' role='switch' aria-checked='false' tabindex='0' title='Activer ce jeu'></div>
+            </div>
+          </div>
+          <p class='muted'>Faites tomber la balle et visez la bonne case.</p>
+          <a class='btn-primary btn' href='${link('/games/balldrop.html')}'>Configurer</a>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Local state (client-side only for now)
+  const keyPrefix = `goreview_games_${id}_`;
+  const get = (k, d=null) => JSON.parse(localStorage.getItem(keyPrefix+k) ?? 'null') ?? d;
+  const set = (k, v) => localStorage.setItem(keyPrefix+k, JSON.stringify(v));
+
+  // Supabase client
+  const SUPABASE_URL = 'https://vigutqmfosxbpncussie.supabase.co';
+  const SUPABASE_SERVICE_ROLE = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ3V0cW1mb3N4YnBuY3Vzc2llIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTU4NDc1MiwiZXhwIjoyMDc3MTYwNzUyfQ.WPhspJ5LQ7E6k9sUFJsaISU6eVcJnIPGYv0GPGQfd98';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
+  const updateAccount = async (fields) => {
+    try {
+      await sb.from('accounts').update(fields).eq('id', id);
+    } catch (e) { console.warn('Supabase update failed', e); }
+  };
+
+  // Position toggle (before/after review)
+  const posEl = document.getElementById('togglePosition');
+  const posLabel = document.getElementById('posLabel');
+  const savedPos = !!get('show_before_review', false);
+  if (posEl) {
+    posEl.setAttribute('aria-checked', savedPos ? 'true' : 'false');
+    const togglePos = () => {
+      const newVal = posEl.getAttribute('aria-checked') !== 'true';
+      posEl.setAttribute('aria-checked', newVal ? 'true' : 'false');
+      set('show_before_review', newVal);
+      if (posLabel) posLabel.textContent = newVal ? "avant l'avis" : "après l'avis";
+      updateAccount({ games_time: newVal ? 'before' : 'after' });
+    };
+    posEl.addEventListener('click', togglePos);
+    posEl.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); togglePos(); } });
+    if (posLabel) posLabel.textContent = savedPos ? "avant l'avis" : "après l'avis";
+  }
+
+  // Game activation toggles (mutually exclusive)
+  const savedGame = get('active_game', null);
+  const cards = root.querySelectorAll('.option[data-game]');
+  cards.forEach(card => {
+    const game = card.getAttribute('data-game');
+    const sw = card.querySelector('.toggle');
+    if (!sw) return;
+    sw.setAttribute('aria-checked', savedGame === game ? 'true' : 'false');
+    const onToggle = () => {
+      const isActive = sw.getAttribute('aria-checked') === 'true';
+      // deactivate all
+      root.querySelectorAll('.option[data-game] .toggle').forEach(t => t.setAttribute('aria-checked', 'false'));
+      // activate this if previously off
+      const newState = !isActive;
+      if (newState) {
+        sw.setAttribute('aria-checked', 'true');
+        set('active_game', game);
+        updateAccount({ games: true, wich_game: game });
+      } else {
+        set('active_game', null);
+        updateAccount({ games: false, wich_game: null });
+      }
+    };
+    sw.addEventListener('click', onToggle);
+    sw.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(); } });
+  });
+})();
+</script>
+</body>
+</html>
+
+

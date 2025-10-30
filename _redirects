@@ -12,6 +12,10 @@
 /create /create.html 200
 /create/* /create.html 200
 
+# Company route (Google Sign-In)
+/company /company.html 200
+/company/* /company.html 200
+
 # API redirects (if needed in future)
 # /api/* https://your-api-url.com/:splat 200
 

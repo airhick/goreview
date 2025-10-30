@@ -52,6 +52,25 @@
   status = 200
   force = false
 
+# Company page (Google Sign-In)
+[[redirects]]
+  from = "/company"
+  to = "/company.html"
+  status = 200
+  force = false
+
+[[redirects]]
+  from = "/company/"
+  to = "/company.html"
+  status = 200
+  force = false
+
+[[redirects]]
+  from = "/company/*"
+  to = "/company.html"
+  status = 200
+  force = false
+
 # SPA fallback (if needed in future)
 # [[redirects]]
 #   from = "/*"

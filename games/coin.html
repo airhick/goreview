@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Configurer - Pile ou face</title>
+  <link rel="stylesheet" href="../styles.css" />
+  <style>
+    .page { min-height:100vh; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,#f9fafb 0%, #ffffff 100%); }
+    .card { width:100%; max-width:720px; background:#fff; border:1px solid #e5e7eb; border-radius:18px; box-shadow:0 10px 25px -5px rgba(0,0,0,0.08); padding:1.5rem; }
+    .grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(260px,1fr)); gap:0.75rem; }
+    label { font-weight:600; display:block; margin-bottom:0.35rem; }
+    input { width:100%; padding:0.6rem 0.8rem; border:1px solid #e5e7eb; border-radius:10px; background:#ffffff; color:#111827; }
+    input::placeholder { color:#9ca3af; }
+    .actions { display:flex; gap:0.5rem; margin-top:1rem; }
+    .btn { display:inline-block; padding:0.6rem 0.9rem; border-radius:10px; border:1px solid #e5e7eb; text-decoration:none; font-weight:600; color:#111827; }
+    .btn:hover { background:#f3f4f6; }
+    .btn-primary { color:#fff; background:#6366f1; border-color:#6366f1; }
+    .btn-primary:hover { background:#4f46e5; }
+    .muted { color:#6b7280; font-size:0.95rem; }
+    .preview { margin-top:1rem; border:1px solid #e5e7eb; border-radius:12px; padding:0.75rem; background:#fafafa; text-align:center; }
+    .coin { width:90px; height:90px; border-radius:9999px; border:1px solid #e5e7eb; background:#fff; margin:0 auto 8px; display:flex; align-items:center; justify-content:center; font-weight:700; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h1 style="margin:0;">Pile ou face</h1>
+        <a class="btn" id="back">&larr; Retour</a>
+      </div>
+      <p class="muted">Définissez la récompense, les libellés des issues et la probabilité de gain.</p>
+
+      <div class="grid">
+        <div>
+          <label for="reward">Récompense (texte)</label>
+          <input id="reward" type="text" placeholder="Ex: Dessert offert" />
+        </div>
+        <div>
+          <label for="winRate">Probabilité de gain (%)</label>
+          <input id="winRate" type="number" min="0" max="100" step="1" value="50" />
+        </div>
+        <div>
+          <label for="heads">Libellé Pile</label>
+          <input id="heads" type="text" placeholder="Pile" />
+        </div>
+        <div>
+          <label for="tails">Libellé Face</label>
+          <input id="tails" type="text" placeholder="Face" />
+        </div>
+      </div>
+
+      <div class="preview" id="preview">
+        <div class="coin" id="coin">Pile</div>
+        <div class="muted">Probabilité de gain: <strong id="pwin">50%</strong></div>
+      </div>
+
+      <div class="actions">
+        <button id="save" class="btn-primary">Enregistrer</button>
+        <button id="reset" class="btn">Réinitialiser</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get('id');
+      if (!id) { window.location.replace('/dashboardlogin.html'); return; }
+      const key = (k) => `goreview_gamecfg_${id}_coin_${k}`;
+      const get = (k,d=null)=> JSON.parse(localStorage.getItem(key(k)) ?? 'null') ?? d;
+      const set = (k,v)=> localStorage.setItem(key(k), JSON.stringify(v));
+      const $ = (s)=>document.getElementById(s);
+
+      document.getElementById('back').href = `/games.html?id=${encodeURIComponent(id)}`;
+
+      ['reward','winRate','heads','tails'].forEach(f=>{ const el=$(f); const val=get(f,''); if(el && val!==null) el.value = val; });
+      function renderPreview(){
+        const rate = Math.max(0, Math.min(100, parseInt($('#winRate').value||'0',10)||0));
+        document.getElementById('pwin').textContent = rate + '%';
+        const heads = ($('#heads').value||'Pile').trim();
+        document.getElementById('coin').textContent = heads;
+      }
+      renderPreview();
+      ['winRate','heads','tails'].forEach(id=> $('#'+id).addEventListener('input', renderPreview));
+      document.getElementById('save').addEventListener('click', ()=>{
+        ['reward','winRate','heads','tails'].forEach(f=> set(f, $(f).value));
+        alert('Configuration enregistrée localement.');
+      });
+      document.getElementById('reset').addEventListener('click', ()=>{
+        ['reward','winRate','heads','tails'].forEach(f=> set(f,''));
+        window.location.reload();
+      });
+    })();
+  </script>
+</body>
+</html>
+
+
