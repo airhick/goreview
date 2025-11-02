@@ -64,6 +64,37 @@ class RedirectHandler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             return
         
+        # Handle Google Places API proxy (to avoid CORS)
+        if path == '/api/google-place-details':
+            import urllib.request
+            GOOGLE_MAPS_API_KEY = 'AIzaSyC1zqymSXocGXuCEVvpzXERWYwIzimV0Oo'
+            query_params = parse_qs(query)
+            place_id = query_params.get('place_id', [None])[0]
+            
+            if not place_id:
+                self.send_response(400)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(b'{"error": "place_id parameter is required"}')
+                return
+            
+            google_url = f'https://maps.googleapis.com/maps/api/place/details/json?place_id={place_id}&fields=rating,user_ratings_total&key={GOOGLE_MAPS_API_KEY}'
+            
+            try:
+                with urllib.request.urlopen(google_url, timeout=15) as response:
+                    data = response.read()
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(data)
+                    return
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(f'{{"error": "{str(e)}"}}'.encode())
+                return
+        
         # Default: serve files normally
         return super().do_GET()
     

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - GoReview</title>
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' http://localhost:*; connect-src 'self' http://localhost:* https://*.googleapis.com https://*.google.com https://maps.googleapis.com https://maps.gstatic.com https://vigutqmfosxbpncussie.supabase.co; img-src 'self' data: https: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://www.google.com https://*.google.com https://maps.googleapis.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; frame-src 'self' http://localhost:* https://www.google.com https://*.google.com https://maps.google.com;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' http://localhost:*; connect-src 'self' http://localhost:* https://*.googleapis.com https://*.google.com https://maps.googleapis.com https://maps.gstatic.com https://vigutqmfosxbpncussie.supabase.co https://*.netlify.app https://*.netlify.com; img-src 'self' data: https: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://www.google.com https://*.google.com https://maps.googleapis.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; frame-src 'self' http://localhost:* https://www.google.com https://*.google.com https://maps.google.com;">
     <script>
       // Suppress ONLY MCP/BrowserAutomation errors, keep all other errors visible
       (function(){
@@ -468,17 +468,23 @@
     }
 
     // Fetch Google Place Details (rating and total reviews only)
+    // Using proxy endpoint to avoid CORS issues
     async function fetchGooglePlaceDetails(placeId) {
-        const GOOGLE_MAPS_API_KEY = 'AIzaSyC1zqymSXocGXuCEVvpzXERWYwIzimV0Oo';
-        const url = 'https://maps.googleapis.com/maps/api/place/details/json';
-        const params = new URLSearchParams({
-            place_id: placeId,
-            fields: 'rating,user_ratings_total',
-            key: GOOGLE_MAPS_API_KEY
-        });
+        // Use local proxy for development, Netlify Function for production
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const proxyUrl = isLocalhost 
+            ? '/api/google-place-details'  // Local Python proxy
+            : '/.netlify/functions/google-place-details';  // Netlify Function
+        
+        const params = new URLSearchParams({ place_id: placeId });
 
         try {
-            const response = await fetch(`${url}?${params.toString()}`);
+            const response = await fetch(`${proxyUrl}?${params.toString()}`);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
             const data = await response.json();
             
             if (data.status === 'OK' && data.result) {
@@ -490,6 +496,8 @@
                 
                 // Optionally update Supabase with fresh data
                 try {
+                    const SUPABASE_URL = 'https://vigutqmfosxbpncussie.supabase.co';
+                    const SUPABASE_SERVICE_ROLE = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ3V0cW1mb3N4YnBuY3Vzc2llIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTU4NDc1MiwiZXhwIjoyMDc3MTYwNzUyfQ.WPhspJ5LQ7E6k9sUFJsaISU6eVcJnIPGYv0GPGQfd98';
                     const client = supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
                     await client.from('accounts').update({
                         current_rating: rating,
@@ -501,6 +509,8 @@
             } else {
                 console.warn('Google Places API error:', data.status, data.error_message);
                 // Fallback to Supabase data
+                const SUPABASE_URL = 'https://vigutqmfosxbpncussie.supabase.co';
+                const SUPABASE_SERVICE_ROLE = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ3V0cW1mb3N4YnBuY3Vzc2llIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTU4NDc1MiwiZXhwIjoyMDc3MTYwNzUyfQ.WPhspJ5LQ7E6k9sUFJsaISU6eVcJnIPGYv0GPGQfd98';
                 const client = supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
                 const { data: accountData } = await client.from('accounts').select('current_rating,tot_review').eq('id', id).maybeSingle();
                 if (accountData) {
@@ -511,6 +521,8 @@
         } catch (error) {
             console.error('Failed to fetch Google Place details', error);
             // Fallback to Supabase data on error
+            const SUPABASE_URL = 'https://vigutqmfosxbpncussie.supabase.co';
+            const SUPABASE_SERVICE_ROLE = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ3V0cW1mb3N4YnBuY3Vzc2llIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTU4NDc1MiwiZXhwIjoyMDc3MTYwNzUyfQ.WPhspJ5LQ7E6k9sUFJsaISU6eVcJnIPGYv0GPGQfd98';
             const client = supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
             const { data: accountData } = await client.from('accounts').select('current_rating,tot_review').eq('id', id).maybeSingle();
             if (accountData) {
