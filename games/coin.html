@@ -7,20 +7,24 @@
   <link rel="stylesheet" href="../styles.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    .page { min-height:100vh; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,#f9fafb 0%, #ffffff 100%); }
-    .card { width:100%; max-width:780px; background:#ffffff; border:1px solid #e3eafc; border-radius:20px; box-shadow:0 20px 30px -15px rgba(37,99,235,0.25); padding:1.5rem; }
+    .page { min-height:100vh; display:flex; align-items:center; justify-content:center; background:#ffffff; }
+    .card { width:100%; max-width:880px; background:#ffffff; border-radius:18px; box-shadow:0 10px 25px -5px rgba(0,0,0,0.08); padding:1.9rem; position:relative; overflow:hidden; border:1px solid #e5e7eb; }
     .grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(260px,1fr)); gap:0.75rem; }
     label { font-weight:600; display:block; margin-bottom:0.35rem; }
-    input { width:100%; padding:0.6rem 0.8rem; border:1px solid #e5e7eb; border-radius:10px; background:#ffffff; color:#111827; }
+    input { width:100%; padding:0.7rem 0.9rem; border:1px solid #dde3ff; border-radius:14px; background:#ffffff; color:#111827; box-shadow:inset 0 1px 0 rgba(255,255,255,0.6); }
     input::placeholder { color:#9ca3af; }
     .actions { display:flex; gap:0.5rem; margin-top:1rem; }
-    .btn { display:inline-block; padding:0.6rem 0.9rem; border-radius:10px; border:1px solid #e5e7eb; text-decoration:none; font-weight:600; color:#111827; }
-    .btn:hover { background:#f3f4f6; }
-    .btn-primary { color:#fff; background:#6366f1; border-color:#6366f1; }
-    .btn-primary:hover { background:#4f46e5; }
+    .btn { display:inline-block; padding:0.72rem 1.05rem; border-radius:14px; border:1px solid #dbe2ff; text-decoration:none; font-weight:700; color:#0f172a; background:linear-gradient(180deg,#ffffff,#f8fbff); transition:transform .18s ease, box-shadow .18s ease, background .18s ease; box-shadow: 0 6px 12px -8px rgba(2,6,23,0.25), inset 0 1px 0 rgba(255,255,255,0.6); }
+    .btn:hover { background:linear-gradient(180deg,#ffffff,#eef2ff); transform:translateY(-1px); box-shadow:0 10px 18px -10px rgba(2,6,23,0.35); }
+    .btn-primary { color:#fff; background:linear-gradient(135deg,#2563eb,#7c3aed); border-color:#6d28d9; box-shadow:0 14px 30px -14px rgba(67,56,202,0.65), inset 0 1px 0 rgba(255,255,255,0.25); }
+    .btn-primary:hover { background:linear-gradient(135deg,#1d4ed8,#6d28d9); }
     .muted { color:#6b7280; font-size:0.95rem; }
-    .preview { margin-top:1rem; border:1px solid #dbe2ff; border-radius:16px; padding:0.9rem; background:linear-gradient(180deg,#ffffff 0%, #f8fbff 100%); text-align:center; }
-    .coin { width:96px; height:96px; border-radius:9999px; border:1px solid #c7d2fe; background:#ffffff; margin:0 auto 8px; display:flex; align-items:center; justify-content:center; font-weight:700; color:#1e3a8a; box-shadow:0 6px 18px -10px rgba(37,99,235,0.35); }
+    .preview { margin-top:1rem; border:1px solid #dbe2ff; border-radius:18px; padding:1rem; background:linear-gradient(180deg,#ffffff 0%, #f1f5ff 100%); text-align:center; }
+    .coin-wrap { perspective: 1000px; width:140px; margin:0 auto 12px; }
+    .coin { width:140px; height:140px; position:relative; transform-style:preserve-3d; transform: rotateY(var(--ry, 0deg)); transition: transform 0.9s cubic-bezier(.2,.8,.2,1); margin:0 auto; }
+    .face { position:absolute; inset:0; border-radius:9999px; border:1px solid #c7d2fe; background:radial-gradient(circle at 30% 30%, #ffffff 0%, #f1f5ff 40%, #dbeafe 100%); display:flex; align-items:center; justify-content:center; font-weight:900; color:#1e3a8a; box-shadow:0 14px 30px -16px rgba(37,99,235,0.45), inset 0 -30px 50px -40px rgba(2,6,23,0.18); backface-visibility:hidden; }
+    .back { transform: rotateY(180deg); }
+    .badge { display:inline-block; padding:4px 8px; border-radius:9999px; border:1px solid #d1fae5; background:#ecfdf5; color:#065f46; font-weight:700; font-size:12px; }
   </style>
 </head>
 <body>
@@ -30,30 +34,35 @@
         <h1 style="margin:0;">Pile ou face</h1>
         <a class="btn" id="back">&larr; Retour</a>
       </div>
-      <p class="muted">Définissez la récompense, les libellés des issues et la probabilité de gain.</p>
+      <p class="muted">Définissez la récompense, et la probabilité de gain.</p>
 
       <div class="grid">
         <div>
           <label for="reward">Récompense (texte)</label>
-          <input id="reward" type="text" placeholder="Ex: Dessert offert" />
+          <div style="display:flex; gap:6px; align-items:center;">
+            <input id="reward" type="text" placeholder="Ex: Dessert offert" />
+            <button id="addReward" type="button" class="btn" title="Ajouter">+</button>
+            <button id="commitReward" type="button" class="btn" title="Valider">Valider</button>
+          </div>
         </div>
         <div>
           <label for="winRate">Probabilité de gain (%)</label>
           <input id="winRate" type="number" min="0" max="100" step="1" value="50" />
         </div>
-        <div>
-          <label for="heads">Libellé Pile</label>
-          <input id="heads" type="text" placeholder="Pile" />
-        </div>
-        <div>
-          <label for="tails">Libellé Face</label>
-          <input id="tails" type="text" placeholder="Face" />
-        </div>
       </div>
 
       <div class="preview" id="preview">
-        <div class="coin" id="coin">Pile</div>
+        <div class="coin-wrap">
+          <div class="coin" id="coin">
+            <div class="face front" id="coinFront">Pile</div>
+            <div class="face back" id="coinBack">Face</div>
+          </div>
+        </div>
         <div class="muted">Probabilité de gain: <strong id="pwin">50%</strong></div>
+        <div class="actions" style="justify-content:center;margin-top:10px">
+          <button id="flip" class="btn">Lancer</button>
+          <span id="flipResult" class="badge" style="display:none"></span>
+        </div>
       </div>
 
       <div class="actions">
@@ -78,28 +87,82 @@
 
       document.getElementById('back').href = `/games.html?id=${encodeURIComponent(id)}`;
 
-      ['reward','winRate','heads','tails'].forEach(f=>{ const el=$(f); const val=get(f,''); if(el && val!==null) el.value = val; });
+      ['reward','winRate'].forEach(f=>{ const el=$(f); const val=get(f,''); if(el && val!==null) el.value = val; });
+      function rewardsFromStorage(){ const saved=get('rewards',null); return Array.isArray(saved)? saved : []; }
+      function setRewards(list){ set('rewards', list); }
+      function getRewards(){ return get('rewards', []); }
       function renderPreview(){
-        const rate = Math.max(0, Math.min(100, parseInt($('#winRate').value||'0',10)||0));
-        document.getElementById('pwin').textContent = rate + '%';
-        const heads = ($('#heads').value||'Pile').trim();
-        document.getElementById('coin').textContent = heads;
+        const rateEl = document.getElementById('winRate');
+        const pwinEl = document.getElementById('pwin');
+        const frontEl = document.getElementById('coinFront');
+        const backEl = document.getElementById('coinBack');
+        const rate = Math.max(0, Math.min(100, parseInt((rateEl && rateEl.value) || '0',10)||0));
+        if (pwinEl) pwinEl.textContent = rate + '%';
+        const labels = getRewards();
+        const a = labels[0] || 'Pile';
+        const b = labels[1] || 'Face';
+        if (frontEl) frontEl.textContent = a;
+        if (backEl) backEl.textContent = b;
       }
       renderPreview();
-      ['winRate','heads','tails'].forEach(id=> $('#'+id).addEventListener('input', renderPreview));
+      ['winRate'].forEach(id=> $('#'+id).addEventListener('input', renderPreview));
+      // Flip preview interaction (rAF easing)
+      const coinEl = document.getElementById('coin');
+      const flipBtn = document.getElementById('flip');
+      const flipResult = document.getElementById('flipResult');
+      function easeOutCubic(t){ return 1 - Math.pow(1 - t, 3); }
+      function animateFlip(){
+        const start = performance.now();
+        const base = parseFloat((getComputedStyle(coinEl).getPropertyValue('--ry')||'0').replace('deg',''))||0;
+        const spins = 6 + Math.floor(Math.random()*4); // 6-9 half-turns
+        const target = base + spins*180 + (Math.random()<0.5?0:180);
+        const duration = 900;
+        function frame(now){
+          const t = Math.min(1, (now - start)/duration);
+          const eased = easeOutCubic(t);
+          const angle = base + (target-base)*eased;
+          coinEl.style.setProperty('--ry', angle + 'deg');
+          if (t < 1) requestAnimationFrame(frame); else showFlipResult();
+        }
+        requestAnimationFrame(frame);
+      }
+      function showFlipResult(){
+        const winRate = Math.max(0, Math.min(100, parseInt($('#winRate').value||'0',10)||0));
+        const isWin = Math.random()*100 < winRate;
+        flipResult.textContent = isWin ? 'Gagné' : 'Perdu';
+        flipResult.style.display = '';
+      }
+      if (flipBtn) {
+        flipBtn.addEventListener('click', ()=>{
+          flipResult.style.display = 'none';
+          // ensure CSS variable is initialized
+          if (!getComputedStyle(coinEl).getPropertyValue('--ry')){
+            coinEl.style.setProperty('--ry','0deg');
+          }
+          animateFlip();
+        });
+      }
+      // rewards UI
+      setRewards(rewardsFromStorage());
+      const addRewardBtn = document.getElementById('addReward');
+      const commitRewardBtn = document.getElementById('commitReward');
+      const rewardInput = document.getElementById('reward');
+      function commitReward(){ const v=(rewardInput.value||'').trim(); if(!v) return; const next=getRewards(); next.push(v); setRewards(next); rewardInput.value=''; renderPreview(); }
+      if (addRewardBtn) addRewardBtn.addEventListener('click', commitReward);
+      if (commitRewardBtn) commitRewardBtn.addEventListener('click', commitReward);
+
       document.getElementById('save').addEventListener('click', async ()=>{
-        ['reward','winRate','heads','tails'].forEach(f=> set(f, $(f).value));
+        ['reward','winRate'].forEach(f=> set(f, $(f).value));
         const reward = $('#reward').value || '';
         const winRate = $('#winRate').value || '';
-        const heads = $('#heads').value || '';
-        const tails = $('#tails').value || '';
-        const paramsStr = new URLSearchParams({ id, game:'coin', reward, wr: winRate, heads, tails }).toString();
+        const rewards = getRewards();
+        const paramsStr = new URLSearchParams({ id, game:'coin', reward, wr: winRate, rewards: rewards.join('|') }).toString();
         const redir = `${location.origin}/company.html?${paramsStr}`;
-        try { await sb.from('accounts').update({ games:true, wich_game:'coin', redirection_url: redir }).eq('id', id);} catch(_){}
+        try { await sb.from('accounts').update({ games:true, wich_game:'coin', redirection_url: redir, games_details: JSON.stringify({ rewards, winRate: Number(winRate), reward }) }).eq('id', id);} catch(_){ }
         alert('Configuration enregistrée.');
       });
       document.getElementById('reset').addEventListener('click', ()=>{
-        ['reward','winRate','heads','tails'].forEach(f=> set(f,''));
+        ['reward','winRate'].forEach(f=> set(f,''));
         window.location.reload();
       });
     })();

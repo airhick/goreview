@@ -4,7 +4,49 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - GoReview</title>
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' http://localhost:*; connect-src 'self' http://localhost:* https://maps.googleapis.com https://maps.gstatic.com https://vigutqmfosxbpncussie.supabase.co; img-src 'self' data: https://*.googleusercontent.com https://maps.gstatic.com https://maps.googleapis.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://www.google.com https://maps.googleapis.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; frame-src 'self' http://localhost:* https://www.google.com https://*.google.com;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' http://localhost:*; connect-src 'self' http://localhost:* https://*.googleapis.com https://*.google.com https://maps.googleapis.com https://maps.gstatic.com https://vigutqmfosxbpncussie.supabase.co; img-src 'self' data: https: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://www.google.com https://*.google.com https://maps.googleapis.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; frame-src 'self' http://localhost:* https://www.google.com https://*.google.com https://maps.google.com;">
+    <script>
+      // Suppress ONLY MCP/BrowserAutomation errors, keep all other errors visible
+      (function(){
+        const isMCPError = (msg) => {
+          if (!msg) return false;
+          const str = String(msg).toLowerCase();
+          return str.includes('localhost:62462') || 
+                 str.includes('browserautomation') || 
+                 str.includes('registerwithmcp') || 
+                 str.includes('pollforcommands') ||
+                 (str.includes('vm') && str.includes('register-iframe'));
+        };
+        
+        // Only suppress console errors that are MCP-related
+        const originalError = console.error;
+        console.error = function(...args) {
+          const isMCP = args.some(arg => isMCPError(String(arg)));
+          if (!isMCP) {
+            originalError.apply(console, args);
+          }
+        };
+        
+        // Suppress fetch errors only for localhost:62462
+        const originalFetch = window.fetch;
+        window.fetch = function(...args) {
+          if (args[0] && args[0].includes && args[0].includes('localhost:62462')) {
+            return Promise.reject(new Error('Blocked by dev filter')).catch(() => {});
+          }
+          return originalFetch.apply(this, args);
+        };
+        
+        // Suppress XMLHttpRequest errors only for localhost:62462
+        const originalOpen = XMLHttpRequest.prototype.open;
+        XMLHttpRequest.prototype.open = function(method, url, ...rest) {
+          if (url && url.includes('localhost:62462')) {
+            this.addEventListener('error', () => {}, {once: true});
+            this.addEventListener('loadend', () => {}, {once: true});
+          }
+          return originalOpen.apply(this, [method, url, ...rest]);
+        };
+      })();
+    </script>
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -45,8 +87,9 @@
             margin: 0;
         }
         .cards-grid {
-            column-width: 280px;
-            column-gap: 1rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
         }
         .card {
             border: 1px solid #e5e7eb;
@@ -55,8 +98,7 @@
             background: #fff;
             display: flex;
             flex-direction: column;
-            break-inside: avoid;
-            margin-bottom: 1rem;
+            margin-bottom: 0;
         }
         .card h3 {
             margin: 0 0 0.35rem 0;
@@ -89,10 +131,207 @@
         .btn-primary:hover { background: #4f46e5; }
         .muted { color: #6b7280; font-size: 0.9rem; }
         .back-link { display: inline-block; margin-bottom: 2rem; text-decoration: none; color: #6366f1; }
-        @media (max-width: 520px) { .dashboard-title { font-size: 1.25rem; } }
-        .preview-frame { width: 100%; height: 420px; border: 1px solid #e5e7eb; border-radius: 14px; background: #fff; }
-        @media (max-width: 520px) { .preview-frame { height: 320px; } }
+        @media (max-width: 520px) { 
+            .dashboard-title { font-size: 1.25rem; }
+            .cards-grid {
+                grid-template-columns: 1fr;
+            }
+            .card[style*="grid-column: span 2"] {
+                grid-column: span 1 !important;
+            }
+        }
         .mini-map { width: 100%; height: 200px; border: 1px solid #e5e7eb; border-radius: 12px; }
+        /* Contacts table preview */
+        .contacts-preview {
+            overflow-x: auto;
+            margin: 1rem 0;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .contacts-preview-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+            min-width: 500px;
+        }
+        .contacts-preview-table thead {
+            background: #f9fafb;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        .contacts-preview-table th {
+            padding: 0.75rem;
+            text-align: left;
+            font-weight: 600;
+            color: #111827;
+            border-bottom: 2px solid #e5e7eb;
+            font-size: 0.875rem;
+        }
+        .contacts-preview-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #f3f4f6;
+            color: #4b5563;
+        }
+        .contacts-preview-table tbody tr:hover {
+            background: #f9fafb;
+        }
+        .contacts-preview-empty {
+            padding: 2rem;
+            text-align: center;
+            color: #6b7280;
+            font-size: 0.875rem;
+        }
+        /* Status Menu */
+        .status-menu {
+            position: relative;
+        }
+        .status-menu-btn {
+            width: 44px;
+            height: 44px;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            background: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 18px;
+        }
+        .status-menu-btn:hover {
+            background: #f9fafb;
+            border-color: #d1d5db;
+        }
+        .status-menu-panel {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            width: 280px;
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.15);
+            padding: 16px;
+            display: none;
+            z-index: 100;
+        }
+        .status-menu-panel.open {
+            display: block;
+        }
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            transition: background 0.15s;
+        }
+        .status-item:last-child {
+            margin-bottom: 0;
+        }
+        .status-item:hover {
+            background: #f9fafb;
+        }
+        .status-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        .status-icon.healthy { background: #d1fae5; }
+        .status-icon.warning { background: #fef3c7; }
+        .status-icon.error { background: #fee2e2; }
+        .status-content {
+            flex: 1;
+            min-width: 0;
+        }
+        .status-label {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 4px;
+        }
+        .status-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: #111827;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .status-badge {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .status-badge.green { background: #10b981; }
+        .status-badge.orange { background: #f59e0b; }
+        .status-badge.red { background: #ef4444; }
+        .toggle-visual {
+            width: 48px;
+            height: 28px;
+            border-radius: 9999px;
+            background: #e5e7eb;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.2s;
+            flex-shrink: 0;
+        }
+        .toggle-visual.active {
+            background: #6366f1;
+        }
+        .toggle-visual::after {
+            content: '';
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: #fff;
+            top: 3px;
+            left: 3px;
+            transition: transform 0.2s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        .toggle-visual.active::after {
+            transform: translateX(20px);
+        }
+        .stat-visual {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .stat-bar {
+            flex: 1;
+            height: 6px;
+            background: #e5e7eb;
+            border-radius: 9999px;
+            overflow: hidden;
+        }
+        .stat-bar-fill {
+            height: 100%;
+            background: #6366f1;
+            border-radius: 9999px;
+            transition: width 0.3s;
+        }
+        @media (max-width: 640px) {
+            .status-menu-panel {
+                right: -8px;
+                width: calc(100vw - 32px);
+                max-width: 280px;
+            }
+            .status-menu-btn {
+                width: 40px;
+                height: 40px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -135,12 +374,227 @@
 
     // Persist id for future visits (6 months)
     setCookie('goreview_user_id', id, 180);
+
+    // Status menu toggle
+    function initStatusMenu() {
+        const btn = document.getElementById('statusMenuBtn');
+        const panel = document.getElementById('statusMenuPanel');
+        if (!btn || !panel) return;
+        
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            panel.classList.toggle('open');
+        });
+        
+        document.addEventListener('click', (e) => {
+            if (!panel.contains(e.target) && !btn.contains(e.target)) {
+                panel.classList.remove('open');
+            }
+        });
+    }
+
+    // Load contacts preview
+    function loadContactsPreview(clientInstance) {
+        const tbody = document.getElementById('contactsPreviewBody');
+        if (!tbody) return;
+
+        clientInstance
+            .from('leads')
+            .select('nom, prenom, email, time')
+            .order('time', { ascending: false })
+            .limit(10)
+            .then(({ data, error }) => {
+                if (error) {
+                    tbody.innerHTML = `<tr><td colspan='4' class='contacts-preview-empty'>Erreur: ${error.message}</td></tr>`;
+                    return;
+                }
+
+                if (!data || data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan='4' class='contacts-preview-empty'>Aucun contact enregistré</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = data.map(lead => {
+                    const date = lead.time ? new Date(lead.time).toLocaleDateString('fr-FR', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    }) : '-';
+                    return `
+                        <tr>
+                            <td>${lead.nom || '-'}</td>
+                            <td>${lead.prenom || '-'}</td>
+                            <td>${lead.email || '-'}</td>
+                            <td>${date}</td>
+                        </tr>
+                    `;
+                }).join('');
+            })
+            .catch(err => {
+                tbody.innerHTML = `<tr><td colspan='4' class='contacts-preview-empty'>Erreur de chargement</td></tr>`;
+                console.error('Failed to load contacts', err);
+            });
+    }
+
+    // Update status indicators
+    function updateStatusMenu(data, clientInstance) {
+        if (!data) return;
+        
+        // Game toggle
+        const gameToggle = document.getElementById('statusGameToggle');
+        const gameIcon = document.getElementById('statusGameIcon');
+        const gameActive = data.games === true;
+        if (gameToggle) {
+            gameToggle.classList.toggle('active', gameActive);
+            if (gameIcon) {
+                gameIcon.className = gameActive ? 'status-icon healthy' : 'status-icon';
+            }
+            // Remove any existing listeners by cloning
+            const oldToggle = gameToggle;
+            const newToggle = oldToggle.cloneNode(true);
+            oldToggle.parentNode.replaceChild(newToggle, oldToggle);
+            
+            document.getElementById('statusGameToggle').addEventListener('click', async function() {
+                const currentState = this.classList.contains('active');
+                const newState = !currentState;
+                try {
+                    // Get current game or default to 'roulette' if activating
+                    const currentGame = data.wich_game || 'roulette';
+                    await clientInstance.from('accounts').update({ games: newState, wich_game: newState ? currentGame : null }).eq('id', id);
+                    this.classList.toggle('active', newState);
+                    if (gameIcon) {
+                        gameIcon.className = newState ? 'status-icon healthy' : 'status-icon';
+                    }
+                    // Sync card toggle
+                    const cardToggle = document.getElementById('cardGameToggle');
+                    if (cardToggle) cardToggle.classList.toggle('active', newState);
+                    // Update card text
+                    const currentGameText = document.getElementById('currentGameText');
+                    const changeGameBtn = document.getElementById('changeGameBtn');
+                    if (currentGameText) {
+                        if (newState && currentGame) {
+                            const gameNames = { roulette: 'Roue de la chance', dice: 'Dé', coin: 'Pile ou face', balldrop: 'Ball Drop' };
+                            currentGameText.textContent = gameNames[currentGame] || currentGame;
+                            if (changeGameBtn) changeGameBtn.style.display = 'inline-block';
+                        } else {
+                            currentGameText.textContent = 'Désactivé';
+                            if (changeGameBtn) changeGameBtn.style.display = 'none';
+                        }
+                    }
+                } catch(e) {
+                    console.error('Failed to update game status', e);
+                }
+            });
+        }
+
+        // Health check
+        const healthIssues = [];
+        if (!data.business_id && !data.place_id) healthIssues.push('Place ID manquant');
+        if (!data.redirection_url) healthIssues.push('Redirection non configurée');
+        
+        const healthIcon = document.getElementById('statusHealthIcon');
+        const healthBadge = document.getElementById('statusHealthBadge');
+        const healthText = document.getElementById('statusHealthText');
+        
+        if (healthIssues.length === 0) {
+            if (healthIcon) { healthIcon.className = 'status-icon healthy'; healthIcon.textContent = '✓'; }
+            if (healthBadge) { healthBadge.className = 'status-badge green'; }
+            if (healthText) healthText.textContent = 'Opérationnel';
+        } else {
+            if (healthIcon) { healthIcon.className = 'status-icon error'; healthIcon.textContent = '⚠'; }
+            if (healthBadge) { healthBadge.className = 'status-badge red'; }
+            if (healthText) healthText.textContent = healthIssues[0];
+        }
+
+        // Redirection
+        const redirectBadge = document.getElementById('statusRedirectBadge');
+        const redirectText = document.getElementById('statusRedirectText');
+        const redirectIcon = document.getElementById('statusRedirectIcon');
+        const hasRedirect = !!data.redirection_url;
+        if (redirectBadge) redirectBadge.className = `status-badge ${hasRedirect ? 'green' : 'orange'}`;
+        if (redirectText) redirectText.textContent = hasRedirect ? 'Configuré' : 'Non configuré';
+        if (redirectIcon) redirectIcon.className = `status-icon ${hasRedirect ? 'healthy' : 'warning'}`;
+
+        // Database (always healthy if we got data)
+        const dbIcon = document.getElementById('statusDbIcon');
+        if (dbIcon) dbIcon.className = 'status-icon healthy';
+
+        // Reviews bar (visual scale: 0-50 for better visibility)
+        const reviewCount = parseInt(data.review_number || '0', 10);
+        const barFill = document.getElementById('statBarFill');
+        const countMini = document.getElementById('statCountMini');
+        if (barFill) {
+            const maxScale = 50;
+            const percentage = Math.min((reviewCount / maxScale) * 100, 100);
+            barFill.style.width = percentage + '%';
+        }
+        if (countMini) countMini.textContent = reviewCount;
+    }
+
     mount.innerHTML = `
         <div class='dashboard-wrap'>
             <div class='dashboard-header'>
                 <div class='dash-brand'>
                     <img src='logo.png' alt='GoReview' class='dash-logo'>
                     <h1 class='dashboard-title'>Dashboard GoReview <span id='bizName' style='color:#6366f1'>#${id}</span></h1>
+                </div>
+                <div class='status-menu'>
+                    <button class='status-menu-btn' id='statusMenuBtn' title='Statut système'>⚙️</button>
+                    <div class='status-menu-panel' id='statusMenuPanel'>
+                        <div class='status-item'>
+                            <div class='status-icon healthy' id='statusHealthIcon'>✓</div>
+                            <div class='status-content'>
+                                <div class='status-label'>Système</div>
+                                <div class='status-value'>
+                                    <span class='status-badge green' id='statusHealthBadge'></span>
+                                    <span id='statusHealthText'>Opérationnel</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class='status-item'>
+                            <div class='status-icon' id='statusGameIcon'>🎮</div>
+                            <div class='status-content'>
+                                <div class='status-label'>Jeu</div>
+                                <div class='status-value'>
+                                    <div class='toggle-visual' id='statusGameToggle'></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class='status-item'>
+                            <div class='status-icon' id='statusDbIcon'>🗄️</div>
+                            <div class='status-content'>
+                                <div class='status-label'>Base de données</div>
+                                <div class='status-value'>
+                                    <span class='status-badge green' id='statusDbBadge'></span>
+                                    <span>Connecté</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class='status-item'>
+                            <div class='status-icon' id='statusRedirectIcon'>🔗</div>
+                            <div class='status-content'>
+                                <div class='status-label'>Redirection</div>
+                                <div class='status-value'>
+                                    <span class='status-badge' id='statusRedirectBadge'></span>
+                                    <span id='statusRedirectText'>-</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class='status-item'>
+                            <div class='status-icon' id='statusReviewsIcon'>📊</div>
+                            <div class='status-content'>
+                                <div class='status-label'>Avis récoltés</div>
+                                <div class='stat-visual'>
+                                    <div class='stat-bar'>
+                                        <div class='stat-bar-fill' id='statBarFill' style='width:0%'></div>
+                                    </div>
+                                    <span id='statCountMini'>0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             <p class='muted' style='margin-bottom:1rem;'>Gérez votre configuration et vos résultats.</p>
@@ -151,28 +605,43 @@
                     <p class='muted'>Total d'avis générés via votre plaque.</p>
                 </div>
                 <div class='card'>
-                    <h3>Contacts</h3>
-                    <p>Consultez les contacts collectés via la plaque.</p>
-                    <div class='btn-row'>
-                        <a id='contactsLink' class='btn-primary btn' href='/company.html?id=${encodeURIComponent(id)}' target='_blank' rel='noopener noreferrer'>Ouvrir le tableau</a>
-                    </div>
-                </div>
-                <div class='card'>
                     <h3>Jeux</h3>
                     <p>Ajoutez un jeu pour encourager les clients à laisser un avis.</p>
-                    <p class='muted'>Etat: <strong id='gamesStatus'>–</strong> <span id='gameName'></span></p>
-                    <div class='btn-row'>
-                        <a class='btn-primary btn' id='gamesLink' href='/games.html?id=${encodeURIComponent(id)}'>Choisir un jeu</a>
+                    <div style='display:flex; align-items:center; gap:12px; margin:12px 0;'>
+                        <div class='toggle-visual' id='cardGameToggle'></div>
+                        <span id='currentGameText' style='font-size:14px; color:#4b5563; flex:1;'>Désactivé</span>
                     </div>
-                </div>
-                <div class='card preview-card'>
-                    <h3>Aperçu en direct</h3>
-                    <p class='muted'>Visualisez l'expérience côté client (redirection + jeu si activé).</p>
-                    <iframe id='livePreview' class='preview-frame' src='about:blank' loading='lazy'></iframe>
+                    <div class='btn-row'>
+                        <a class='btn-primary btn' id='changeGameBtn' href='/games.html?id=${encodeURIComponent(id)}' style='display:none;'>Changer</a>
+                    </div>
                 </div>
                 <div class='card'>
                     <h3>Votre établissement</h3>
                     <iframe id='miniMap' class='mini-map' src='about:blank' loading='lazy' referrerpolicy='no-referrer-when-downgrade'></iframe>
+                </div>
+            </div>
+            <div class='card' style='margin-top:1.5rem;'>
+                <h3>Contacts</h3>
+                <p>Consultez les contacts collectés via la plaque.</p>
+                <div class='contacts-preview' id='contactsPreview'>
+                    <table class='contacts-preview-table'>
+                        <thead>
+                            <tr>
+                                <th>Nom</th>
+                                <th>Prénom</th>
+                                <th>Email</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id='contactsPreviewBody'>
+                            <tr>
+                                <td colspan='4' class='contacts-preview-empty'>Chargement...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class='btn-row'>
+                    <a id='contactsLink' class='btn-primary btn' href='/contact.html?id=${encodeURIComponent(id)}'>Consulter les contacts</a>
                 </div>
             </div>
         </div>
@@ -184,6 +653,8 @@
 
     try {
         const client = supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
+        // Init menu after DOM is ready
+        setTimeout(() => initStatusMenu(), 0);
         client
             .from('accounts')
             .select('*')
@@ -196,6 +667,7 @@
                     return;
                 }
                 if (!data) return;
+                updateStatusMenu(data, client);
                 // Business name in title
                 const name = data.business_name || data.company_name || data.company_nam || ('#' + id);
                 const titleEl = document.getElementById('bizName');
@@ -203,37 +675,64 @@
                 // Stats (review_number)
                 const statsEl = document.getElementById('statsCount');
                 if (statsEl) statsEl.textContent = data.review_number || '0';
-                // Contacts link (contact_table URL)
-                const contactsEl = document.getElementById('contactsLink');
-                if (contactsEl) {
-                    contactsEl.href = data.contact_table || `/company.html?id=${encodeURIComponent(id)}`;
+                // Load contacts preview
+                loadContactsPreview(client);
+                // Games card - Update toggle and game name
+                const cardGameToggle = document.getElementById('cardGameToggle');
+                const currentGameText = document.getElementById('currentGameText');
+                const changeGameBtn = document.getElementById('changeGameBtn');
+                const gameActive = data.games === true;
+                const gameName = data.wich_game || null;
+                
+                if (cardGameToggle) {
+                    cardGameToggle.classList.toggle('active', gameActive);
+                    // Toggle functionality
+                    const oldToggle = cardGameToggle;
+                    const newToggle = oldToggle.cloneNode(true);
+                    oldToggle.parentNode.replaceChild(newToggle, oldToggle);
+                    
+                    document.getElementById('cardGameToggle').addEventListener('click', async function() {
+                        const currentState = this.classList.contains('active');
+                        const newState = !currentState;
+                        try {
+                            // Get current game or default to 'roulette' if activating
+                            const currentGame = gameName || 'roulette';
+                            await client.from('accounts').update({ games: newState, wich_game: newState ? currentGame : null }).eq('id', id);
+                            this.classList.toggle('active', newState);
+                            updateGameCardText(newState, newState ? currentGame : null);
+                            // Also update status menu toggle and icon
+                            const statusToggle = document.getElementById('statusGameToggle');
+                            const statusGameIcon = document.getElementById('statusGameIcon');
+                            if (statusToggle) statusToggle.classList.toggle('active', newState);
+                            if (statusGameIcon) {
+                                statusGameIcon.className = newState ? 'status-icon healthy' : 'status-icon';
+                            }
+                        } catch(e) {
+                            console.error('Failed to update game status', e);
+                        }
+                    });
                 }
-                // Games
-                const gamesStatusEl = document.getElementById('gamesStatus');
-                const gameNameEl = document.getElementById('gameName');
-                if (gamesStatusEl) gamesStatusEl.textContent = data.games ? 'Activé' : 'Désactivé';
-                if (gameNameEl) gameNameEl.textContent = data.wich_game ? `(${data.wich_game})` : '';
+                
+                function updateGameCardText(isActive, game) {
+                    if (currentGameText) {
+                        if (isActive && game) {
+                            const gameNames = { roulette: 'Roue de la chance', dice: 'Dé', coin: 'Pile ou face', balldrop: 'Ball Drop' };
+                            currentGameText.textContent = gameNames[game] || game;
+                            if (changeGameBtn) changeGameBtn.style.display = 'inline-block';
+                        } else {
+                            currentGameText.textContent = 'Désactivé';
+                            if (changeGameBtn) changeGameBtn.style.display = 'none';
+                        }
+                    }
+                }
+                
+                updateGameCardText(gameActive, gameName);
                 // Google Maps card
                 const placeId = data.business_id || data.place_id || null;
                 const mapFrame = document.getElementById('miniMap');
                 if (placeId && mapFrame) {
                     // Use the Google Maps embed format to avoid X-Frame-Options issues
                     mapFrame.src = `https://www.google.com/maps?q=place_id:${encodeURIComponent(placeId)}&output=embed`;
-                }
-                // Live preview iframe: external sites may block embedding via CSP.
-                // If redirection_url is same-origin, use it; otherwise fall back to local company preview.
-                const previewEl = document.getElementById('livePreview');
-                if (previewEl) {
-                    let previewUrl = `/company.html?id=${encodeURIComponent(id)}`;
-                    if (data.redirection_url) {
-                        try {
-                            const u = new URL(data.redirection_url);
-                            if (u.origin === window.location.origin) {
-                                previewUrl = data.redirection_url;
-                            }
-                        } catch(_) {}
-                    }
-                    previewEl.src = previewUrl;
                 }
             });
     } catch (e) {

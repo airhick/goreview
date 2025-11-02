@@ -4,8 +4,50 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Connexion Google</title>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' http://localhost:*; connect-src 'self' http://localhost:* https://vigutqmfosxbpncussie.supabase.co https://accounts.google.com https://www.google.com https://maps.googleapis.com https://maps.gstatic.com; img-src 'self' data: https://*.googleusercontent.com https://www.google.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://www.google.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; frame-src https://www.google.com https://*.google.com;">
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' http://localhost:*; connect-src 'self' http://localhost:* https://vigutqmfosxbpncussie.supabase.co https://accounts.google.com https://www.google.com https://maps.googleapis.com https://maps.gstatic.com; img-src 'self' data: https://*.googleusercontent.com https://www.google.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://www.google.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://accounts.google.com; style-src-elem 'self' 'unsafe-inline' https://accounts.google.com; frame-src https://www.google.com https://*.google.com;">
+  <script>
+    // Suppress ONLY MCP/BrowserAutomation errors, keep all other errors visible
+    (function(){
+      const isMCPError = (msg) => {
+        if (!msg) return false;
+        const str = String(msg).toLowerCase();
+        return str.includes('localhost:62462') || 
+               str.includes('browserautomation') || 
+               str.includes('registerwithmcp') || 
+               str.includes('pollforcommands') ||
+               (str.includes('vm') && str.includes('register-iframe'));
+      };
+      
+      // Only suppress console errors that are MCP-related
+      const originalError = console.error;
+      console.error = function(...args) {
+        const isMCP = args.some(arg => isMCPError(String(arg)));
+        if (!isMCP) {
+          originalError.apply(console, args);
+        }
+      };
+      
+      // Suppress fetch errors only for localhost:62462
+      const originalFetch = window.fetch;
+      window.fetch = function(...args) {
+        if (args[0] && args[0].includes && args[0].includes('localhost:62462')) {
+          return Promise.reject(new Error('Blocked by dev filter')).catch(() => {});
+        }
+        return originalFetch.apply(this, args);
+      };
+      
+      // Suppress XMLHttpRequest errors only for localhost:62462
+      const originalOpen = XMLHttpRequest.prototype.open;
+      XMLHttpRequest.prototype.open = function(method, url, ...rest) {
+        if (url && url.includes('localhost:62462')) {
+          this.addEventListener('error', () => {}, {once: true});
+          this.addEventListener('loadend', () => {}, {once: true});
+        }
+        return originalOpen.apply(this, [method, url, ...rest]);
+      };
+    })();
+  </script>
+  <script src="https://accounts.google.com/gsi/client?hl=fr" async defer></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     /* Fond et typographie façon Google */
@@ -42,8 +84,8 @@
 
     /* Logo Google */
     .g-logo {
-      width: 40px;
-      height: 40px;
+      height: 36px;
+      width: auto;
       margin: 0 auto 12px;
       display: block;
     }
@@ -123,12 +165,76 @@
       font-size: 12px;
       color: #5f6368;
     }
+
+    /* Responsive styles */
+    @media (max-width: 600px) {
+      body {
+        padding: 16px;
+        align-items: flex-start;
+        padding-top: 40px;
+      }
+
+      .container {
+        max-width: 100%;
+        padding: 24px 20px 20px;
+        border-radius: 8px;
+      }
+
+      .title {
+        font-size: 20px;
+      }
+
+      .subtitle {
+        font-size: 13px;
+      }
+
+      .consent {
+        font-size: 12.5px;
+        margin-bottom: 14px;
+      }
+
+      .footnote {
+        font-size: 11px;
+      }
+
+      #googleBtn {
+        width: 100% !important;
+      }
+
+      .game-card {
+        max-width: 100%;
+      }
+
+      .btn, .btn-primary {
+        width: 100%;
+        padding: 12px;
+        font-size: 14px;
+      }
+    }
+
+    @media (max-width: 400px) {
+      .container {
+        padding: 20px 16px 18px;
+      }
+
+      .title {
+        font-size: 18px;
+      }
+
+      .subtitle {
+        font-size: 12px;
+      }
+
+      .g-logo {
+        height: 32px;
+      }
+    }
   </style>
 </head>
 <body>
   <div id="loginContainer" class="container">
     <!-- Logo Google officiel en PNG -->
-    <img class="g-logo" src="https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_92x30dp.png" alt="Google">
+    <img class="g-logo" src="https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png" alt="Google">
 
     <h1 class="title">Se connecter</h1>
     <p class="subtitle">Utilisez votre compte Google</p>
@@ -243,12 +349,13 @@
         locale: 'fr'
       });
 
+      const btnWidth = window.innerWidth <= 600 ? (window.innerWidth - 64) : 320;
       google.accounts.id.renderButton(
         document.getElementById("googleBtn"),
         {
           theme: "outline",
           size: "large",
-          width: 320,
+          width: btnWidth,
           locale: 'fr',
           text: 'signin_with'
         }
@@ -311,7 +418,8 @@
           callback: handleCredentialResponse,
           locale: 'fr'
         });
-        google.accounts.id.renderButton(document.getElementById("googleBtn"), { theme: "outline", size: "large", width: 320, locale: 'fr', text: 'signin_with' });
+        const btnWidth = window.innerWidth <= 600 ? (window.innerWidth - 64) : 320;
+        google.accounts.id.renderButton(document.getElementById("googleBtn"), { theme: "outline", size: "large", width: btnWidth, locale: 'fr', text: 'signin_with' });
       });
     }
 

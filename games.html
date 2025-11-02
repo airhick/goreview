@@ -4,18 +4,87 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Jeux - GoReview</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' http://localhost:*; connect-src 'self' http://localhost:* https://vigutqmfosxbpncussie.supabase.co; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline';">
+    <script>
+      // Suppress ONLY MCP/BrowserAutomation console messages, keep all other messages visible
+      (function(){
+        const isMCPMessage = (msg) => {
+          if (!msg) return false;
+          const str = String(msg).toLowerCase();
+          return str.includes('localhost:62462') || 
+                 str.includes('browserautomation') || 
+                 str.includes('registerwithmcp') || 
+                 str.includes('pollforcommands') ||
+                 str.includes('setting up console') ||
+                 str.includes('setting up resource') ||
+                 str.includes('tracking') ||
+                 str.includes('starting initialization') ||
+                 str.includes('registering with mcp') ||
+                 str.includes('injection complete') ||
+                 str.includes('starting command polling') ||
+                 (str.includes('vm') && str.includes('register-iframe'));
+        };
+        
+        // Suppress console.log messages that are MCP-related
+        const originalLog = console.log;
+        console.log = function(...args) {
+          const isMCP = args.some(arg => isMCPMessage(String(arg)));
+          if (!isMCP) {
+            originalLog.apply(console, args);
+          }
+        };
+        
+        // Suppress console errors that are MCP-related
+        const originalError = console.error;
+        console.error = function(...args) {
+          const isMCP = args.some(arg => isMCPMessage(String(arg)));
+          if (!isMCP) {
+            originalError.apply(console, args);
+          }
+        };
+        
+        // Suppress console.warn messages that are MCP-related
+        const originalWarn = console.warn;
+        console.warn = function(...args) {
+          const isMCP = args.some(arg => isMCPMessage(String(arg)));
+          if (!isMCP) {
+            originalWarn.apply(console, args);
+          }
+        };
+        
+        // Suppress fetch errors only for localhost:62462
+        const originalFetch = window.fetch;
+        window.fetch = function(...args) {
+          if (args[0] && args[0].includes && args[0].includes('localhost:62462')) {
+            return Promise.reject(new Error('Blocked by dev filter')).catch(() => {});
+          }
+          return originalFetch.apply(this, args);
+        };
+        
+        // Suppress XMLHttpRequest errors only for localhost:62462
+        const originalOpen = XMLHttpRequest.prototype.open;
+        XMLHttpRequest.prototype.open = function(method, url, ...rest) {
+          if (url && url.includes('localhost:62462')) {
+            this.addEventListener('error', () => {}, {once: true});
+            this.addEventListener('loadend', () => {}, {once: true});
+          }
+          return originalOpen.apply(this, [method, url, ...rest]);
+        };
+      })();
+    </script>
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        .centered-card { min-height: 100vh; display:flex; align-items:center; justify-content:center; background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%); }
-        .wrap { background:#ffffff; border:1px solid #e5e7eb; border-radius:20px; box-shadow:0 20px 30px -15px rgba(37,99,235,0.25); width:100%; max-width:820px; padding:2rem; }
+        .centered-card { min-height: 100vh; display:flex; align-items:center; justify-content:center; background: #ffffff; }
+        .wrap { background:#ffffff; border:1px solid #e5e7eb; border-radius:20px; box-shadow:0 10px 25px -5px rgba(0,0,0,0.08); width:100%; max-width:980px; padding:2.1rem; position:relative; overflow:hidden; }
         .header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; }
         .title { margin:0; font-size:1.5rem; }
         .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); gap:1rem; }
-        .option { border:1px solid #e3eafc; border-radius:16px; padding:1.1rem; display:flex; flex-direction:column; gap:0.6rem; background:linear-gradient(180deg, #ffffff 0%, #f8fbff 100%); box-shadow:0 6px 18px -10px rgba(37,99,235,0.35); }
+        .option { border:1px solid #e5e7eb; border-radius:16px; padding:1.1rem; display:flex; flex-direction:column; gap:0.6rem; background:#ffffff; box-shadow:none; transition: background .15s, border-color .15s; }
+        .option:hover { background:#f9fafb; border-color:#e5e7eb; }
         .option-head { display:flex; align-items:center; justify-content:space-between; gap:0.5rem; }
         .option-title { display:flex; align-items:center; gap:0.6rem; }
-        .icon { width:40px; height:40px; display:inline-flex; align-items:center; justify-content:center; border-radius:12px; background:#e0e7ff; color:#1e3a8a; box-shadow:inset 0 0 0 1px #c7d2fe; }
+        .icon { width:40px; height:40px; display:inline-flex; align-items:center; justify-content:center; border-radius:10px; background:#f3f4f6; color:#1f2937; border:1px solid #e5e7eb; font-size:18px; }
         .option h3 { margin:0 0 0.35rem 0; font-size:1.125rem; }
         .btn { display:inline-block; padding:0.55rem 1rem; border-radius:12px; border:1px solid #dbe2ff; text-decoration:none; font-weight:600; color:#0f172a; background:#ffffff; }
         .btn:hover { background:#eef2ff; border-color:#c7d2fe; }
@@ -31,6 +100,91 @@
         .row { display:flex; align-items:center; justify-content:space-between; gap:0.75rem; }
         .section { border:1px solid #e5e7eb; border-radius:14px; padding:1rem; margin-bottom:1rem; }
         .badge { display:inline-block; padding:0.25rem 0.5rem; background:#f3f4f6; border-radius:9999px; font-size:0.85rem; color:#374151; }
+        /* Roulette configuration panel */
+        .config-panel { display:none; margin-top:2rem; padding-top:2rem; border-top:2px solid #e5e7eb; }
+        .config-panel.active { display:block; }
+        .config-panel label { font-weight:600; display:block; margin-bottom:0.35rem; }
+        .config-panel input[type="text"] { width:100%; padding:0.7rem 0.9rem; border:1px solid #dde3ff; border-radius:14px; background:#ffffff; color:#111827; }
+        .config-panel .input-row { display:flex; gap:8px; align-items:stretch; }
+        .config-panel .input-row input { flex:1; }
+        .config-panel .input-row .btn-add-reward { 
+          padding:0.7rem 1.2rem; 
+          border-radius:14px; 
+          border:1px solid #6366f1; 
+          background:linear-gradient(135deg,#6366f1,#4f46e5); 
+          color:#ffffff; 
+          font-weight:700; 
+          font-size:1.2rem; 
+          cursor:pointer; 
+          min-width:48px; 
+          display:flex; 
+          align-items:center; 
+          justify-content:center;
+          box-shadow:0 4px 12px -4px rgba(99,102,241,0.4);
+          transition:all 0.2s;
+        }
+        .config-panel .input-row .btn-add-reward:hover { 
+          background:linear-gradient(135deg,#4f46e5,#4338ca); 
+          transform:translateY(-1px);
+          box-shadow:0 6px 16px -4px rgba(99,102,241,0.5);
+        }
+        .config-panel .input-row .btn-add-reward:active { 
+          transform:translateY(0);
+        }
+        .preview-section { margin-top:1rem; border:1px solid #dbe2ff; border-radius:18px; padding:1rem; background:#ffffff; }
+        .wheel-container { width:240px; height:240px; margin:10px auto 14px; position:relative; min-width:240px; min-height:240px; }
+        .wheel-canvas { 
+          width:240px !important; 
+          height:240px !important; 
+          border-radius:9999px; 
+          display:block !important; 
+          background:#f0f0f0;
+          min-width:240px;
+          min-height:240px;
+          visibility:visible !important;
+          opacity:1 !important;
+          border:2px solid #93c5fd;
+        }
+        .config-panel.active .wheel-canvas {
+          background:transparent;
+          border:none;
+        }
+        .chips { display:flex; gap:6px; flex-wrap:wrap; justify-content:center; margin:8px 0; }
+        .chip { background:#eef2ff; color:#1e3a8a; border:1px solid #c7d2fe; padding:6px 10px; border-radius:9999px; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
+        .chip:hover { background:#e0e7ff; }
+        .chip-delete { font-size:14px; font-weight:bold; color:#ef4444; opacity:0.7; line-height:1; cursor:pointer; margin-left:6px; }
+        .chip-delete:hover { opacity:1; }
+        .chip { position:relative; }
+        .chip:has(.chip-delete:hover) { background:#fee2e2; border-color:#fca5a5; }
+        /* Rewards list container */
+        .rewards-list-container { border:1px solid #e5e7eb; border-radius:14px; padding:1rem; background:#f9fafb; min-height:60px; }
+        .rewards-list-container:empty::before { content:"Aucune récompense ajoutée"; color:#9ca3af; font-style:italic; }
+        .reward-item { display:flex; align-items:center; justify-content:space-between; padding:0.75rem 1rem; margin-bottom:0.5rem; background:#ffffff; border:1px solid #e5e7eb; border-radius:10px; transition:all 0.2s; }
+        .reward-item:last-child { margin-bottom:0; }
+        .reward-item:hover { background:#f3f4f6; border-color:#d1d5db; box-shadow:0 2px 4px rgba(0,0,0,0.05); }
+        .reward-item-text { flex:1; font-size:0.95rem; color:#111827; font-weight:500; min-width:120px; }
+        .reward-item-probability { display:flex; align-items:center; gap:0.5rem; margin:0 1rem; min-width:140px; }
+        .reward-item-probability label { font-size:0.85rem; color:#6b7280; white-space:nowrap; }
+        .reward-item-probability input[type="range"] { flex:1; width:80px; }
+        .reward-item-probability .prob-value { font-size:0.85rem; font-weight:600; color:#6366f1; min-width:35px; text-align:right; }
+        .reward-item-delete { width:28px; height:28px; display:flex; align-items:center; justify-content:center; background:#fee2e2; border:1px solid #fecaca; border-radius:6px; color:#dc2626; font-size:18px; font-weight:bold; cursor:pointer; transition:all 0.2s; flex-shrink:0; }
+        .reward-item-delete:hover { background:#dc2626; color:#ffffff; border-color:#dc2626; transform:scale(1.1); }
+        .reward-item-delete:active { transform:scale(0.95); }
+        .preview-cta { display:flex; align-items:center; justify-content:center; gap:8px; margin-top:8px; }
+        .badge-win { display:inline-block; padding:4px 8px; border-radius:9999px; background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; font-weight:600; font-size:12px; }
+        /* Win popup modal */
+        .win-popup-overlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:10000; animation:fadeIn 0.3s; }
+        .win-popup { background:#ffffff; border-radius:20px; padding:2rem; max-width:400px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.3); text-align:center; animation:slideUp 0.3s; }
+        .win-popup h2 { margin:0 0 1rem 0; color:#065f46; font-size:1.5rem; font-weight:700; }
+        .win-popup .reward-name { font-size:1.5rem; font-weight:700; color:#6366f1; margin:1.5rem 0; padding:1.5rem; background:#eef2ff; border-radius:12px; border:2px solid #c7d2fe; }
+        .win-popup button { margin-top:1.5rem; padding:0.75rem 2rem; border-radius:12px; border:none; background:linear-gradient(135deg,#6366f1,#4f46e5); color:#ffffff; font-weight:600; font-size:1rem; cursor:pointer; box-shadow:0 4px 12px -4px rgba(99,102,241,0.4); }
+        .win-popup button:hover { background:linear-gradient(135deg,#4f46e5,#4338ca); transform:translateY(-1px); }
+        @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+        @keyframes slideUp { from { transform:translateY(20px); opacity:0; } to { transform:translateY(0); opacity:1; } }
+        input[type=range] { -webkit-appearance:none; appearance:none; height:10px; background:#ffffff; border:1px solid #dbe2ff; border-radius:9999px; width:100%; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:20px; height:20px; border-radius:50%; background:#ffffff; border:1px solid #c7d2fe; cursor:pointer; }
+        input[type=range]::-moz-range-thumb { width:20px; height:20px; border-radius:50%; background:#ffffff; border:1px solid #c7d2fe; cursor:pointer; }
+        .actions { display:flex; gap:0.6rem; margin-top:1rem; }
     </style>
 </head>
 <body>
@@ -54,7 +208,6 @@
       <div class='section row'>
         <div>
           <strong>Jeu</strong>
-          <div class='muted'>Activer ou désactiver les jeux</div>
         </div>
         <div id='toggleMaster' class='toggle' role='switch' aria-checked='false' tabindex='0'>
           <div class='knob'></div>
@@ -68,51 +221,57 @@
               <div class='icon'>🎡</div>
               <h3>Roue de la chance</h3>
             </div>
-            <div class='row'>
-              <div class='toggle' role='switch' aria-checked='false' tabindex='0' title='Activer ce jeu'></div>
-            </div>
           </div>
-          <p class='muted'>Tournez la roue pour tenter de gagner une récompense.</p>
-          <a class='btn-primary btn' href='${link('/games/roulette.html')}'>Configurer</a>
         </div>
-        <div class='option' data-game='dice'>
-          <div class='option-head'>
-            <div class='option-title'>
-              <div class='icon'>🎲</div>
-              <h3>Dé</h3>
             </div>
-            <div class='row'>
-              <div class='toggle' role='switch' aria-checked='false' tabindex='0' title='Activer ce jeu'></div>
+      <div class='config-panel' id='rouletteConfig'>
+        <h2 style='margin-top:0;'>Configuration - Roue de la chance</h2>
+        <p class='muted'>Définissez les récompenses et leur probabilité individuelle. <strong>Au moins une récompense est obligatoire.</strong></p>
+        <div class='grid'>
+          <div>
+            <label for="rouletteReward">Récompense <span style="color:#ef4444;">*</span></label>
+            <div class='input-row'>
+              <input id="rouletteReward" type="text" placeholder="Ex: Café offert, -10%, Goodie, ..." />
+              <button id="rouletteAddReward" type="button" class="btn-add-reward" title="Ajouter une récompense">+</button>
             </div>
           </div>
-          <p class='muted'>Lancez un dé pour tenter de gagner une récompense.</p>
-          <a class='btn-primary btn' href='${link('/games/dice.html')}'>Configurer</a>
         </div>
-        <div class='option' data-game='coin'>
-          <div class='option-head'>
-            <div class='option-title'>
-              <div class='icon'>🪙</div>
-              <h3>Pile ou face</h3>
+        <div class='grid' style='margin-top:1rem;'>
+          <div style='grid-column:1/-1;'>
+            <div style='display:flex; align-items:center; justify-content:space-between; margin-bottom:0.5rem;'>
+              <label style='margin:0; font-weight:600;'>Message à ajouter</label>
+              <div id="toggleCustomMessage" class='toggle' role='switch' aria-checked='false' tabindex='0' style='margin-left:1rem;'>
+                <div class='knob'></div>
+              </div>
             </div>
-            <div class='row'>
-              <div class='toggle' role='switch' aria-checked='false' tabindex='0' title='Activer ce jeu'></div>
+            <div id="customMessageContainer" style='display:none; margin-top:0.5rem;'>
+              <input id="customMessageInput" type="text" placeholder="Ex: Présentez cela au comptoir pour récupérer votre récompense" style="width:100%; padding:0.7rem 0.9rem; border:1px solid #dde3ff; border-radius:14px; background:#ffffff; color:#111827;" />
+              <small style="color:#6b7280; font-size:0.85rem; margin-top:0.25rem; display:block;">Ce message s'affichera dans la popup de victoire</small>
             </div>
           </div>
-          <p class='muted'>Pile ou face pour tenter de gagner une récompense.</p>
-          <a class='btn-primary btn' href='${link('/games/coin.html')}'>Configurer</a>
         </div>
-        <div class='option' data-game='balldrop'>
-          <div class='option-head'>
-            <div class='option-title'>
-              <div class='icon'>🏀</div>
-              <h3>Ball Drop</h3>
-            </div>
-            <div class='row'>
-              <div class='toggle' role='switch' aria-checked='false' tabindex='0' title='Activer ce jeu'></div>
+        <div class='grid' style='margin-top:0.75rem;'>
+          <div style='grid-column:1/-1;'>
+            <label style="margin-bottom:0.5rem; display:block; font-weight:600;">Liste des récompenses disponibles</label>
+            <div id="rouletteRewardsList" class="rewards-list-container"></div>
+            <div id="rewardsWarning" style="display:none; margin-top:0.5rem; padding:0.75rem; background:#fee2e2; border:1px solid #fecaca; border-radius:12px; color:#991b1b; font-size:0.9rem;">
+              <strong>⚠️ Attention:</strong> Vous devez ajouter au moins une récompense avant de pouvoir enregistrer.
             </div>
           </div>
-          <p class='muted'>Faites tomber la balle et visez la bonne case.</p>
-          <a class='btn-primary btn' href='${link('/games/balldrop.html')}'>Configurer</a>
+        </div>
+        <div class='preview-section'>
+          <div class='wheel-container'>
+            <canvas id="rouletteWheelCanvas" class="wheel-canvas"></canvas>
+            </div>
+          <div class="chips" id="rouletteChips"></div>
+          <div class="preview-cta">
+            <button id="rouletteSpin" type="button" class="btn">Tourner</button>
+            <span id="rouletteSpinResult" class="badge-win" style="display:none"></span>
+          </div>
+        </div>
+        <div class='actions' style='margin-top:1.5rem;'>
+          <button id="rouletteSave" class="btn-primary">Enregistrer</button>
+          <button id="rouletteReset" class="btn">Réinitialiser</button>
         </div>
       </div>
     </div>
@@ -142,55 +301,992 @@
   // Position toggle (before/after review)
   const masterEl = document.getElementById('toggleMaster');
 
-  // Game activation toggles (mutually exclusive)
-  const savedGame = get('active_game', null);
-  const cards = root.querySelectorAll('.option[data-game]');
-  cards.forEach(card => {
-    const game = card.getAttribute('data-game');
-    const sw = card.querySelector('.toggle');
-    if (!sw) return;
-    sw.setAttribute('aria-checked', savedGame === game ? 'true' : 'false');
-    const onToggle = () => {
-      const isActive = sw.getAttribute('aria-checked') === 'true';
-      // deactivate all
-      root.querySelectorAll('.option[data-game] .toggle').forEach(t => t.setAttribute('aria-checked', 'false'));
-      // activate this if previously off
-      const newState = !isActive;
-      if (newState) {
-        sw.setAttribute('aria-checked', 'true');
-        set('active_game', game);
-        updateAccount({ games: true, wich_game: game });
-      } else {
-        set('active_game', null);
-        updateAccount({ games: false, wich_game: null });
-      }
-    };
-    sw.addEventListener('click', onToggle);
-    sw.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(); } });
-  });
+  // With only one game, default active game is 'roulette' when enabled
+  set('active_game', get('active_game', 'roulette') || 'roulette');
+
+  // Show/hide config panel
+  const rouletteConfig = document.getElementById('rouletteConfig');
+  
+  const showConfigPanel = () => {
+    if (rouletteConfig) {
+      rouletteConfig.classList.add('active');
+      // Simple direct draw after panel is visible
+      setTimeout(() => {
+        drawRouletteWheel();
+      }, 200);
+    }
+  };
+  const hideConfigPanel = () => {
+    if (rouletteConfig) rouletteConfig.classList.remove('active');
+  };
 
   // Master toggle handlers
   if (masterEl) {
     const setAllOff = () => {
       root.querySelectorAll('.option[data-game] .toggle').forEach(t => t.setAttribute('aria-checked','false'));
       set('active_game', null);
+      hideConfigPanel();
     };
     const toggleMaster = () => {
       const next = masterEl.getAttribute('aria-checked') !== 'true';
       masterEl.setAttribute('aria-checked', next ? 'true' : 'false');
-      if (!next) { setAllOff(); updateAccount({ games:false, wich_game:null }); }
-      else { updateAccount({ games:true }); }
+      if (!next) { 
+        setAllOff(); 
+        updateAccount({ games:false, wich_game:null }); 
+      }
+      else { 
+        set('active_game','roulette'); 
+        updateAccount({ games:true, wich_game:'roulette' }); 
+        showConfigPanel();
+      }
     };
     masterEl.addEventListener('click', toggleMaster);
     masterEl.addEventListener('keydown', e => { if (e.key==='Enter'||e.key===' '){ e.preventDefault(); toggleMaster(); }});
   }
 
+  // Simple function to draw roulette wheel - accessible globally
+  let wheelAngle = 0;
+  function drawRouletteWheel() {
+    const canvas = document.getElementById('rouletteWheelCanvas');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    // Set canvas size
+    const size = 240;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = size * dpr;
+    canvas.height = size * dpr;
+    
+    const w = size;
+    const h = size;
+    const cx = w/2, cy = h/2;
+    const outerRadius = w/2 - 8;
+    const innerRadius = 20;
+    
+    // Clear and scale
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.save();
+    ctx.scale(dpr, dpr);
+    
+    // Get rewards from localStorage using the same key structure
+    const keyPrefix = `goreview_gamecfg_${id}_roulette_rewards`;
+    const rawRewards = JSON.parse(localStorage.getItem(keyPrefix) || '[]');
+    
+    // Convert to new format if needed
+    const rewards = rawRewards.map(r => {
+      if (typeof r === 'string') {
+        return { name: r, probability: 50 };
+      }
+      return {
+        name: r.name || r,
+        probability: r.probability || 50
+      };
+    });
+    
+    // Use actual number of rewards, minimum 1 for visual purposes
+    const n = Math.max(rewards.length || 0, 1);
+    const step = (Math.PI*2)/n;
+    
+    // Colors
+    const colors = ['#93c5fd', '#a5b4fc', '#c4b5fd', '#ddd6fe'];
+    
+    // Translate to center and rotate
+    ctx.translate(cx, cy);
+    ctx.rotate(wheelAngle);
+    
+    // Draw segments
+    for (let i=0; i<n; i++) {
+      const a0 = i*step - Math.PI/2;
+      const a1 = (i+1)*step - Math.PI/2;
+      
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a0) * innerRadius, Math.sin(a0) * innerRadius);
+      ctx.arc(0, 0, outerRadius, a0, a1);
+      ctx.lineTo(Math.cos(a1) * innerRadius, Math.sin(a1) * innerRadius);
+      ctx.arc(0, 0, innerRadius, a1, a0, true);
+      ctx.closePath();
+      ctx.fillStyle = colors[i % colors.length];
+      ctx.fill();
+      
+      // Separator
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a1) * innerRadius, Math.sin(a1) * innerRadius);
+      ctx.lineTo(Math.cos(a1) * outerRadius, Math.sin(a1) * outerRadius);
+      ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+    
+    // Draw text - show all rewards as segments
+    if (rewards.length > 0) {
+      ctx.font = 'bold 11px system-ui';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      for (let i=0; i<rewards.length; i++) {
+        const reward = rewards[i];
+        const label = reward ? (reward.name || reward) : '';
+        if (!label) continue;
+        const a = (i + 0.5)*step - Math.PI/2;
+        const tx = Math.cos(a) * (innerRadius + (outerRadius - innerRadius) * 0.6);
+        const ty = Math.sin(a) * (innerRadius + (outerRadius - innerRadius) * 0.6);
+        ctx.save();
+        ctx.translate(tx, ty);
+        ctx.rotate(a + Math.PI/2);
+        ctx.fillStyle = '#1e3a8a';
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1;
+        // Truncate text if too long to fit in segment
+        const maxLength = Math.floor((outerRadius - innerRadius) / 8);
+        ctx.fillText(label.substring(0, maxLength), 0, 0);
+        ctx.restore();
+      }
+    } else {
+      // Show placeholder text when no rewards
+      ctx.font = 'bold 14px system-ui';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#9ca3af';
+      ctx.fillText('Ajoutez des récompenses', 0, 0);
+    }
+    
+    // Center
+    ctx.fillStyle = '#6366f1';
+    ctx.beginPath();
+    ctx.arc(0, 0, innerRadius, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(0, 0, 6, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.restore();
+    
+    // Draw pointer at top (fixed position, not rotated)
+    ctx.save();
+    ctx.translate(cx, cy);
+    // Pointer points down at top of wheel
+    ctx.fillStyle = '#0f172a';
+    ctx.beginPath();
+    ctx.moveTo(0, -outerRadius - 2);
+    ctx.lineTo(-12, -outerRadius - 12);
+    ctx.lineTo(12, -outerRadius - 12);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+  
+  // Watch for panel visibility and draw
+  if (rouletteConfig) {
+    const observer = new MutationObserver(() => {
+      if (rouletteConfig.classList.contains('active')) {
+        setTimeout(() => drawRouletteWheel(), 100);
+      }
+    });
+    observer.observe(rouletteConfig, { attributes: true, attributeFilter: ['class'] });
+  }
+
+  // Roulette configuration logic
+  (function initRoulette(){
+    const key = (k) => `goreview_gamecfg_${id}_roulette_${k}`;
+    const rget = (k,d=null)=> JSON.parse(localStorage.getItem(key(k)) ?? 'null') ?? d;
+    const rset = (k,v)=> localStorage.setItem(key(k), JSON.stringify(v));
+    const $ = (s)=>document.getElementById(s);
+
+    function rewardsFromStorage(){
+      const saved = rget('rewards', null);
+      const legacy = ['slot1','slot2','slot3','slot4'].map(k=>rget(k,'')).filter(Boolean);
+      const rawRewards = Array.isArray(saved) && saved.length ? saved : (legacy.length? legacy : []);
+      
+      // Convert to new format if needed (handle both old string format and new object format)
+      const converted = rawRewards.map((r) => {
+        if (typeof r === 'string') {
+          // Old format: will get probability recalculated below
+          return { name: r, probability: 50 };
+        }
+        // New format: ensure it has both name and probability
+        return {
+          name: r.name || r,
+          probability: r.probability || 50
+        };
+      });
+      
+      // Recalculate probabilities to be equal if not already set properly
+      if (converted.length > 0) {
+        const equalProb = Math.round(100 / converted.length);
+        // Only recalculate if probabilities seem inconsistent (sum not close to 100)
+        const sumProb = converted.reduce((sum, r) => sum + (r.probability || 50), 0);
+        if (Math.abs(sumProb - 100) > 10) {
+          // Probabilities need to be recalculated
+          return converted.map(r => ({ name: r.name || r, probability: equalProb }));
+        }
+      }
+      
+      return converted;
+    }
+    function setRewards(list){ rset('rewards', list); }
+    function getRewards(){ 
+      const rewards = rget('rewards', []);
+      // Ensure format is correct
+      const converted = rewards.map(r => {
+        if (typeof r === 'string') {
+          return { name: r, probability: 50 };
+        }
+        return {
+          name: r.name || r,
+          probability: r.probability || 50
+        };
+      });
+      
+      // If rewards exist, ensure probabilities are normalized (equal distribution by default)
+      if (converted.length > 0) {
+        // Check if probabilities are equal (within 5% tolerance)
+        const equalProb = Math.round(100 / converted.length);
+        const allEqual = converted.every(r => Math.abs(r.probability - equalProb) <= 2);
+        
+        // If not equal and sum is way off, recalculate to equal
+        const sumProb = converted.reduce((sum, r) => sum + (r.probability || 50), 0);
+        if (!allEqual && Math.abs(sumProb - 100) > 10) {
+          return converted.map(r => ({ name: r.name || r, probability: equalProb }));
+        }
+      }
+      
+      return converted;
+    }
+    function getRewardNames(){ return getRewards().map(r => r.name); }
+    
+    function renderRewards(){
+      const wrap = document.getElementById('rouletteRewardsList');
+      const warningEl = document.getElementById('rewardsWarning');
+      const countBadge = document.getElementById('rewardsCountBadge');
+      if (!wrap) return;
+      wrap.innerHTML = '';
+      const rewards = getRewards();
+      const count = rewards.length;
+      
+      // Update count badge
+      if (countBadge) {
+        if (count === 0) {
+          countBadge.textContent = '0 (requis: minimum 1)';
+          countBadge.style.background = '#fee2e2';
+          countBadge.style.color = '#991b1b';
+        } else {
+          countBadge.textContent = count + (count === 1 ? ' récompense' : ' récompenses');
+          countBadge.style.background = '#d1fae5';
+          countBadge.style.color = '#065f46';
+        }
+      }
+      
+      // Show/hide warning
+      if (warningEl) {
+        warningEl.style.display = count === 0 ? 'block' : 'none';
+      }
+      
+      // Create list of reward items
+      rewards.forEach((reward, idx)=>{
+        const rewardName = reward.name || reward;
+        const rewardProb = reward.probability || 50;
+        
+        const rewardItem = document.createElement('div');
+        rewardItem.className = 'reward-item';
+        
+        const rewardText = document.createElement('span');
+        rewardText.className = 'reward-item-text';
+        rewardText.textContent = rewardName;
+        
+        // Probability slider container
+        const probContainer = document.createElement('div');
+        probContainer.className = 'reward-item-probability';
+        
+        const probLabel = document.createElement('label');
+        probLabel.textContent = 'Prob:';
+        
+        const probSlider = document.createElement('input');
+        probSlider.type = 'range';
+        probSlider.min = '1';
+        probSlider.max = '100';
+        probSlider.value = rewardProb;
+        probSlider.id = `reward-prob-${idx}`;
+        
+        const probValue = document.createElement('span');
+        probValue.className = 'prob-value';
+        probValue.textContent = rewardProb + '%';
+        probValue.id = `reward-prob-value-${idx}`;
+        
+        // Update probability on slider change
+        probSlider.addEventListener('input', function() {
+          const newProb = parseInt(this.value);
+          probValue.textContent = newProb + '%';
+          const currentRewards = getRewards();
+          currentRewards[idx].probability = newProb;
+          setRewards(currentRewards);
+          drawRouletteWheel(); // Redraw wheel with new probabilities
+        });
+        
+        probContainer.appendChild(probLabel);
+        probContainer.appendChild(probSlider);
+        probContainer.appendChild(probValue);
+        
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'reward-item-delete';
+        deleteBtn.type = 'button';
+        deleteBtn.textContent = '×';
+        deleteBtn.title = 'Supprimer cette récompense';
+        deleteBtn.setAttribute('aria-label', 'Supprimer ' + rewardName);
+        
+        const removeReward = () => {
+          // Prevent removing if it's the last reward
+          const currentRewards = getRewards();
+          if (currentRewards.length === 1) {
+            alert('Vous devez avoir au moins une récompense. Ajoutez-en une autre avant de supprimer celle-ci.');
+            return;
+          }
+          // Remove the reward
+          const filtered = currentRewards.filter((_,i)=>i!==idx);
+          
+          // Recalculate probabilities for remaining rewards
+          const remainingCount = filtered.length;
+          const newProb = Math.round(100 / remainingCount);
+          const next = filtered.map(r => ({ 
+            name: r.name || r, 
+            probability: newProb 
+          }));
+          
+          setRewards(next); 
+          renderRewards(); 
+          renderPreview(); 
+          drawRouletteWheel();
+        };
+        
+        deleteBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          removeReward();
+        });
+        
+        rewardItem.appendChild(rewardText);
+        rewardItem.appendChild(probContainer);
+        rewardItem.appendChild(deleteBtn);
+        wrap.appendChild(rewardItem);
+      });
+    }
+
+    // Simple initialization - draw wheel when ready
+    setTimeout(() => {
+      drawRouletteWheel();
+    }, 500);
+    
+    // Initialize renderPreview to use simple draw function
+    function renderPreview(){
+      const chips = document.getElementById('rouletteChips');
+      if (chips) {
+        chips.innerHTML = '';
+        const rewards = getRewards();
+        if (rewards.length === 0) {
+          const emptyMsg = document.createElement('span');
+          emptyMsg.style.color = '#9ca3af';
+          emptyMsg.style.fontSize = '0.9rem';
+          emptyMsg.textContent = 'Aucune récompense ajoutée';
+          chips.appendChild(emptyMsg);
+        } else {
+          rewards.forEach(reward => { 
+            const rewardName = reward.name || reward;
+            const s = document.createElement('span'); 
+            s.className = 'chip'; 
+            s.textContent = rewardName; 
+            chips.appendChild(s); 
+          });
+        }
+      }
+      drawRouletteWheel();
+    }
+
+    function easeOutCubic(t){ return 1 - Math.pow(1 - t, 3); }
+    function spinWheel(){
+      const rewards = getRewards();
+      if (rewards.length === 0) {
+        alert('Veuillez ajouter au moins une récompense avant de tourner la roue.');
+        return;
+      }
+      
+      const spinBtn = document.getElementById('rouletteSpin');
+      if (spinBtn) {
+        spinBtn.disabled = true;
+        spinBtn.textContent = 'Rotation...';
+        spinBtn.style.opacity = '0.7';
+        spinBtn.style.cursor = 'not-allowed';
+      }
+      
+      const duration = 2000 + Math.random() * 1000; // 2-3 seconds
+      const start = performance.now();
+      const startAngle = wheelAngle;
+      // Spin multiple times (5-8 full rotations) plus a random angle
+      const rotations = 5 + Math.random() * 3;
+      const randomAngle = Math.random() * Math.PI * 2;
+      const targetAngle = startAngle + (rotations * Math.PI * 2) + randomAngle;
+      
+      let isAnimating = true;
+      
+      function frame(now){
+        if (!isAnimating) return;
+        
+        const t = Math.min(1, (now - start)/duration);
+        const eased = easeOutCubic(t);
+        wheelAngle = startAngle + (targetAngle - startAngle) * eased;
+        drawRouletteWheel();
+        
+        if (t < 1) {
+          requestAnimationFrame(frame);
+        } else {
+          // Animation complete - calculate which reward was won
+          isAnimating = false;
+          showSpinResult();
+          
+          const spinBtnAfter = document.getElementById('rouletteSpin');
+          if (spinBtnAfter) {
+            spinBtnAfter.disabled = false;
+            spinBtnAfter.textContent = 'Tourner';
+            spinBtnAfter.style.opacity = '1';
+            spinBtnAfter.style.cursor = 'pointer';
+          }
+        }
+      }
+      
+      requestAnimationFrame(frame);
+    }
+    
+    function showSpinResult(){
+      const rewards = getRewards();
+      if (rewards.length === 0) return;
+      
+      // Calculate which segment the pointer landed on
+      // The pointer is at top (angle -90 degrees / -PI/2)
+      // Normalize wheelAngle to 0-2PI range
+      let normalizedAngle = wheelAngle % (Math.PI * 2);
+      if (normalizedAngle < 0) normalizedAngle += Math.PI * 2;
+      
+      // Convert to positive angle from top (-90 degrees)
+      // We need to account for rotation direction (clockwise)
+      // Since the wheel rotates clockwise, we need to reverse the calculation
+      let pointerAngle = (-Math.PI / 2) - normalizedAngle;
+      if (pointerAngle < 0) pointerAngle += Math.PI * 2;
+      
+      // Calculate which segment (0-indexed)
+      const step = (Math.PI * 2) / rewards.length;
+      let segmentIndex = Math.floor(pointerAngle / step);
+      
+      // Ensure index is within bounds
+      segmentIndex = segmentIndex % rewards.length;
+      if (segmentIndex < 0) segmentIndex += rewards.length;
+      
+      // Get the reward that was landed on
+      const selectedReward = rewards[segmentIndex] || rewards[0];
+      const rewardName = selectedReward.name || selectedReward;
+      
+      // Always show popup with the reward that was landed on
+      showWinPopup(rewardName);
+      
+      // Hide the result badge since we don't have win/lose
+      const spinResult = document.getElementById('rouletteSpinResult');
+      if (spinResult) {
+        spinResult.style.display = 'none';
+      }
+    }
+    
+    function showWinPopup(rewardName) {
+      // Remove any existing popup
+      const existingPopup = document.getElementById('winPopupOverlay');
+      if (existingPopup) {
+        existingPopup.remove();
+      }
+      
+      // Get custom message if enabled
+      const toggleMessage = document.getElementById('toggleCustomMessage');
+      const customMessageInput = document.getElementById('customMessageInput');
+      const hasCustomMessage = toggleMessage && toggleMessage.getAttribute('aria-checked') === 'true';
+      const customMessage = hasCustomMessage && customMessageInput ? customMessageInput.value.trim() : '';
+      
+      // Create popup overlay
+      const overlay = document.createElement('div');
+      overlay.id = 'winPopupOverlay';
+      overlay.className = 'win-popup-overlay';
+      
+      // Create popup content
+      const popup = document.createElement('div');
+      popup.className = 'win-popup';
+      
+      let popupHTML = `
+        <h2>Vous avez gagné :</h2>
+        <div class="reward-name">${rewardName}</div>
+      `;
+      
+      if (customMessage) {
+        popupHTML += `<div style="margin-top:1rem; padding:0.75rem; background:#f3f4f6; border-radius:10px; color:#374151; font-size:0.9rem; line-height:1.5;">${customMessage}</div>`;
+      }
+      
+      popupHTML += `<button onclick="this.closest('.win-popup-overlay').remove()">Fermer</button>`;
+      
+      popup.innerHTML = popupHTML;
+      
+      overlay.appendChild(popup);
+      document.body.appendChild(overlay);
+      
+      // Close on overlay click
+      overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) {
+          overlay.remove();
+        }
+      });
+      
+      // Close on Escape key
+      const closeOnEscape = function(e) {
+        if (e.key === 'Escape') {
+          overlay.remove();
+          document.removeEventListener('keydown', closeOnEscape);
+        }
+      };
+      document.addEventListener('keydown', closeOnEscape);
+    }
+    
+    // Event listeners - set up directly after HTML injection
+    const commitReward = () => { 
+      const rewardInput = document.getElementById('rouletteReward');
+      if (!rewardInput) {
+        console.error('rewardInput not found');
+        return;
+      }
+      
+      const v = (rewardInput.value || '').trim(); 
+      if (!v) {
+        rewardInput.focus();
+        return;
+      }
+      const currentRewards = getRewards(); 
+      // Calculate default probability: 100 / (current count + 1)
+      const newCount = currentRewards.length + 1;
+      const defaultProb = Math.round(100 / newCount);
+      
+      // Recalculate all probabilities to be equal
+      const next = currentRewards.map(() => ({ name: '', probability: defaultProb })); // Will be replaced
+      // Copy existing rewards with recalculated probabilities
+      currentRewards.forEach((r, idx) => {
+        next[idx] = { name: r.name || r, probability: defaultProb };
+      });
+      // Add new reward
+      next.push({ name: v, probability: defaultProb }); 
+      setRewards(next); 
+      rewardInput.value = ''; 
+      rewardInput.focus(); // Keep focus on input for easy adding
+      renderRewards(); 
+      renderPreview(); 
+      drawRouletteWheel(); // Explicitly redraw the wheel
+    };
+    
+    // Use event delegation - attach to document to catch clicks anywhere
+    // This ensures it works even if elements are added dynamically
+    document.addEventListener('click', function(e) {
+      if (e.target && e.target.id === 'rouletteAddReward') {
+        e.preventDefault();
+        e.stopPropagation();
+        commitReward();
+        return false;
+      }
+    });
+    
+    // Setup event listeners - call this after HTML is injected
+    function setupRewardButton() {
+      const addRewardBtn = document.getElementById('rouletteAddReward');
+      const rewardInput = document.getElementById('rouletteReward');
+      
+      if (!addRewardBtn || !rewardInput) {
+        // Retry if elements not found
+        setTimeout(setupRewardButton, 100);
+        return;
+      }
+      
+      // Attach click listener directly
+      addRewardBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        commitReward();
+        return false;
+      }, true); // Use capture phase
+      
+      // Also set onclick as backup
+      addRewardBtn.onclick = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        commitReward();
+        return false;
+      };
+      
+      // Add Enter key listener
+      rewardInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          commitReward();
+        }
+      });
+    }
+    
+    // Setup listeners immediately after HTML injection
+    setTimeout(setupRewardButton, 50);
+    
+    // Also setup when panel becomes visible
+    const configPanel = document.getElementById('rouletteConfig');
+    if (configPanel) {
+      const observer = new MutationObserver(() => {
+        if (configPanel.classList.contains('active')) {
+          setTimeout(setupRewardButton, 50);
+        }
+      });
+      observer.observe(configPanel, { attributes: true, attributeFilter: ['class'] });
+    }
+    
+    // Additional setup attempts
+    setTimeout(setupRewardButton, 200);
+    setTimeout(setupRewardButton, 500);
+    setTimeout(setupRewardButton, 1000);
+    
+    // Win rate removed - now each reward has its own probability slider
+    
+    // Custom message toggle setup
+    const toggleMessage = document.getElementById('toggleCustomMessage');
+    const messageContainer = document.getElementById('customMessageContainer');
+    const messageInput = document.getElementById('customMessageInput');
+    
+    if (toggleMessage && messageContainer && messageInput) {
+      // Load saved state
+      const savedToggle = rget('customMessageEnabled', false);
+      const savedMessage = rget('customMessage', '');
+      
+      if (savedToggle) {
+        toggleMessage.setAttribute('aria-checked', 'true');
+        messageContainer.style.display = 'block';
+      }
+      if (savedMessage) {
+        messageInput.value = savedMessage;
+      }
+      
+      // Toggle handler
+      const toggleCustomMessage = () => {
+        const isActive = toggleMessage.getAttribute('aria-checked') === 'true';
+        const next = !isActive;
+        toggleMessage.setAttribute('aria-checked', next ? 'true' : 'false');
+        messageContainer.style.display = next ? 'block' : 'none';
+        rset('customMessageEnabled', next);
+        if (!next) {
+          messageInput.value = '';
+          rset('customMessage', '');
+        }
+      };
+      
+      toggleMessage.addEventListener('click', toggleCustomMessage);
+      toggleMessage.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          toggleCustomMessage();
+        }
+      });
+      
+      // Save message on input change
+      messageInput.addEventListener('input', () => {
+        rset('customMessage', messageInput.value.trim());
+      });
+    }
+
+    // Use event delegation for spin button - attach to document
+    document.addEventListener('click', function(e) {
+      if (e.target && e.target.id === 'rouletteSpin') {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const rewards = getRewards();
+        if (rewards.length === 0) {
+          alert('Veuillez ajouter au moins une récompense avant de tourner la roue.');
+          return;
+        }
+        
+        const spinResult = document.getElementById('rouletteSpinResult');
+        if (spinResult) {
+          spinResult.style.display = 'none';
+          spinResult.textContent = '';
+        }
+        
+        spinWheel();
+        return false;
+      }
+    });
+    
+    // Setup spin button listener directly as well
+    function setupSpinButton() {
+      const spinBtn = document.getElementById('rouletteSpin');
+      const spinResult = document.getElementById('rouletteSpinResult');
+      
+      if (!spinBtn) {
+        setTimeout(setupSpinButton, 100);
+        return;
+      }
+      
+      // Remove and reattach to ensure clean state
+      const newBtn = spinBtn.cloneNode(true);
+      spinBtn.parentNode.replaceChild(newBtn, spinBtn);
+      
+      newBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const rewards = getRewards();
+        if (rewards.length === 0) {
+          alert('Veuillez ajouter au moins une récompense avant de tourner la roue.');
+          return;
+        }
+        
+        if (spinResult) {
+          spinResult.style.display = 'none';
+          spinResult.textContent = '';
+        }
+        
+        spinWheel();
+        return false;
+      }, true);
+      
+      // Also set onclick as backup
+      newBtn.onclick = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const rewards = getRewards();
+        if (rewards.length === 0) {
+          alert('Veuillez ajouter au moins une récompense avant de tourner la roue.');
+          return;
+        }
+        
+        if (spinResult) {
+          spinResult.style.display = 'none';
+          spinResult.textContent = '';
+        }
+        
+        spinWheel();
+        return false;
+      };
+    }
+    
+    // Setup spin button - try multiple times
+    setTimeout(setupSpinButton, 50);
+    setTimeout(setupSpinButton, 200);
+    setTimeout(setupSpinButton, 500);
+    
+    // Also setup when panel becomes visible (reuse configPanel from above)
+    if (configPanel) {
+      const spinObserver = new MutationObserver(() => {
+        if (configPanel.classList.contains('active')) {
+          setTimeout(setupSpinButton, 50);
+        }
+      });
+      spinObserver.observe(configPanel, { attributes: true, attributeFilter: ['class'] });
+    }
+
+    const saveBtn = $('#rouletteSave');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', async ()=>{
+        const rewards = getRewards();
+        
+        // Validate: at least 1 reward is required
+        if (rewards.length === 0) {
+          alert('⚠️ Veuillez ajouter au moins une récompense avant d\'enregistrer.\n\nLa roue de la chance nécessite au minimum une récompense pour fonctionner.');
+          const rewardInput = document.getElementById('rouletteReward');
+          if (rewardInput) {
+            rewardInput.focus();
+            rewardInput.style.borderColor = '#ef4444';
+            setTimeout(() => {
+              rewardInput.style.borderColor = '';
+            }, 3000);
+          }
+          return;
+        }
+        
+        setRewards(rewards);
+        const rewardNames = rewards.map(r => r.name || r);
+        const paramsStr = new URLSearchParams({ id, game:'roulette', rewards: rewardNames.join('|') }).toString();
+        const redir = `${location.origin}/company.html?${paramsStr}`;
+        try {
+          await sb.from('accounts').update({ 
+            games: true, 
+            wich_game: 'roulette', 
+            redirection_url: redir, 
+            games_details: JSON.stringify({ rewards }) 
+          }).eq('id', id);
+          alert('✓ Configuration enregistrée avec succès !\n\n' + rewards.length + ' récompense(s) configurée(s).');
+        } catch(e){ 
+          console.error('Save failed', e);
+          alert('Erreur lors de l\'enregistrement. Veuillez réessayer.');
+        }
+      });
+    }
+
+    // Setup reset button - use event delegation to ensure it always works
+    function setupResetButton() {
+      const resetBtn = document.getElementById('rouletteReset');
+      
+      if (!resetBtn) {
+        setTimeout(setupResetButton, 100);
+        return;
+      }
+      
+      // Remove and reattach to ensure clean state
+      const newBtn = resetBtn.cloneNode(true);
+      resetBtn.parentNode.replaceChild(newBtn, resetBtn);
+      
+      newBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        if (confirm('Êtes-vous sûr de vouloir réinitialiser toutes les récompenses ? Cette action est irréversible.')) {
+          setRewards([]);
+          const rewardInput = document.getElementById('rouletteReward');
+          if (rewardInput) rewardInput.value = '';
+          
+          // Also reset custom message
+          rset('customMessageEnabled', false);
+          rset('customMessage', '');
+          const customMessageToggle = document.getElementById('toggleCustomMessage');
+          if (customMessageToggle) {
+            customMessageToggle.setAttribute('aria-checked', 'false');
+            customMessageToggle.classList.remove('checked');
+          }
+          const customMessageContainer = document.getElementById('customMessageContainer');
+          if (customMessageContainer) {
+            customMessageContainer.style.display = 'none';
+          }
+          const customMessageInput = document.getElementById('customMessageInput');
+          if (customMessageInput) {
+            customMessageInput.value = '';
+          }
+          
+          renderRewards();
+          renderPreview();
+        }
+        
+        return false;
+      }, true);
+      
+      // Also set onclick as backup
+      newBtn.onclick = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        if (confirm('Êtes-vous sûr de vouloir réinitialiser toutes les récompenses ? Cette action est irréversible.')) {
+          setRewards([]);
+          const rewardInput = document.getElementById('rouletteReward');
+          if (rewardInput) rewardInput.value = '';
+          
+          // Also reset custom message
+          rset('customMessageEnabled', false);
+          rset('customMessage', '');
+          const customMessageToggle = document.getElementById('toggleCustomMessage');
+          if (customMessageToggle) {
+            customMessageToggle.setAttribute('aria-checked', 'false');
+            customMessageToggle.classList.remove('checked');
+          }
+          const customMessageContainer = document.getElementById('customMessageContainer');
+          if (customMessageContainer) {
+            customMessageContainer.style.display = 'none';
+          }
+          const customMessageInput = document.getElementById('customMessageInput');
+          if (customMessageInput) {
+            customMessageInput.value = '';
+          }
+          
+          renderRewards();
+          renderPreview();
+        }
+        
+        return false;
+      };
+    }
+    
+    // Also use event delegation on document as backup
+    document.addEventListener('click', function(e) {
+      if (e.target && e.target.id === 'rouletteReset') {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        if (confirm('Êtes-vous sûr de vouloir réinitialiser toutes les récompenses ? Cette action est irréversible.')) {
+          setRewards([]);
+          const rewardInput = document.getElementById('rouletteReward');
+          if (rewardInput) rewardInput.value = '';
+          
+          // Also reset custom message
+          rset('customMessageEnabled', false);
+          rset('customMessage', '');
+          const customMessageToggle = document.getElementById('toggleCustomMessage');
+          if (customMessageToggle) {
+            customMessageToggle.setAttribute('aria-checked', 'false');
+            customMessageToggle.classList.remove('checked');
+          }
+          const customMessageContainer = document.getElementById('customMessageContainer');
+          if (customMessageContainer) {
+            customMessageContainer.style.display = 'none';
+          }
+          const customMessageInput = document.getElementById('customMessageInput');
+          if (customMessageInput) {
+            customMessageInput.value = '';
+          }
+          
+          renderRewards();
+          renderPreview();
+        }
+        
+        return false;
+      }
+    }, true);
+    
+    // Initialize reset button
+    setupResetButton();
+    setTimeout(setupResetButton, 100);
+    setTimeout(setupResetButton, 300);
+    
+    // Initialize - ensure probabilities are properly distributed
+    let initialRewards = rewardsFromStorage();
+    if (initialRewards.length > 0) {
+      // Ensure all probabilities are equal on first load
+      const equalProb = Math.round(100 / initialRewards.length);
+      initialRewards = initialRewards.map(r => ({
+        name: r.name || r,
+        probability: equalProb
+      }));
+      setRewards(initialRewards);
+    }
+    renderRewards();
+    renderPreview(); // Draw the wheel initially
+  })();
+
   // Initialize from Supabase if available
   (async function initFromRemote(){
     const row = await fetchAccount();
-    if (!row) return;
+    if (!row) {
+      // Even if no remote data, ensure wheel can be drawn when panel becomes visible
+      setTimeout(() => {
+        if (rouletteConfig && rouletteConfig.classList.contains('active')) {
+          drawRouletteWheel();
+        }
+      }, 1000);
+      return;
+    }
     // master
-    if (masterEl) masterEl.setAttribute('aria-checked', row.games ? 'true' : 'false');
+    if (masterEl) {
+      masterEl.setAttribute('aria-checked', row.games ? 'true' : 'false');
+      if (row.games) {
+        showConfigPanel();
+        // Force wheel redraw after panel is shown
+        setTimeout(() => {
+          drawRouletteWheel();
+        }, 300);
+      }
+    }
     // active game
     if (row.wich_game) {
       set('active_game', row.wich_game);

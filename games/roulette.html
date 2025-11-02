@@ -7,24 +7,37 @@
   <link rel="stylesheet" href="../styles.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    .page { min-height:100vh; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,#f9fafb 0%, #ffffff 100%); }
-    .card { width:100%; max-width:780px; background:#ffffff; border:1px solid #e3eafc; border-radius:20px; box-shadow:0 20px 30px -15px rgba(37,99,235,0.25); padding:1.5rem; }
+    .page { min-height:100vh; display:flex; align-items:center; justify-content:center; background:#ffffff; }
+    .card { width:100%; max-width:880px; background:#ffffff; border-radius:18px; box-shadow:0 10px 25px -5px rgba(0,0,0,0.08); padding:1.9rem; position:relative; overflow:hidden; border:1px solid #e5e7eb; }
     .row { display:flex; gap:0.75rem; }
-    .grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(260px,1fr)); gap:0.75rem; }
+    .grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(260px,1fr)); gap:0.9rem; }
     label { font-weight:600; display:block; margin-bottom:0.35rem; }
-    input, select { width:100%; padding:0.6rem 0.8rem; border:1px solid #e5e7eb; border-radius:10px; background:#ffffff; color:#111827; }
+    input, select { width:100%; padding:0.7rem 0.9rem; border:1px solid #dde3ff; border-radius:14px; background:#ffffff; color:#111827; box-shadow:inset 0 1px 0 rgba(255,255,255,0.6); }
     input::placeholder { color:#9ca3af; }
-    .actions { display:flex; gap:0.5rem; margin-top:1rem; }
-    .btn { display:inline-block; padding:0.6rem 0.9rem; border-radius:10px; border:1px solid #e5e7eb; text-decoration:none; font-weight:600; color:#111827; }
-    .btn:hover { background:#f3f4f6; }
-    .btn-primary { color:#fff; background:#6366f1; border-color:#6366f1; }
-    .btn-primary:hover { background:#4f46e5; }
+    .actions { display:flex; gap:0.6rem; margin-top:1rem; }
+    .btn { display:inline-block; padding:0.72rem 1.05rem; border-radius:14px; border:1px solid #dbe2ff; text-decoration:none; font-weight:700; color:#0f172a; background:linear-gradient(180deg,#ffffff,#f8fbff); transition:transform .18s ease, box-shadow .18s ease, background .18s ease; box-shadow: 0 6px 12px -8px rgba(2,6,23,0.25), inset 0 1px 0 rgba(255,255,255,0.6); }
+    .btn:hover { background:linear-gradient(180deg,#ffffff,#eef2ff); transform:translateY(-1px); box-shadow:0 10px 18px -10px rgba(2,6,23,0.35); }
+    .btn-primary { color:#fff; background:linear-gradient(135deg,#2563eb,#7c3aed); border-color:#6d28d9; box-shadow:0 14px 30px -14px rgba(67,56,202,0.65), inset 0 1px 0 rgba(255,255,255,0.25); }
+    .btn-primary:hover { background:linear-gradient(135deg,#1d4ed8,#6d28d9); }
     .muted { color:#6b7280; font-size:0.95rem; }
-    .preview { margin-top:1rem; border:1px solid #dbe2ff; border-radius:16px; padding:0.9rem; background:linear-gradient(180deg,#ffffff 0%, #f8fbff 100%); }
-    .wheel { width:160px; height:160px; border-radius:9999px; background:conic-gradient(#60a5fa 0 var(--win), #93c5fd var(--win) 100%); margin:0 auto 10px; position:relative; box-shadow:inset 0 0 0 8px #e0e7ff; }
-    .wheel::after { content:''; position:absolute; top:-12px; left:50%; transform:translateX(-50%); width:0; height:0; border-left:10px solid transparent; border-right:10px solid transparent; border-bottom:14px solid #1e3a8a; }
+    .preview { margin-top:1rem; border:1px solid #dbe2ff; border-radius:18px; padding:1rem; background:linear-gradient(180deg,#ffffff 0%, #f1f5ff 100%); }
+    .wheel { width:240px; height:240px; border-radius:9999px; margin:10px auto 14px; position:relative; transition: transform 1.3s cubic-bezier(.2,.8,.2,1); transform: rotate(var(--rot, 0deg)); background:
+      radial-gradient(closest-side at 50% 50%, rgba(255,255,255,0.85), transparent 68%),
+      conic-gradient(from -90deg, #34d399 0 var(--win), #f87171 var(--win) 100%);
+      box-shadow: inset 0 0 0 16px #e0e7ff, 0 16px 40px -24px rgba(37,99,235,0.5), inset 0 -20px 40px -30px rgba(2,6,23,0.15);
+    }
+    .wheel::before { content:""; position:absolute; inset:18px; border-radius:inherit; background:radial-gradient(circle at 30% 30%, rgba(255,255,255,0.35), transparent 40%); pointer-events:none; }
+    .wheel::after { content:''; position:absolute; top:-14px; left:50%; transform:translateX(-50%); width:0; height:0; border-left:12px solid transparent; border-right:12px solid transparent; border-bottom:16px solid #0f172a; filter: drop-shadow(0 2px 6px rgba(2,6,23,0.35)); }
     .chips { display:flex; gap:6px; flex-wrap:wrap; justify-content:center; }
-    .chip { background:#e0e7ff; color:#1e3a8a; border:1px solid #c7d2fe; padding:4px 8px; border-radius:9999px; font-size:12px; }
+    .chip { background:linear-gradient(180deg,#eef2ff,#e0e7ff); color:#1e3a8a; border:1px solid #c7d2fe; padding:6px 10px; border-radius:9999px; font-size:12px; box-shadow:inset 0 1px 0 rgba(255,255,255,0.7), 0 4px 10px -6px rgba(37,99,235,0.35); }
+    .preview-cta { display:flex; align-items:center; justify-content:center; gap:8px; margin-top:8px; }
+    .badge-win { display:inline-block; padding:4px 8px; border-radius:9999px; background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; font-weight:600; font-size:12px; }
+    /* White slider styling */
+    input[type=range] { -webkit-appearance:none; appearance:none; height:10px; background:#ffffff; border:1px solid #dbe2ff; border-radius:9999px; box-shadow:inset 0 1px 0 rgba(255,255,255,0.6); }
+    input[type=range]:focus { outline:none; }
+    input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:20px; height:20px; border-radius:50%; background:#ffffff; border:1px solid #c7d2fe; box-shadow:0 4px 10px -6px rgba(2,6,23,0.25), inset 0 1px 0 rgba(255,255,255,0.8); cursor:pointer; }
+    input[type=range]::-moz-range-thumb { width:20px; height:20px; border-radius:50%; background:#ffffff; border:1px solid #c7d2fe; box-shadow:0 4px 10px -6px rgba(2,6,23,0.25), inset 0 1px 0 rgba(255,255,255,0.8); cursor:pointer; }
+    input[type=range]::-moz-range-track { height:10px; background:#ffffff; border:1px solid #dbe2ff; border-radius:9999px; }
   </style>
 </head>
 <body>
@@ -34,42 +47,41 @@
         <h1 style="margin:0;">Roue de la chance</h1>
         <a class="btn" id="back">&larr; Retour</a>
       </div>
-      <p class="muted">Définissez les issues possibles et la probabilité de gain. Les clients gagnent une récompense de votre choix.</p>
+      <p class="muted">Définissez les récompenses et la probabilité de gain.</p>
 
       <div class="grid">
         <div>
           <label for="reward">Récompense (texte)</label>
-          <input id="reward" type="text" placeholder="Ex: Café offert, -10%, Goodie, ..." />
+          <div style="display:flex; gap:6px; align-items:center;">
+            <input id="reward" type="text" placeholder="Ex: Café offert, -10%, Goodie, ..." />
+            <button id="addReward" type="button" class="btn" title="Ajouter">+</button>
+            <button id="commitReward" type="button" class="btn" title="Valider">Valider</button>
+          </div>
         </div>
         <div>
-          <label for="winRate">Probabilité de gain (%)</label>
-          <input id="winRate" type="number" min="0" max="100" step="1" value="30" />
+          <label>Probabilité de gain: <span id="winRateView">30%</span></label>
+          <input id="winRateRange" type="range" min="1" max="100" value="30" />
+          <input id="winRate" type="hidden" value="30" />
         </div>
       </div>
 
       <div class="grid" style="margin-top:0.75rem;">
-        <div>
-          <label for="slot1">Issue 1</label>
-          <input id="slot1" type="text" placeholder="Ex: Gagné" />
-        </div>
-        <div>
-          <label for="slot2">Issue 2</label>
-          <input id="slot2" type="text" placeholder="Ex: Réessayez" />
-        </div>
-        <div>
-          <label for="slot3">Issue 3</label>
-          <input id="slot3" type="text" placeholder="Ex: Presque !" />
-        </div>
-        <div>
-          <label for="slot4">Issue 4</label>
-          <input id="slot4" type="text" placeholder="Optionnel" />
+        <div style="grid-column:1/-1;">
+          <label>Récompenses</label>
+          <div id="rewardsList" class="chips"></div>
         </div>
       </div>
 
       <div class="preview" id="preview">
-        <div class="wheel" id="wheel" style="--win:30%"></div>
+        <div class="wheel" id="wheel" style="--win:30%">
+          <canvas id="wheelCanvas" style="width:100%;height:100%; border-radius:9999px; display:block"></canvas>
+        </div>
         <div class="muted" style="text-align:center;margin-bottom:6px">Probabilité de gain: <span id="pwin">30%</span></div>
         <div class="chips" id="chips"></div>
+        <div class="preview-cta">
+          <button id="spin" type="button" class="btn">Tourner</button>
+          <span id="spinResult" class="badge-win" style="display:none"></span>
+        </div>
       </div>
 
       <div class="actions">
@@ -95,34 +107,175 @@
       const back = document.getElementById('back');
       back.href = `/games.html?id=${encodeURIComponent(id)}`;
 
-      const fields = ['reward','winRate','slot1','slot2','slot3','slot4'];
+      const fields = ['reward'];
       fields.forEach(f=>{ const el=$(f); const val=get(f,''); if(el && val!==null) el.value = val; });
 
-      function renderPreview(){
-        const rate = Math.max(0, Math.min(100, parseInt($('#winRate').value||'0',10) || 0));
-        document.getElementById('pwin').textContent = rate + '%';
-        document.getElementById('wheel').style.setProperty('--win', rate+'%');
-        const chips = document.getElementById('chips');
-        chips.innerHTML = '';
-        ['slot1','slot2','slot3','slot4'].forEach(k=>{
-          const v = ($('#'+k).value||'').trim();
-          if (v) { const s=document.createElement('span'); s.className='chip'; s.textContent=v; chips.appendChild(s);} 
+      function rewardsFromStorage(){
+        const saved = get('rewards', null);
+        const legacy = ['slot1','slot2','slot3','slot4'].map(k=>get(k,'')).filter(Boolean);
+        return Array.isArray(saved) && saved.length ? saved : (legacy.length? legacy : []);
+      }
+      function setRewards(list){ set('rewards', list); }
+      function getRewards(){ return get('rewards', []); }
+      function renderRewards(){
+        const wrap = document.getElementById('rewardsList');
+        wrap.innerHTML = '';
+        getRewards().forEach((v, idx)=>{
+          const chip = document.createElement('span'); chip.className='chip'; chip.textContent=v;
+          chip.title = 'Cliquez pour supprimer';
+          chip.style.cursor='pointer';
+          chip.addEventListener('click', ()=>{ const next=getRewards().filter((_,i)=>i!==idx); setRewards(next); renderRewards(); renderPreview(); });
+          wrap.appendChild(chip);
         });
       }
+
+      function renderPreview(){
+        const winRateEl = document.getElementById('winRate');
+        const rate = Math.max(1, Math.min(100, parseInt((winRateEl && winRateEl.value) || '30',10) || 30));
+        const pwinEl = document.getElementById('pwin');
+        if (pwinEl) pwinEl.textContent = rate + '%';
+        const wheelEl = document.getElementById('wheel');
+        if (wheelEl) wheelEl.style.setProperty('--win', rate+'%');
+        const chips = document.getElementById('chips');
+        if (chips) {
+          chips.innerHTML = '';
+          getRewards().forEach(v=>{ const s=document.createElement('span'); s.className='chip'; s.textContent=v; chips.appendChild(s); });
+        }
+        drawWheel();
+      }
+      // Canvas wheel renderer + spin
+      const wheelCanvas = document.getElementById('wheelCanvas');
+      const ctx = wheelCanvas.getContext('2d');
+      let wheelAngle = 0;
+      function sizeCanvasToContainer(){
+        if (!wheelCanvas) return;
+        const dpr = window.devicePixelRatio || 1;
+        const rect = wheelCanvas.getBoundingClientRect();
+        const w = Math.max(160, Math.floor(rect.width));
+        const h = w;
+        wheelCanvas.width = Math.floor(w * dpr);
+        wheelCanvas.height = Math.floor(h * dpr);
+      }
+      function drawWheel(){
+        if (!ctx) return;
+        sizeCanvasToContainer();
+        const cx = wheelCanvas.width/2, cy = wheelCanvas.height/2, r = (wheelCanvas.width/2) - Math.max(16, wheelCanvas.width*0.05);
+        ctx.save();
+        ctx.clearRect(0,0,wheelCanvas.width,wheelCanvas.height);
+        ctx.translate(cx, cy);
+        ctx.rotate(wheelAngle);
+        const rewards = getRewards();
+        const n = Math.max((rewards.length||0), 6);
+        const step = (Math.PI*2)/n;
+        const lightBlue = '#93c5fd'; // GoReview light blue theme
+        for (let i=0;i<n;i++){
+          const a0 = i*step, a1 = (i+1)*step;
+          ctx.beginPath();
+          ctx.moveTo(0,0);
+          ctx.arc(0,0,r,a0,a1);
+          ctx.fillStyle = lightBlue;
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+        // Labels only if rewards exist
+        if (rewards.length > 0){
+          ctx.fillStyle = '#0f172a';
+          ctx.font = `${Math.max(11, Math.floor(r*0.08))}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          for (let i=0;i<n;i++){
+            const label = rewards[i] || '';
+            if (!label) continue;
+            const a = (i+0.5)*step;
+            const tx = Math.cos(a)*(r*0.65);
+            const ty = Math.sin(a)*(r*0.65);
+            ctx.save();
+            ctx.translate(tx, ty);
+            ctx.rotate(a + Math.PI/2);
+            ctx.fillText(label.substring(0,20), 0, 0);
+            ctx.restore();
+          }
+        }
+        // Center cap
+        ctx.beginPath(); ctx.arc(0,0,22,0,Math.PI*2);
+        ctx.fillStyle = '#6366f1'; ctx.fill();
+        ctx.beginPath(); ctx.arc(0,0,20,0,Math.PI*2);
+        ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.fill();
+        ctx.restore();
+      }
+      drawWheel();
+      // Redraw on resize
+      const wheelEl = document.getElementById('wheel');
+      if (window.ResizeObserver && wheelEl) {
+        const ro = new ResizeObserver(()=> drawWheel());
+        ro.observe(wheelEl);
+      } else {
+        window.addEventListener('resize', drawWheel);
+      }
+
+      function easeOutCubic(t){ return 1 - Math.pow(1 - t, 3); }
+      function spinWheel(){
+        const duration = 1800;
+        const start = performance.now();
+        const startAngle = wheelAngle;
+        const extra = (Math.PI*2) * (5 + Math.random()*2) + (Math.random()*Math.PI*2);
+        function frame(now){
+          const t = Math.min(1, (now - start)/duration);
+          const eased = easeOutCubic(t);
+          wheelAngle = startAngle + extra*eased;
+          drawWheel();
+          if (t < 1) requestAnimationFrame(frame);
+          else showSpinResult();
+        }
+        requestAnimationFrame(frame);
+      }
+      function showSpinResult(){
+        const winRate = Math.max(1, Math.min(100, parseInt($('#winRate').value||'30',10) || 30));
+        const isWin = Math.random()*100 < winRate;
+        const spinResult = document.getElementById('spinResult');
+        spinResult.textContent = isWin ? 'Gagné' : 'Perdu';
+        spinResult.style.display = '';
+      }
+      setRewards(rewardsFromStorage());
+      renderRewards();
       renderPreview();
-      ['winRate','slot1','slot2','slot3','slot4'].forEach(id=>{
-        $('#'+id).addEventListener('input', renderPreview);
+      const addRewardBtn = document.getElementById('addReward');
+      const commitRewardBtn = document.getElementById('commitReward');
+      const rewardInput = document.getElementById('reward');
+      function commitReward(){ const v=(rewardInput.value||'').trim(); if(!v) return; const next=getRewards(); next.push(v); setRewards(next); rewardInput.value=''; renderRewards(); renderPreview(); }
+      if (addRewardBtn) addRewardBtn.addEventListener('click', commitReward);
+      if (commitRewardBtn) commitRewardBtn.addEventListener('click', commitReward);
+      const range = document.getElementById('winRateRange');
+      range.addEventListener('input', ()=>{
+        document.getElementById('winRateView').textContent = range.value + '%';
+        document.getElementById('winRate').value = range.value;
+        renderPreview();
       });
+
+      // Spin preview interaction
+      const wheel = document.getElementById('wheel');
+      const spinBtn = document.getElementById('spin');
+      const spinResult = document.getElementById('spinResult');
+      if (spinBtn) {
+        spinBtn.addEventListener('click', ()=>{
+          spinResult.style.display = 'none';
+          spinWheel();
+        });
+      }
 
       document.getElementById('save').addEventListener('click', async ()=>{
         fields.forEach(f=> set(f, $(f).value));
         const reward = $('#reward').value || '';
         const winRate = $('#winRate').value || '';
-        const paramsStr = new URLSearchParams({ id, game:'roulette', reward, wr: winRate }).toString();
+        const rewards = getRewards();
+        setRewards(rewards);
+        const paramsStr = new URLSearchParams({ id, game:'roulette', reward, wr: winRate, rewards: rewards.join('|') }).toString();
         const redir = `${location.origin}/company.html?${paramsStr}`;
         try {
-          await sb.from('accounts').update({ games: true, wich_game: 'roulette', redirection_url: redir }).eq('id', id);
-        } catch(_){}
+          await sb.from('accounts').update({ games: true, wich_game: 'roulette', redirection_url: redir, games_details: JSON.stringify({ rewards, winRate: Number(winRate), reward }) }).eq('id', id);
+        } catch(_){ }
         alert('Configuration enregistrée.');
       });
       document.getElementById('reset').addEventListener('click', ()=>{
