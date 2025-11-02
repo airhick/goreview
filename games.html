@@ -165,8 +165,8 @@
         .reward-item-text { flex:1; font-size:0.95rem; color:#111827; font-weight:500; min-width:120px; }
         .reward-item-probability { display:flex; align-items:center; gap:0.5rem; margin:0 1rem; min-width:140px; }
         .reward-item-probability label { font-size:0.85rem; color:#6b7280; white-space:nowrap; }
-        .reward-item-probability input[type="range"] { flex:1; width:80px; }
-        .reward-item-probability .prob-value { font-size:0.85rem; font-weight:600; color:#6366f1; min-width:35px; text-align:right; }
+        .reward-item-probability input[type="range"] { flex:1; width:80px; transition:all 0.3s ease-out; }
+        .reward-item-probability .prob-value { font-size:0.85rem; font-weight:600; color:#6366f1; min-width:35px; text-align:right; transition:all 0.3s ease-out; }
         .reward-item-delete { width:28px; height:28px; display:flex; align-items:center; justify-content:center; background:#fee2e2; border:1px solid #fecaca; border-radius:6px; color:#dc2626; font-size:18px; font-weight:bold; cursor:pointer; transition:all 0.2s; flex-shrink:0; }
         .reward-item-delete:hover { background:#dc2626; color:#ffffff; border-color:#dc2626; transform:scale(1.1); }
         .reward-item-delete:active { transform:scale(0.95); }
@@ -181,9 +181,17 @@
         .win-popup button:hover { background:linear-gradient(135deg,#4f46e5,#4338ca); transform:translateY(-1px); }
         @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
         @keyframes slideUp { from { transform:translateY(20px); opacity:0; } to { transform:translateY(0); opacity:1; } }
-        input[type=range] { -webkit-appearance:none; appearance:none; height:10px; background:#ffffff; border:1px solid #dbe2ff; border-radius:9999px; width:100%; }
-        input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:20px; height:20px; border-radius:50%; background:#ffffff; border:1px solid #c7d2fe; cursor:pointer; }
-        input[type=range]::-moz-range-thumb { width:20px; height:20px; border-radius:50%; background:#ffffff; border:1px solid #c7d2fe; cursor:pointer; }
+        input[type=range] { -webkit-appearance:none; appearance:none; height:10px; background:#ffffff; border:1px solid #dbe2ff; border-radius:9999px; width:100%; transition:all 0.3s ease-out; cursor:grab; position:relative; margin:0; padding:0; }
+        input[type=range]:active { cursor:grabbing; }
+        input[type=range]:focus { outline:none; box-shadow:0 0 0 3px rgba(99,102,241,0.1); }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:20px; height:20px; border-radius:50%; background:#ffffff; border:2px solid #6366f1; cursor:grab; transition:all 0.2s cubic-bezier(0.4, 0, 0.2, 1); box-shadow:0 2px 4px rgba(99,102,241,0.2); position:relative; margin-top:-5px; }
+        input[type=range]::-webkit-slider-thumb:hover { transform:scale(1.15); box-shadow:0 4px 8px rgba(99,102,241,0.3); cursor:grab; }
+        input[type=range]::-webkit-slider-thumb:active { transform:scale(1.1); cursor:grabbing; }
+        input[type=range]::-webkit-slider-runnable-track { height:10px; border-radius:9999px; background:linear-gradient(to right, #6366f1 0%, #6366f1 calc(var(--progress, 50%) + 10px), #ffffff calc(var(--progress, 50%) + 10px), #ffffff 100%); transition:background 0.15s ease-out; cursor:pointer; }
+        input[type=range]::-moz-range-thumb { width:20px; height:20px; border-radius:50%; background:#ffffff; border:2px solid #6366f1; cursor:grab; transition:all 0.2s cubic-bezier(0.4, 0, 0.2, 1); box-shadow:0 2px 4px rgba(99,102,241,0.2); }
+        input[type=range]::-moz-range-thumb:hover { transform:scale(1.15); box-shadow:0 4px 8px rgba(99,102,241,0.3); cursor:grab; }
+        input[type=range]::-moz-range-thumb:active { transform:scale(1.1); cursor:grabbing; }
+        input[type=range]::-moz-range-track { height:10px; background:#ffffff; border:1px solid #dbe2ff; border-radius:9999px; cursor:pointer; }
         .actions { display:flex; gap:0.6rem; margin-top:1rem; }
     </style>
 </head>
@@ -202,7 +210,7 @@
   root.innerHTML = `
     <div class='wrap'>
       <div class='header'>
-        <h1 class='title'>Choisissez un jeu</h1>
+        <h1 class='title'>Configurer un jeu</h1>
         <a class='btn' href='/dashboard.html?id=${encodeURIComponent(id)}'>&larr; Dashboard</a>
       </div>
       <div class='section row'>
@@ -270,7 +278,6 @@
           </div>
         </div>
         <div class='actions' style='margin-top:1.5rem;'>
-          <button id="rouletteSave" class="btn-primary">Enregistrer</button>
           <button id="rouletteReset" class="btn">Réinitialiser</button>
         </div>
       </div>
@@ -370,24 +377,45 @@
     ctx.save();
     ctx.scale(dpr, dpr);
     
-    // Get rewards from localStorage using the same key structure
-    const keyPrefix = `goreview_gamecfg_${id}_roulette_rewards`;
-    const rawRewards = JSON.parse(localStorage.getItem(keyPrefix) || '[]');
-    
-    // Convert to new format if needed
-    const rewards = rawRewards.map(r => {
-      if (typeof r === 'string') {
-        return { name: r, probability: 50 };
+    // Get rewards from the roulette init function's cache (from Supabase)
+    // Access the cachedGameSettings from the initRoulette closure
+    let rewards = [];
+    try {
+      // Try to get rewards from the current page's game settings
+      // We'll use a global function or access through the window
+      if (window.getCurrentRewards) {
+        rewards = window.getCurrentRewards();
+      } else {
+        // Fallback: try localStorage for backward compatibility
+        const keyPrefix = `goreview_gamecfg_${id}_roulette_rewards`;
+        const rawRewards = JSON.parse(localStorage.getItem(keyPrefix) || '[]');
+        rewards = rawRewards.map(r => {
+          if (typeof r === 'string') {
+            return { name: r, probability: 50 };
+          }
+          return {
+            name: r.name || r,
+            probability: r.probability || 50
+          };
+        });
       }
-      return {
-        name: r.name || r,
-        probability: r.probability || 50
-      };
+    } catch (e) {
+      rewards = [];
+    }
+    
+    // Calculate cumulative angles based on probabilities
+    const totalProb = rewards.reduce((sum, r) => sum + (r.probability || 0), 0) || 100;
+    const cumulativeAngles = [0]; // Start at 0
+    rewards.forEach((reward, idx) => {
+      const prob = reward.probability || 0;
+      const angle = (prob / totalProb) * (Math.PI * 2);
+      cumulativeAngles.push(cumulativeAngles[cumulativeAngles.length - 1] + angle);
     });
     
-    // Use actual number of rewards, minimum 1 for visual purposes
-    const n = Math.max(rewards.length || 0, 1);
-    const step = (Math.PI*2)/n;
+    // Ensure we close the circle
+    cumulativeAngles[cumulativeAngles.length - 1] = Math.PI * 2;
+    
+    const n = rewards.length || 0;
     
     // Colors
     const colors = ['#93c5fd', '#a5b4fc', '#c4b5fd', '#ddd6fe'];
@@ -396,27 +424,29 @@
     ctx.translate(cx, cy);
     ctx.rotate(wheelAngle);
     
-    // Draw segments
-    for (let i=0; i<n; i++) {
-      const a0 = i*step - Math.PI/2;
-      const a1 = (i+1)*step - Math.PI/2;
-      
-      ctx.beginPath();
-      ctx.moveTo(Math.cos(a0) * innerRadius, Math.sin(a0) * innerRadius);
-      ctx.arc(0, 0, outerRadius, a0, a1);
-      ctx.lineTo(Math.cos(a1) * innerRadius, Math.sin(a1) * innerRadius);
-      ctx.arc(0, 0, innerRadius, a1, a0, true);
-      ctx.closePath();
-      ctx.fillStyle = colors[i % colors.length];
-      ctx.fill();
-      
-      // Separator
-      ctx.beginPath();
-      ctx.moveTo(Math.cos(a1) * innerRadius, Math.sin(a1) * innerRadius);
-      ctx.lineTo(Math.cos(a1) * outerRadius, Math.sin(a1) * outerRadius);
-      ctx.strokeStyle = 'rgba(255,255,255,0.8)';
-      ctx.lineWidth = 2;
-      ctx.stroke();
+    // Draw segments based on probability proportions
+    if (n > 0) {
+      for (let i=0; i<n; i++) {
+        const a0 = cumulativeAngles[i] - Math.PI/2;
+        const a1 = cumulativeAngles[i+1] - Math.PI/2;
+        
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a0) * innerRadius, Math.sin(a0) * innerRadius);
+        ctx.arc(0, 0, outerRadius, a0, a1);
+        ctx.lineTo(Math.cos(a1) * innerRadius, Math.sin(a1) * innerRadius);
+        ctx.arc(0, 0, innerRadius, a1, a0, true);
+        ctx.closePath();
+        ctx.fillStyle = colors[i % colors.length];
+        ctx.fill();
+        
+        // Separator
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a1) * innerRadius, Math.sin(a1) * innerRadius);
+        ctx.lineTo(Math.cos(a1) * outerRadius, Math.sin(a1) * outerRadius);
+        ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
     }
     
     // Draw text - show all rewards as segments
@@ -428,7 +458,9 @@
         const reward = rewards[i];
         const label = reward ? (reward.name || reward) : '';
         if (!label) continue;
-        const a = (i + 0.5)*step - Math.PI/2;
+        // Calculate middle angle of this segment based on probability
+        const midAngle = (cumulativeAngles[i] + cumulativeAngles[i+1]) / 2 - Math.PI/2;
+        const a = midAngle;
         const tx = Math.cos(a) * (innerRadius + (outerRadius - innerRadius) * 0.6);
         const ty = Math.sin(a) * (innerRadius + (outerRadius - innerRadius) * 0.6);
         ctx.save();
@@ -490,45 +522,108 @@
 
   // Roulette configuration logic
   (function initRoulette(){
-    const key = (k) => `goreview_gamecfg_${id}_roulette_${k}`;
-    const rget = (k,d=null)=> JSON.parse(localStorage.getItem(key(k)) ?? 'null') ?? d;
-    const rset = (k,v)=> localStorage.setItem(key(k), JSON.stringify(v));
     const $ = (s)=>document.getElementById(s);
+    
+    // Cache for game settings from Supabase
+    let cachedGameSettings = null;
+    let saveTimeout = null;
+
+    // Load game settings from Supabase
+    async function loadGameSettingsFromSupabase() {
+      try {
+        const row = await fetchAccount();
+        if (row && row.games_details) {
+          const parsed = JSON.parse(row.games_details);
+          cachedGameSettings = parsed;
+          return parsed;
+        }
+        return { rewards: [], customMessageEnabled: false, customMessage: '' };
+      } catch (e) {
+        console.warn('Failed to load game settings from Supabase', e);
+        return { rewards: [], customMessageEnabled: false, customMessage: '' };
+      }
+    }
+
+    // Save game settings to Supabase (with debouncing)
+    async function saveGameSettingsToSupabase(gameSettings, immediate = false) {
+      // Clear any pending save
+      if (saveTimeout) {
+        clearTimeout(saveTimeout);
+        saveTimeout = null;
+      }
+
+      const saveFn = async () => {
+        try {
+          const rewardNames = (gameSettings.rewards || []).map(r => r.name || r);
+          const paramsStr = new URLSearchParams({ id, game:'roulette', rewards: rewardNames.join('|') }).toString();
+          const redir = `${location.origin}/company.html?${paramsStr}`;
+          
+          await sb.from('accounts').update({ 
+            games: true, 
+            wich_game: 'roulette', 
+            redirection_url: redir, 
+            games_details: JSON.stringify(gameSettings) 
+          }).eq('id', id);
+          
+          cachedGameSettings = gameSettings;
+        } catch (e) {
+          console.error('Failed to save game settings to Supabase', e);
+        }
+      };
+
+      if (immediate) {
+        await saveFn();
+      } else {
+        // Debounce: save after 1 second of inactivity
+        saveTimeout = setTimeout(saveFn, 1000);
+      }
+    }
 
     function rewardsFromStorage(){
-      const saved = rget('rewards', null);
-      const legacy = ['slot1','slot2','slot3','slot4'].map(k=>rget(k,'')).filter(Boolean);
-      const rawRewards = Array.isArray(saved) && saved.length ? saved : (legacy.length? legacy : []);
-      
-      // Convert to new format if needed (handle both old string format and new object format)
-      const converted = rawRewards.map((r) => {
-        if (typeof r === 'string') {
-          // Old format: will get probability recalculated below
-          return { name: r, probability: 50 };
+      // Try to get from cache first, otherwise return empty
+      if (cachedGameSettings && cachedGameSettings.rewards) {
+        const rawRewards = cachedGameSettings.rewards;
+        // Convert to new format if needed
+        const converted = rawRewards.map((r) => {
+          if (typeof r === 'string') {
+            return { name: r, probability: 50 };
+          }
+          return {
+            name: r.name || r,
+            probability: r.probability || 50
+          };
+        });
+        
+        // Recalculate probabilities if inconsistent
+        if (converted.length > 0) {
+          const equalProb = Math.round(100 / converted.length);
+          const sumProb = converted.reduce((sum, r) => sum + (r.probability || 50), 0);
+          if (Math.abs(sumProb - 100) > 10) {
+            return converted.map(r => ({ name: r.name || r, probability: equalProb }));
+          }
         }
-        // New format: ensure it has both name and probability
-        return {
-          name: r.name || r,
-          probability: r.probability || 50
-        };
-      });
+        return converted;
+      }
+      return [];
+    }
+    
+    function setRewards(list){
+      // Update cache
+      if (!cachedGameSettings) {
+        cachedGameSettings = { rewards: [], customMessageEnabled: false, customMessage: '' };
+      }
+      cachedGameSettings.rewards = list;
       
-      // Recalculate probabilities to be equal if not already set properly
-      if (converted.length > 0) {
-        const equalProb = Math.round(100 / converted.length);
-        // Only recalculate if probabilities seem inconsistent (sum not close to 100)
-        const sumProb = converted.reduce((sum, r) => sum + (r.probability || 50), 0);
-        if (Math.abs(sumProb - 100) > 10) {
-          // Probabilities need to be recalculated
-          return converted.map(r => ({ name: r.name || r, probability: equalProb }));
-        }
+      // Save to Supabase (debounced)
+      saveGameSettingsToSupabase(cachedGameSettings);
+    }
+    
+    function getRewards(){ 
+      if (!cachedGameSettings || !cachedGameSettings.rewards) {
+        return [];
       }
       
-      return converted;
-    }
-    function setRewards(list){ rset('rewards', list); }
-    function getRewards(){ 
-      const rewards = rget('rewards', []);
+      const rewards = cachedGameSettings.rewards;
       // Ensure format is correct
       const converted = rewards.map(r => {
         if (typeof r === 'string') {
@@ -540,13 +635,10 @@
         };
       });
       
-      // If rewards exist, ensure probabilities are normalized (equal distribution by default)
+      // If rewards exist, ensure probabilities are normalized
       if (converted.length > 0) {
-        // Check if probabilities are equal (within 5% tolerance)
         const equalProb = Math.round(100 / converted.length);
         const allEqual = converted.every(r => Math.abs(r.probability - equalProb) <= 2);
-        
-        // If not equal and sum is way off, recalculate to equal
         const sumProb = converted.reduce((sum, r) => sum + (r.probability || 50), 0);
         if (!allEqual && Math.abs(sumProb - 100) > 10) {
           return converted.map(r => ({ name: r.name || r, probability: equalProb }));
@@ -555,7 +647,182 @@
       
       return converted;
     }
+    
+    // Expose getRewards globally for drawRouletteWheel
+    window.getCurrentRewards = getRewards;
+    
+    // Functions to get/set custom message
+    function getCustomMessageEnabled() {
+      return cachedGameSettings?.customMessageEnabled || false;
+    }
+    
+    function setCustomMessageEnabled(enabled) {
+      if (!cachedGameSettings) {
+        cachedGameSettings = { rewards: [], customMessageEnabled: false, customMessage: '' };
+      }
+      cachedGameSettings.customMessageEnabled = enabled;
+      saveGameSettingsToSupabase(cachedGameSettings);
+    }
+    
+    function getCustomMessage() {
+      return cachedGameSettings?.customMessage || '';
+    }
+    
+    function setCustomMessage(message) {
+      if (!cachedGameSettings) {
+        cachedGameSettings = { rewards: [], customMessageEnabled: false, customMessage: '' };
+      }
+      cachedGameSettings.customMessage = message || '';
+      saveGameSettingsToSupabase(cachedGameSettings);
+    }
     function getRewardNames(){ return getRewards().map(r => r.name); }
+    
+    // Animate value changes smoothly
+    function animateValue(element, start, end, duration) {
+      if (!element) return;
+      const startTime = performance.now();
+      const diff = end - start;
+      
+      function update(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        // Ease-out cubic for smooth deceleration
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const current = Math.round(start + diff * eased);
+        element.textContent = current + '%';
+        
+        if (progress < 1) {
+          requestAnimationFrame(update);
+        } else {
+          element.textContent = end + '%';
+        }
+      }
+      
+      requestAnimationFrame(update);
+    }
+    
+    // Adjust other probabilities proportionally when one changes
+    function adjustProbabilities(rewards, changedIndex, newProb) {
+      if (rewards.length === 0) return rewards;
+      if (rewards.length === 1) {
+        // Single reward: can be 0-100%, but we'll set it to 100% if 0
+        return [{ name: rewards[0].name || rewards[0], probability: Math.max(0, Math.min(100, newProb || 100)) }];
+      }
+      
+      // Clone the rewards array
+      const adjusted = rewards.map(r => ({ name: r.name || r, probability: r.probability || 0 }));
+      
+      // Store old probability of changed item
+      const oldProb = adjusted[changedIndex].probability;
+      
+      // Set new probability for changed item (clamp between 0 and 100)
+      adjusted[changedIndex].probability = Math.max(0, Math.min(100, newProb));
+      
+      // Calculate difference
+      const diff = oldProb - adjusted[changedIndex].probability;
+      
+      // If no change, return as is
+      if (Math.abs(diff) < 0.01) {
+        // Just ensure sum is 100
+        const sum = adjusted.reduce((total, r) => total + r.probability, 0);
+        if (Math.abs(sum - 100) > 0.01) {
+          // Distribute the difference proportionally
+          const otherRewards = adjusted.filter((_, i) => i !== changedIndex);
+          const otherSum = otherRewards.reduce((total, r) => total + r.probability, 0);
+          if (otherSum > 0) {
+            otherRewards.forEach((r, i) => {
+              const originalIdx = adjusted.findIndex((orig, idx) => idx !== changedIndex && orig.name === r.name);
+              if (originalIdx >= 0) {
+                adjusted[originalIdx].probability = Math.max(0, Math.round((r.probability / otherSum) * (100 - adjusted[changedIndex].probability)));
+              }
+            });
+          }
+        }
+        return adjusted;
+      }
+      
+      // Get all other rewards (excluding the changed one)
+      const otherRewards = adjusted.filter((_, i) => i !== changedIndex);
+      const otherSum = otherRewards.reduce((total, r) => total + r.probability, 0);
+      
+      // Target sum for other rewards
+      const targetOtherSum = 100 - adjusted[changedIndex].probability;
+      
+      if (otherSum > 0 && targetOtherSum > 0) {
+        // Distribute proportionally to other rewards
+        otherRewards.forEach((r) => {
+          const originalIdx = adjusted.findIndex((orig, idx) => idx !== changedIndex && orig.name === r.name);
+          if (originalIdx >= 0) {
+            // Calculate proportional share
+            const proportion = r.probability / otherSum;
+            adjusted[originalIdx].probability = Math.max(0, Math.round(proportion * targetOtherSum));
+          }
+        });
+      } else if (otherSum === 0 && targetOtherSum > 0) {
+        // All others are 0, distribute equally
+        const equalShare = Math.round(targetOtherSum / otherRewards.length);
+        let shareIdx = 0;
+        adjusted.forEach((orig, origIdx) => {
+          if (origIdx !== changedIndex && shareIdx < otherRewards.length) {
+            adjusted[origIdx].probability = equalShare;
+            shareIdx++;
+          }
+        });
+      }
+      
+      // Adjust for rounding errors to ensure exactly 100%
+      const finalSum = adjusted.reduce((total, r) => total + r.probability, 0);
+      const roundingDiff = 100 - finalSum;
+      
+      if (Math.abs(roundingDiff) > 0.01) {
+        // Find the largest other reward and adjust it
+        const otherIndices = adjusted.map((_, i) => i).filter(i => i !== changedIndex);
+        if (otherIndices.length > 0) {
+          // Sort by probability and adjust the largest
+          const sorted = otherIndices.map(i => ({ idx: i, prob: adjusted[i].probability }))
+            .sort((a, b) => b.prob - a.prob);
+          if (sorted.length > 0) {
+            adjusted[sorted[0].idx].probability += roundingDiff;
+            adjusted[sorted[0].idx].probability = Math.max(0, adjusted[sorted[0].idx].probability);
+          }
+        }
+      }
+      
+      return adjusted;
+    }
+    
+    // Normalize probabilities to ensure they sum to exactly 100% (fallback function)
+    function normalizeProbabilities(rewards) {
+      if (rewards.length === 0) return rewards;
+      if (rewards.length === 1) {
+        return [{ name: rewards[0].name || rewards[0], probability: 100 }];
+      }
+      
+      const sum = rewards.reduce((total, r) => total + (r.probability || 0), 0);
+      
+      if (sum === 0 || !sum || !isFinite(sum)) {
+        const equalProb = Math.round(100 / rewards.length);
+        return rewards.map(r => ({
+          name: r.name || r,
+          probability: equalProb
+        }));
+      }
+      
+      const normalized = rewards.map(r => ({
+        name: r.name || r,
+        probability: Math.round((r.probability || 0) * 100 / sum)
+      }));
+      
+      const normalizedSum = normalized.reduce((total, r) => total + r.probability, 0);
+      const diff = 100 - normalizedSum;
+      
+      if (diff !== 0) {
+        normalized[0].probability += diff;
+        normalized[0].probability = Math.max(0, normalized[0].probability);
+      }
+      
+      return normalized;
+    }
     
     function renderRewards(){
       const wrap = document.getElementById('rouletteRewardsList');
@@ -605,24 +872,109 @@
         
         const probSlider = document.createElement('input');
         probSlider.type = 'range';
-        probSlider.min = '1';
+        probSlider.min = '0';
         probSlider.max = '100';
         probSlider.value = rewardProb;
         probSlider.id = `reward-prob-${idx}`;
+        probSlider.style.setProperty('--progress', rewardProb + '%');
         
         const probValue = document.createElement('span');
         probValue.className = 'prob-value';
         probValue.textContent = rewardProb + '%';
         probValue.id = `reward-prob-value-${idx}`;
         
-        // Update probability on slider change
+        // Track if user is dragging the slider
+        let isDragging = false;
+        let adjustTimeout = null;
+        let oldProb = rewardProb;
+        
+        // Update probability on slider change - smooth proportional adjustment
         probSlider.addEventListener('input', function() {
           const newProb = parseInt(this.value);
+          
+          // Update the value display immediately (smooth transition via CSS)
           probValue.textContent = newProb + '%';
+          
+          // Update CSS variable for progress visualization
+          this.style.setProperty('--progress', newProb + '%');
+          
+          // Clear any pending adjustment
+          if (adjustTimeout) {
+            clearTimeout(adjustTimeout);
+          }
+          
+          // Get current rewards
           const currentRewards = getRewards();
-          currentRewards[idx].probability = newProb;
-          setRewards(currentRewards);
-          drawRouletteWheel(); // Redraw wheel with new probabilities
+          
+          // Adjust other probabilities proportionally in real-time (debounced)
+          adjustTimeout = setTimeout(() => {
+            const adjusted = adjustProbabilities(currentRewards, idx, newProb);
+            setRewards(adjusted);
+            
+            // Update all slider values smoothly without full re-render
+            adjusted.forEach((reward, rewardIdx) => {
+              const sliderId = `reward-prob-${rewardIdx}`;
+              const valueId = `reward-prob-value-${rewardIdx}`;
+              const slider = document.getElementById(sliderId);
+              const valueDisplay = document.getElementById(valueId);
+              
+              if (slider && slider !== probSlider) {
+                const currentVal = parseInt(slider.value) || 0;
+                const targetVal = reward.probability || 0;
+                
+                // Smoothly animate other sliders
+                if (Math.abs(currentVal - targetVal) > 1) {
+                  slider.value = targetVal;
+                  slider.style.setProperty('--progress', targetVal + '%');
+                  if (valueDisplay) {
+                    animateValue(valueDisplay, currentVal, targetVal, 200);
+                  }
+                }
+              } else if (slider === probSlider) {
+                // Keep the current slider at its set value
+                slider.style.setProperty('--progress', newProb + '%');
+              }
+              
+              if (valueDisplay && valueDisplay !== probValue) {
+                const currentVal = parseInt(valueDisplay.textContent) || 0;
+                const targetVal = reward.probability || 0;
+                if (Math.abs(currentVal - targetVal) > 1) {
+                  animateValue(valueDisplay, currentVal, targetVal, 200);
+                }
+              }
+            });
+            
+            oldProb = newProb;
+            
+            // Update preview and wheel
+            renderPreview();
+            drawRouletteWheel();
+          }, 50); // Small delay for smooth interaction
+        });
+        
+        // Handle mouse down - user starts dragging
+        probSlider.addEventListener('mousedown', function() {
+          isDragging = true;
+          const currentRewards = getRewards();
+          oldProb = currentRewards[idx] ? currentRewards[idx].probability : 0;
+        });
+        
+        // Handle mouse up - user finished dragging
+        probSlider.addEventListener('mouseup', function() {
+          isDragging = false;
+        });
+        
+        // Handle change event for keyboard navigation
+        probSlider.addEventListener('change', function() {
+          const newProb = parseInt(this.value);
+          const currentRewards = getRewards();
+          const adjusted = adjustProbabilities(currentRewards, idx, newProb);
+          setRewards(adjusted);
+          
+          // Full re-render to ensure everything is synchronized
+          renderRewards();
+          renderPreview();
+          drawRouletteWheel();
         });
         
         probContainer.appendChild(probLabel);
@@ -646,15 +998,9 @@
           // Remove the reward
           const filtered = currentRewards.filter((_,i)=>i!==idx);
           
-          // Recalculate probabilities for remaining rewards
-          const remainingCount = filtered.length;
-          const newProb = Math.round(100 / remainingCount);
-          const next = filtered.map(r => ({ 
-            name: r.name || r, 
-            probability: newProb 
-          }));
-          
-          setRewards(next); 
+          // Normalize probabilities for remaining rewards
+          const normalized = normalizeProbabilities(filtered);
+          setRewards(normalized); 
           renderRewards(); 
           renderPreview(); 
           drawRouletteWheel();
@@ -761,31 +1107,27 @@
       const rewards = getRewards();
       if (rewards.length === 0) return;
       
-      // Calculate which segment the pointer landed on
-      // The pointer is at top (angle -90 degrees / -PI/2)
-      // Normalize wheelAngle to 0-2PI range
-      let normalizedAngle = wheelAngle % (Math.PI * 2);
-      if (normalizedAngle < 0) normalizedAngle += Math.PI * 2;
+      // Use probabilities to determine which reward wins (probability-based selection)
+      // Generate a random number 0-100 and find which reward it falls into based on cumulative probabilities
+      const random = Math.random() * 100;
       
-      // Convert to positive angle from top (-90 degrees)
-      // We need to account for rotation direction (clockwise)
-      // Since the wheel rotates clockwise, we need to reverse the calculation
-      let pointerAngle = (-Math.PI / 2) - normalizedAngle;
-      if (pointerAngle < 0) pointerAngle += Math.PI * 2;
+      // Calculate cumulative probabilities
+      let cumulative = 0;
+      let selectedIndex = rewards.length - 1; // Default to last reward
       
-      // Calculate which segment (0-indexed)
-      const step = (Math.PI * 2) / rewards.length;
-      let segmentIndex = Math.floor(pointerAngle / step);
+      for (let i = 0; i < rewards.length; i++) {
+        cumulative += rewards[i].probability || 0;
+        if (random < cumulative) {
+          selectedIndex = i;
+          break;
+        }
+      }
       
-      // Ensure index is within bounds
-      segmentIndex = segmentIndex % rewards.length;
-      if (segmentIndex < 0) segmentIndex += rewards.length;
-      
-      // Get the reward that was landed on
-      const selectedReward = rewards[segmentIndex] || rewards[0];
+      // Get the reward that was selected based on probability
+      const selectedReward = rewards[selectedIndex] || rewards[0];
       const rewardName = selectedReward.name || selectedReward;
       
-      // Always show popup with the reward that was landed on
+      // Always show popup with the reward that was selected based on probability
       showWinPopup(rewardName);
       
       // Hide the result badge since we don't have win/lose
@@ -876,7 +1218,9 @@
       });
       // Add new reward
       next.push({ name: v, probability: defaultProb }); 
-      setRewards(next); 
+      // Normalize to ensure sum is exactly 100%
+      const normalized = normalizeProbabilities(next);
+      setRewards(normalized); 
       rewardInput.value = ''; 
       rewardInput.focus(); // Keep focus on input for easy adding
       renderRewards(); 
@@ -959,8 +1303,8 @@
     
     if (toggleMessage && messageContainer && messageInput) {
       // Load saved state
-      const savedToggle = rget('customMessageEnabled', false);
-      const savedMessage = rget('customMessage', '');
+      const savedToggle = getCustomMessageEnabled();
+      const savedMessage = getCustomMessage();
       
       if (savedToggle) {
         toggleMessage.setAttribute('aria-checked', 'true');
@@ -976,10 +1320,10 @@
         const next = !isActive;
         toggleMessage.setAttribute('aria-checked', next ? 'true' : 'false');
         messageContainer.style.display = next ? 'block' : 'none';
-        rset('customMessageEnabled', next);
+        setCustomMessageEnabled(next);
         if (!next) {
           messageInput.value = '';
-          rset('customMessage', '');
+          setCustomMessage('');
         }
       };
       
@@ -993,7 +1337,7 @@
       
       // Save message on input change
       messageInput.addEventListener('input', () => {
-        rset('customMessage', messageInput.value.trim());
+        setCustomMessage(messageInput.value.trim());
       });
     }
 
@@ -1089,44 +1433,6 @@
       spinObserver.observe(configPanel, { attributes: true, attributeFilter: ['class'] });
     }
 
-    const saveBtn = $('#rouletteSave');
-    if (saveBtn) {
-      saveBtn.addEventListener('click', async ()=>{
-        const rewards = getRewards();
-        
-        // Validate: at least 1 reward is required
-        if (rewards.length === 0) {
-          alert('⚠️ Veuillez ajouter au moins une récompense avant d\'enregistrer.\n\nLa roue de la chance nécessite au minimum une récompense pour fonctionner.');
-          const rewardInput = document.getElementById('rouletteReward');
-          if (rewardInput) {
-            rewardInput.focus();
-            rewardInput.style.borderColor = '#ef4444';
-            setTimeout(() => {
-              rewardInput.style.borderColor = '';
-            }, 3000);
-          }
-          return;
-        }
-        
-        setRewards(rewards);
-        const rewardNames = rewards.map(r => r.name || r);
-        const paramsStr = new URLSearchParams({ id, game:'roulette', rewards: rewardNames.join('|') }).toString();
-        const redir = `${location.origin}/company.html?${paramsStr}`;
-        try {
-          await sb.from('accounts').update({ 
-            games: true, 
-            wich_game: 'roulette', 
-            redirection_url: redir, 
-            games_details: JSON.stringify({ rewards }) 
-          }).eq('id', id);
-          alert('✓ Configuration enregistrée avec succès !\n\n' + rewards.length + ' récompense(s) configurée(s).');
-        } catch(e){ 
-          console.error('Save failed', e);
-          alert('Erreur lors de l\'enregistrement. Veuillez réessayer.');
-        }
-      });
-    }
-
     // Setup reset button - use event delegation to ensure it always works
     function setupResetButton() {
       const resetBtn = document.getElementById('rouletteReset');
@@ -1150,8 +1456,8 @@
           if (rewardInput) rewardInput.value = '';
           
           // Also reset custom message
-          rset('customMessageEnabled', false);
-          rset('customMessage', '');
+          setCustomMessageEnabled(false);
+          setCustomMessage('');
           const customMessageToggle = document.getElementById('toggleCustomMessage');
           if (customMessageToggle) {
             customMessageToggle.setAttribute('aria-checked', 'false');
@@ -1184,8 +1490,8 @@
           if (rewardInput) rewardInput.value = '';
           
           // Also reset custom message
-          rset('customMessageEnabled', false);
-          rset('customMessage', '');
+          setCustomMessageEnabled(false);
+          setCustomMessage('');
           const customMessageToggle = document.getElementById('toggleCustomMessage');
           if (customMessageToggle) {
             customMessageToggle.setAttribute('aria-checked', 'false');
@@ -1220,8 +1526,8 @@
           if (rewardInput) rewardInput.value = '';
           
           // Also reset custom message
-          rset('customMessageEnabled', false);
-          rset('customMessage', '');
+          setCustomMessageEnabled(false);
+          setCustomMessage('');
           const customMessageToggle = document.getElementById('toggleCustomMessage');
           if (customMessageToggle) {
             customMessageToggle.setAttribute('aria-checked', 'false');
@@ -1249,19 +1555,43 @@
     setTimeout(setupResetButton, 100);
     setTimeout(setupResetButton, 300);
     
-    // Initialize - ensure probabilities are properly distributed
-    let initialRewards = rewardsFromStorage();
-    if (initialRewards.length > 0) {
-      // Ensure all probabilities are equal on first load
-      const equalProb = Math.round(100 / initialRewards.length);
-      initialRewards = initialRewards.map(r => ({
-        name: r.name || r,
-        probability: equalProb
-      }));
-      setRewards(initialRewards);
-    }
-    renderRewards();
-    renderPreview(); // Draw the wheel initially
+    // Initialize - load from Supabase first, then render
+    (async function initializeFromSupabase() {
+      await loadGameSettingsFromSupabase();
+      
+      // Initialize rewards with normalization
+      let initialRewards = rewardsFromStorage();
+      if (initialRewards.length > 0) {
+        const normalized = normalizeProbabilities(initialRewards);
+        // Don't trigger save here, just update cache
+        if (!cachedGameSettings) {
+          cachedGameSettings = { rewards: [], customMessageEnabled: false, customMessage: '' };
+        }
+        cachedGameSettings.rewards = normalized;
+      }
+      
+      // Initialize custom message UI
+      const toggleMessage = document.getElementById('toggleCustomMessage');
+      const messageContainer = document.getElementById('customMessageContainer');
+      const messageInput = document.getElementById('customMessageInput');
+      
+      if (toggleMessage) {
+        const enabled = getCustomMessageEnabled();
+        toggleMessage.setAttribute('aria-checked', enabled ? 'true' : 'false');
+        if (enabled) {
+          toggleMessage.classList.add('checked');
+        }
+        if (messageContainer) {
+          messageContainer.style.display = enabled ? 'block' : 'none';
+        }
+        if (messageInput) {
+          messageInput.value = getCustomMessage();
+        }
+      }
+      
+      renderRewards();
+      renderPreview(); // Draw the wheel initially
+    })();
   })();
 
   // Initialize from Supabase if available
