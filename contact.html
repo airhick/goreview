@@ -438,54 +438,115 @@
             // Download CSV handler
             document.getElementById('downloadCSV').addEventListener('click', downloadCSV);
 
-            // Update example contact if it exists
+            // Fetch contacts from contact_table column
             (async () => {
                 try {
-                    const { data: existing } = await client
-                        .from('leads')
-                        .select('id, email')
-                        .eq('email', 'enulalos@gmail.com')
+                    const { data: accountData, error: fetchError } = await client
+                        .from('accounts')
+                        .select('contact_table')
+                        .eq('id', id)
                         .maybeSingle();
                     
-                    if (existing && existing.id) {
-                        await client
-                            .from('leads')
-                            .update({
-                                nom: 'go',
-                                prenom: 'Review',
-                                email: 'goreview.fr@gmail.com'
-                            })
-                            .eq('id', existing.id);
-                    }
-                } catch (e) {
-                    // Silently fail if update doesn't work
-                }
-            })();
-
-            // Fetch all leads
-            client
-                .from('leads')
-                .select('nom, prenom, email, time')
-                .order('time', { ascending: false })
-                .then(({ data, error }) => {
                     const tbody = document.getElementById('contactsTableBody');
                     
-                    if (error) {
+                    if (fetchError) {
                         tbody.innerHTML = `
                             <tr>
                                 <td colspan="4" class="empty-state">
                                     <div class="empty-state-icon">❌</div>
-                                    <p>Erreur lors du chargement: ${error.message}</p>
+                                    <p>Erreur lors du chargement: ${fetchError.message}</p>
                                 </td>
                             </tr>
                         `;
                         return;
                     }
 
-                    allContacts = data || [];
+                    // Parse contact_table (should be a JSON string or already an array)
+                    let contacts = [];
+                    if (accountData && accountData.contact_table) {
+                        try {
+                            contacts = typeof accountData.contact_table === 'string' 
+                                ? JSON.parse(accountData.contact_table) 
+                                : accountData.contact_table;
+                            if (!Array.isArray(contacts)) {
+                                contacts = [];
+                            }
+                        } catch (parseError) {
+                            console.warn('Failed to parse contact_table', parseError);
+                            contacts = [];
+                        }
+                    }
+
+                    // If no contacts and contact_table is empty/null, initialize with example contact
+                    if (contacts.length === 0) {
+                        const exampleContact = {
+                            nom: 'go',
+                            prenom: 'Review',
+                            email: 'goreview.fr@gmail.com',
+                            time: new Date().toISOString()
+                        };
+                        contacts = [exampleContact];
+                        
+                        // Save the example contact to contact_table
+                        try {
+                            await client
+                                .from('accounts')
+                                .update({ contact_table: JSON.stringify(contacts) })
+                                .eq('id', id);
+                        } catch (updateError) {
+                            console.warn('Failed to initialize contact_table', updateError);
+                        }
+                    } else {
+                        // Check if the example contact exists, if not add it
+                        const hasExample = contacts.some(c => 
+                            c.email === 'goreview.fr@gmail.com' || 
+                            (c.nom === 'go' && c.prenom === 'Review')
+                        );
+                        
+                        if (!hasExample) {
+                            const exampleContact = {
+                                nom: 'go',
+                                prenom: 'Review',
+                                email: 'goreview.fr@gmail.com',
+                                time: new Date().toISOString()
+                            };
+                            contacts.unshift(exampleContact); // Add at the beginning
+                            
+                            // Save updated contacts
+                            try {
+                                await client
+                                    .from('accounts')
+                                    .update({ contact_table: JSON.stringify(contacts) })
+                                    .eq('id', id);
+                            } catch (updateError) {
+                                console.warn('Failed to update contact_table with example', updateError);
+                            }
+                        }
+                    }
+
+                    // Sort by time (most recent first)
+                    contacts.sort((a, b) => {
+                        const timeA = a.time ? new Date(a.time).getTime() : 0;
+                        const timeB = b.time ? new Date(b.time).getTime() : 0;
+                        return timeB - timeA;
+                    });
+
+                    allContacts = contacts;
                     currentPage = 1;
                     renderTable();
-                });
+                } catch (err) {
+                    const tbody = document.getElementById('contactsTableBody');
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="4" class="empty-state">
+                                <div class="empty-state-icon">❌</div>
+                                <p>Erreur lors du chargement: ${err.message}</p>
+                            </td>
+                        </tr>
+                    `;
+                    console.error('Failed to load contacts', err);
+                }
+            })();
         })();
     </script>
 </body>

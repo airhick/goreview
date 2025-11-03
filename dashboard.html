@@ -422,49 +422,123 @@
         });
     }
 
-    // Load contacts preview
-    function loadContactsPreview(clientInstance) {
+    // Load contacts preview from contact_table column
+    async function loadContactsPreview(clientInstance) {
         const tbody = document.getElementById('contactsPreviewBody');
         if (!tbody) return;
 
-        clientInstance
-            .from('leads')
-            .select('nom, prenom, email, time')
-            .order('time', { ascending: false })
-            .limit(10)
-            .then(({ data, error }) => {
-                if (error) {
-                    tbody.innerHTML = `<tr><td colspan='4' class='contacts-preview-empty'>Erreur: ${error.message}</td></tr>`;
-                    return;
-                }
+        try {
+            // First, get the account data to retrieve contact_table
+            const { data: accountData, error: fetchError } = await clientInstance
+                .from('accounts')
+                .select('contact_table')
+                .eq('id', id)
+                .maybeSingle();
 
-                if (!data || data.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan='4' class='contacts-preview-empty'>Aucun contact enregistré</td></tr>`;
-                    return;
-                }
+            if (fetchError) {
+                tbody.innerHTML = `<tr><td colspan='4' class='contacts-preview-empty'>Erreur: ${fetchError.message}</td></tr>`;
+                return;
+            }
 
-                tbody.innerHTML = data.map(lead => {
-                    const date = lead.time ? new Date(lead.time).toLocaleDateString('fr-FR', {
-                        year: 'numeric',
-                        month: '2-digit',
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    }) : '-';
-                    return `
-                        <tr>
-                            <td>${lead.nom || '-'}</td>
-                            <td>${lead.prenom || '-'}</td>
-                            <td>${lead.email || '-'}</td>
-                            <td>${date}</td>
-                        </tr>
-                    `;
-                }).join('');
-            })
-            .catch(err => {
-                tbody.innerHTML = `<tr><td colspan='4' class='contacts-preview-empty'>Erreur de chargement</td></tr>`;
-                console.error('Failed to load contacts', err);
+            // Parse contact_table (should be a JSON string or already an array)
+            let contacts = [];
+            if (accountData && accountData.contact_table) {
+                try {
+                    contacts = typeof accountData.contact_table === 'string' 
+                        ? JSON.parse(accountData.contact_table) 
+                        : accountData.contact_table;
+                    if (!Array.isArray(contacts)) {
+                        contacts = [];
+                    }
+                } catch (parseError) {
+                    console.warn('Failed to parse contact_table', parseError);
+                    contacts = [];
+                }
+            }
+
+            // If no contacts and contact_table is empty/null, initialize with example contact
+            if (contacts.length === 0) {
+                const exampleContact = {
+                    nom: 'go',
+                    prenom: 'Review',
+                    email: 'goreview.fr@gmail.com',
+                    time: new Date().toISOString()
+                };
+                contacts = [exampleContact];
+                
+                // Save the example contact to contact_table
+                try {
+                    await clientInstance
+                        .from('accounts')
+                        .update({ contact_table: JSON.stringify(contacts) })
+                        .eq('id', id);
+                } catch (updateError) {
+                    console.warn('Failed to initialize contact_table', updateError);
+                }
+            } else {
+                // Check if the example contact exists, if not add it
+                const hasExample = contacts.some(c => 
+                    c.email === 'goreview.fr@gmail.com' || 
+                    (c.nom === 'go' && c.prenom === 'Review')
+                );
+                
+                if (!hasExample) {
+                    const exampleContact = {
+                        nom: 'go',
+                        prenom: 'Review',
+                        email: 'goreview.fr@gmail.com',
+                        time: new Date().toISOString()
+                    };
+                    contacts.unshift(exampleContact); // Add at the beginning
+                    
+                    // Save updated contacts
+                    try {
+                        await clientInstance
+                            .from('accounts')
+                            .update({ contact_table: JSON.stringify(contacts) })
+                            .eq('id', id);
+                    } catch (updateError) {
+                        console.warn('Failed to update contact_table with example', updateError);
+                    }
+                }
+            }
+
+            // Sort by time (most recent first)
+            contacts.sort((a, b) => {
+                const timeA = a.time ? new Date(a.time).getTime() : 0;
+                const timeB = b.time ? new Date(b.time).getTime() : 0;
+                return timeB - timeA;
             });
+
+            // Display up to 10 contacts
+            const displayContacts = contacts.slice(0, 10);
+
+            if (displayContacts.length === 0) {
+                tbody.innerHTML = `<tr><td colspan='4' class='contacts-preview-empty'>Aucun contact enregistré</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = displayContacts.map(contact => {
+                const date = contact.time ? new Date(contact.time).toLocaleDateString('fr-FR', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }) : '-';
+                return `
+                    <tr>
+                        <td>${contact.nom || '-'}</td>
+                        <td>${contact.prenom || '-'}</td>
+                        <td>${contact.email || '-'}</td>
+                        <td>${date}</td>
+                    </tr>
+                `;
+            }).join('');
+        } catch (err) {
+            tbody.innerHTML = `<tr><td colspan='4' class='contacts-preview-empty'>Erreur de chargement</td></tr>`;
+            console.error('Failed to load contacts', err);
+        }
     }
 
     // Fetch Google Place Details (rating and total reviews only)
