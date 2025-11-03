@@ -98,6 +98,52 @@ class RedirectHandler(http.server.SimpleHTTPRequestHandler):
         # Default: serve files normally
         return super().do_GET()
     
+    def do_POST(self):
+        # Parse the URL
+        parsed_path = urlparse(self.path)
+        path = parsed_path.path
+        
+        # Handle dashboard login webhook proxy (to avoid CORS)
+        if path == '/api/dashboard-login':
+            import urllib.request
+            import json
+            
+            # Read request body
+            content_length = int(self.headers.get('Content-Length', 0))
+            post_data = self.rfile.read(content_length)
+            
+            webhook_url = 'https://n8n.goreview.fr/webhook/dashboard_login'
+            
+            try:
+                # Create request
+                req = urllib.request.Request(
+                    webhook_url,
+                    data=post_data,
+                    headers={
+                        'Content-Type': 'application/json',
+                        'Content-Length': len(post_data)
+                    },
+                    method='POST'
+                )
+                
+                with urllib.request.urlopen(req, timeout=15) as response:
+                    data = response.read()
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(data)
+                    return
+            except Exception as e:
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(f'{{"error": "{str(e)}"}}'.encode())
+                return
+        
+        # Default: return 404 for POST requests
+        self.send_response(404)
+        self.end_headers()
+    
     def log_message(self, format, *args):
         # Custom log format
         print(f"[{self.log_date_time_string()}] {args[0]}")

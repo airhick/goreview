@@ -476,6 +476,25 @@
                     console.warn('Failed to initialize contact_table', updateError);
                 }
             } else {
+                // Normalize date fields - convert 'timestamp' to 'time' for consistency
+                contacts = contacts.map(c => {
+                    if (c.timestamp && !c.time) {
+                        c.time = c.timestamp;
+                        delete c.timestamp;
+                    }
+                    return c;
+                });
+                
+                // Save normalized contacts back to Supabase
+                    try {
+                        await clientInstance
+                            .from('accounts')
+                            .update({ contact_table: JSON.stringify(contacts) })
+                            .eq('id', id);
+                    } catch (updateError) {
+                        console.warn('Failed to save normalized contacts', updateError);
+                    }
+                
                 // Check if the example contact exists, if not add it
                 const hasExample = contacts.some(c => 
                     c.email === 'goreview.fr@gmail.com' || 
@@ -503,10 +522,10 @@
                 }
             }
 
-            // Sort by time (most recent first)
+            // Sort by time (most recent first) - handle both 'time' and 'timestamp' fields
             contacts.sort((a, b) => {
-                const timeA = a.time ? new Date(a.time).getTime() : 0;
-                const timeB = b.time ? new Date(b.time).getTime() : 0;
+                const timeA = (a.time || a.timestamp) ? new Date(a.time || a.timestamp).getTime() : 0;
+                const timeB = (b.time || b.timestamp) ? new Date(b.time || b.timestamp).getTime() : 0;
                 return timeB - timeA;
             });
 
@@ -519,13 +538,28 @@
             }
 
             tbody.innerHTML = displayContacts.map(contact => {
-                const date = contact.time ? new Date(contact.time).toLocaleDateString('fr-FR', {
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                }) : '-';
+                // Handle both 'time' and 'timestamp' fields
+                const dateValue = contact.time || contact.timestamp;
+                let date = '-';
+                
+                if (dateValue) {
+                    try {
+                        const dateObj = new Date(dateValue);
+                        if (!isNaN(dateObj.getTime())) {
+                            date = dateObj.toLocaleDateString('fr-FR', {
+                                year: 'numeric',
+                                month: '2-digit',
+                                day: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            });
+                        }
+                    } catch (e) {
+                        console.warn('Failed to parse date:', dateValue, e);
+                        date = '-';
+                    }
+                }
+                
                 return `
                     <tr>
                         <td>${contact.nom || '-'}</td>

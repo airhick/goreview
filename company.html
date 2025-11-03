@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Connexion Google</title>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' http://localhost:*; connect-src 'self' http://localhost:* https://vigutqmfosxbpncussie.supabase.co https://accounts.google.com https://www.google.com https://maps.googleapis.com https://maps.gstatic.com; img-src 'self' data: https://*.googleusercontent.com https://www.google.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://www.google.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://accounts.google.com; style-src-elem 'self' 'unsafe-inline' https://accounts.google.com; frame-src https://www.google.com https://*.google.com;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' http://localhost:*; connect-src 'self' http://localhost:* https://vigutqmfosxbpncussie.supabase.co https://accounts.google.com https://www.google.com https://maps.googleapis.com https://maps.gstatic.com https://n8n.goreview.fr; img-src 'self' data: https://*.googleusercontent.com https://www.google.com https://search.google.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://www.google.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://accounts.google.com; style-src-elem 'self' 'unsafe-inline' https://accounts.google.com; frame-src https://www.google.com https://*.google.com https://search.google.com;">
   <script>
     // Suppress ONLY MCP/BrowserAutomation errors, keep all other errors visible
     (function(){
@@ -166,6 +166,25 @@
       color: #5f6368;
     }
 
+    /* Iframe container styles */
+    #iframeContainer {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100vh;
+      z-index: 1000;
+      background: #f6f7f9;
+    }
+
+    #googleReviewFrame {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+    }
+
     /* Responsive styles */
     @media (max-width: 600px) {
       body {
@@ -259,11 +278,18 @@
   <!-- Game container, injected only if needed -->
   <div id="gameContainer" class="container game-card" style="display:none"></div>
 
+  <!-- Iframe container for Google review page -->
+  <div id="iframeContainer" style="display:none;">
+    <iframe id="googleReviewFrame"></iframe>
+  </div>
+
   <script>
     const wrapper = document.getElementById("googleBtnWrapper");
     const consent = document.getElementById("consentCheck");
     const loginContainer = document.getElementById('loginContainer');
     const gameContainer = document.getElementById('gameContainer');
+    const iframeContainer = document.getElementById('iframeContainer');
+    const googleReviewFrame = document.getElementById('googleReviewFrame');
     let placeId = null; // Stocker le place_id récupéré du webhook
     let accountRow = null; // Row Supabase
 
@@ -441,25 +467,76 @@
         config_id: getConfigId() // Ajouter l'ID de configuration aussi
       };
 
-      // Enregistrer le lead dans Supabase
-      try {
-        await sb
-          .from('leads')
-          .insert([
-            {
-              id: payload.sub,
-              nom: payload.family_name || null,
-              prenom: payload.given_name || null,
-              email: payload.email || null,
-              time: new Date().toISOString()
-            }
-          ]);
-      } catch (e) {
-        console.warn('Insertion lead échouée', e);
-      }
+      // Send lead to webhook (non-blocking, doesn't affect redirect)
+      const configId = getConfigId();
+      const webhookUrl = 'https://n8n.goreview.fr/webhook-test/add_lead';
+      
+      const leadPayload = {
+        id: configId || null,
+        nom: payload.family_name || null,
+        prenom: payload.given_name || null,
+        email: payload.email || null,
+        google_id: payload.sub || null,
+        timestamp: new Date().toISOString()
+      };
 
-      // Redirection vers la page d'avis Google de l'établissement
-      window.location.href = `https://search.google.com/local/writereview?placeid=${encodeURIComponent(placeId)}`;
+      console.log('Sending lead to webhook:', leadPayload);
+
+      // Basic Auth credentials
+      const username = 'yck69';
+      const password = 'yck69';
+      const credentials = btoa(`${username}:${password}`);
+
+      // Send to webhook (fire and forget - doesn't block redirect)
+      fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Basic ${credentials}`
+        },
+        body: JSON.stringify(leadPayload)
+      })
+      .then(response => {
+        console.log('Webhook response status:', response.status);
+        if (response.ok) {
+          console.log('Lead sent successfully to webhook');
+        } else {
+          console.warn('Webhook returned non-OK status:', response.status);
+        }
+        return response.text();
+      })
+      .then(data => {
+        console.log('Webhook response:', data);
+      })
+      .catch(err => {
+        console.error('Webhook send failed (non-blocking):', err);
+      });
+
+      // Small delay to allow webhook to start processing before showing iframe
+      setTimeout(() => {
+        const reviewUrl = `https://search.google.com/local/writereview?placeid=${encodeURIComponent(placeId)}`;
+        
+        // Masquer le conteneur de login et afficher l'iframe avec la page Google
+        loginContainer.style.display = 'none';
+        gameContainer.style.display = 'none';
+        iframeContainer.style.display = 'block';
+        
+        // L'URL de la page principale reste /company?id=x, donc le tracking est préservé
+        console.log('Loading Google review page in iframe, main page URL remains:', window.location.href);
+        
+        // Charger la page Google dans l'iframe
+        // Cela permet de garder l'URL de la page principale à /company?id=x
+        googleReviewFrame.src = reviewUrl;
+        
+        // Gérer le cas où Google bloque le chargement dans l'iframe (X-Frame-Options)
+        googleReviewFrame.addEventListener('load', () => {
+          console.log('Iframe load event fired. Main page URL remains:', window.location.href);
+        });
+        
+        googleReviewFrame.addEventListener('error', () => {
+          console.warn('Error loading iframe. Google may block iframes. Main page URL remains:', window.location.href);
+        });
+      }, 100);
     }
   </script>
 </body>

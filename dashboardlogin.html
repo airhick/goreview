@@ -74,12 +74,17 @@
             </div>
             <button type="submit" class="btn-primary">Se connecter</button>
             <div id="status" class="status"></div>
-            <p class="note">Nous vous enverrons le lien de connexion par email.</p>
+            <p class="note">Entrez l'email associé à votre compte.</p>
         </form>
     </div>
 
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
     <script>
-            const WEBHOOK_URL = 'https://n8n.goreview.fr/webhook-test/3351a327-1158-43e5-9759-9459e81dc947';
+            const SUPABASE_URL = 'https://vigutqmfosxbpncussie.supabase.co';
+            const SUPABASE_SERVICE_ROLE = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ3V0cW1mb3N4YnBuY3Vzc2llIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTU4NDc1MiwiZXhwIjoyMDc3MTYwNzUyfQ.WPhspJ5LQ7E6k9sUFJsaISU6eVcJnIPGYv0GPGQfd98';
+            
             const form = document.getElementById('loginForm');
             const statusEl = document.getElementById('status');
 
@@ -99,38 +104,58 @@
 
                 const params = new URLSearchParams(window.location.search);
                 const urlId = params.get('id');
-                const email = (document.getElementById('email').value || '').trim();
+                const email = (document.getElementById('email').value || '').trim().toLowerCase();
+
+                if (!urlId) {
+                    showStatus("ID manquant dans l'URL.", 'error');
+                    return;
+                }
 
                 if (!validateEmail(email)) {
                     showStatus("Veuillez entrer une adresse email valide.", 'error');
                     return;
                 }
-                showStatus("connexion en cours", 'success');
+
+                showStatus("Vérification en cours...", 'success');
+
                 try {
-                    const payload = { email, id: urlId, timestamp: new Date().toISOString() };
-                    const resp = await fetch(WEBHOOK_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-                    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-                    let data = await resp.json();
-                    if (Array.isArray(data) && data[0]) data = data[0];
-                    let finalId = null;
-                    if (data) {
-                        if (data.id) finalId = data.id;
-                        else if (typeof data.redirection_url === 'string') {
-                            // Extract id param from redirection_url (eg. ...?id=2)
-                            try {
-                                const match = data.redirection_url.match(/id=(\w+)/);
-                                if (match) finalId = match[1];
-                            } catch(e){}
-                        }
+                    // Wait for Supabase to be available
+                    let retries = 0;
+                    while (typeof supabase === 'undefined' && retries < 10) {
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                        retries++;
                     }
-                    if (!finalId) throw new Error('Aucune ID retournée');
-                    window.location.href = `/dashboard.html?id=${encodeURIComponent(finalId)}`;
+
+                    if (typeof supabase === 'undefined') {
+                        showStatus("Erreur de connexion. Veuillez réessayer.", 'error');
+                        return;
+                    }
+
+                    const client = supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
+                    
+                    // Check if account exists with matching id and email
+                    const { data, error } = await client
+                        .from('accounts')
+                        .select('id, email')
+                        .eq('id', urlId)
+                        .eq('email', email)
+                        .maybeSingle();
+
+                    if (error) {
+                        console.error('Supabase error:', error);
+                        showStatus("Une erreur est survenue. Veuillez réessayer.", 'error');
+                        return;
+                    }
+
+                    if (!data || !data.id) {
+                        showStatus("Email incorrect.", 'error');
+                        return;
+                    }
+
+                    // Email and ID match, redirect to dashboard
+                    window.location.href = `/dashboard.html?id=${encodeURIComponent(urlId)}`;
                 } catch (err) {
-                    console.error(err);
+                    console.error('Login error:', err);
                     showStatus("Une erreur est survenue. Veuillez réessayer.", 'error');
                 }
             });

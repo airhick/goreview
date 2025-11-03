@@ -403,19 +403,95 @@
     <!-- Google Places API -->
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC1zqymSXocGXuCEVvpzXERWYwIzimV0Oo&libraries=places&callback=initAutocomplete" async defer></script>
 
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
     <script>
+        // Early check: redirect to dashboard if account already exists
+        (async function checkExistingAccount() {
+            const params = new URLSearchParams(window.location.search);
+            const id = params.get('id');
+            
+            if (!id) return; // Will be handled by the existing check
+            
+            // Wait for Supabase to be available
+            let retries = 0;
+            while (typeof supabase === 'undefined' && retries < 10) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                retries++;
+            }
+            
+            if (typeof supabase === 'undefined') {
+                console.warn('Supabase not loaded, continuing with form');
+                return;
+            }
+            
+            try {
+                const SUPABASE_URL = 'https://vigutqmfosxbpncussie.supabase.co';
+                const SUPABASE_SERVICE_ROLE = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ3V0cW1mb3N4YnBuY3Vzc2llIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTU4NDc1MiwiZXhwIjoyMDc3MTYwNzUyfQ.WPhspJ5LQ7E6k9sUFJsaISU6eVcJnIPGYv0GPGQfd98';
+                const client = supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
+                
+                const { data, error } = await client
+                    .from('accounts')
+                    .select('id, business_id')
+                    .eq('id', id)
+                    .maybeSingle();
+                
+                if (error) {
+                    console.warn('Error checking account:', error);
+                    return; // Continue with form if error
+                }
+                
+                // Debug logging
+                console.log('Account check for id:', id, 'Data:', data);
+                
+                // If no account exists at all, stay on create page
+                if (!data || !data.id) {
+                    console.log('No account found, staying on create page');
+                    return; // Stay on create page
+                }
+                
+                // Check if business_id exists and is valid
+                const businessId = data.business_id;
+                const hasBusinessId = businessId !== null && 
+                                     businessId !== undefined && 
+                                     businessId !== '' &&
+                                     String(businessId).trim() !== '';
+                
+                console.log('business_id value:', businessId, 'hasBusinessId:', hasBusinessId);
+                
+                // Only redirect if business_id is filled
+                if (hasBusinessId) {
+                    console.log('Account has business_id, redirecting to dashboard');
+                    window.location.href = `/dashboardlogin.html?id=${encodeURIComponent(id)}`;
+                    return;
+                }
+                
+                // If account exists but business_id is null/empty, stay on create page
+                console.log('Account exists but no business_id, staying on create page');
+            } catch (err) {
+                console.warn('Failed to check existing account:', err);
+                // Continue with form if check fails
+            }
+        })();
+
         if (window.pageLocked) {
             // Stop further script execution on this page if locked
         } else {
         let autocompleteService;
+        let placesService;
         let autocompleteRequestTimeout;
         let companyInput;
         let autocompleteResults;
+        let selectedPlaceId = null; // Store the selected place_id
 
-        // Initialize Google Places Autocomplete
+        // Initialize Google Places Autocomplete and Places Service
         function initAutocomplete() {
             if (typeof google !== 'undefined' && google.maps && google.maps.places) {
                 autocompleteService = new google.maps.places.AutocompleteService();
+                // Create a dummy div for PlacesService (required by the API)
+                const dummyDiv = document.createElement('div');
+                placesService = new google.maps.places.PlacesService(dummyDiv);
             }
         }
 
@@ -433,6 +509,9 @@
 
             companyInput.addEventListener('input', function(e) {
                 const query = e.target.value.trim();
+
+                // Reset place_id when user types manually
+                selectedPlaceId = null;
 
                 // Clear previous timeout
                 clearTimeout(autocompleteRequestTimeout);
@@ -483,6 +562,8 @@
                     item.addEventListener('click', () => {
                         companyInput.value = prediction.structured_formatting.main_text;
                         autocompleteResults.classList.remove('show');
+                        // Get place details to retrieve place_id
+                        getPlaceDetails(prediction.place_id);
                     });
                     autocompleteResults.appendChild(item);
                 });
@@ -490,6 +571,31 @@
             } else {
                 autocompleteResults.classList.remove('show');
             }
+        }
+
+        // Get place details including place_id
+        function getPlaceDetails(placeId) {
+            if (!placesService || !placeId) {
+                selectedPlaceId = null;
+                return;
+            }
+
+            placesService.getDetails(
+                {
+                    placeId: placeId,
+                    fields: ['place_id', 'name', 'formatted_address']
+                },
+                (place, status) => {
+                    if (status === google.maps.places.PlacesServiceStatus.OK && place) {
+                        selectedPlaceId = place.place_id || placeId;
+                        console.log('Place selected:', place.name, 'Place ID:', selectedPlaceId);
+                    } else {
+                        // Fallback: use the prediction place_id directly
+                        selectedPlaceId = placeId;
+                        console.log('Using prediction place_id:', selectedPlaceId);
+                    }
+                }
+            );
         }
 
         // Go back to config page
@@ -547,33 +653,63 @@
 
             try {
                 // Send data to webhook
-                const webhookUrl = 'https://n8n.goreview.fr/webhook-test/6d857fbd-8a06-4a50-b336-ebff1c6b1747';
+                const webhookUrl = 'https://n8n.goreview.fr/webhook/create';
                 
                 const payload = {
                     firstName: formData.firstName,
                     lastName: formData.lastName,
                     email: formData.email,
                     companyName: formData.companyName,
+                    placeId: selectedPlaceId || null, // Include place_id from Google Places
                     id: id || null,
                     timestamp: new Date().toISOString()
                 };
 
-                const response = await fetch(webhookUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(payload)
-                });
+                // Validate that place_id is present if company name was selected from autocomplete
+                if (!selectedPlaceId && formData.companyName) {
+                    console.warn('No place_id found for company:', formData.companyName);
+                    // Still send the form, but placeId will be null
+                }
 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                // Basic Auth credentials
+                const username = 'yck69';
+                const password = 'yck69';
+                const credentials = btoa(`${username}:${password}`);
+
+                console.log('Sending to webhook:', webhookUrl, payload);
+
+                // Try to send to webhook, but don't block on CORS errors
+                let webhookSuccess = false;
+                try {
+                    const response = await fetch(webhookUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Basic ${credentials}`
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.ok) {
+                        webhookSuccess = true;
+                        console.log('Webhook sent successfully');
+                    } else {
+                        console.warn('Webhook returned non-OK status:', response.status);
+                    }
+                } catch (fetchError) {
+                    // If it's a CORS error, log but don't block the user
+                    if (fetchError.message.includes('CORS') || fetchError.name === 'TypeError' && fetchError.message.includes('Failed to fetch')) {
+                        console.warn('Webhook CORS error (non-blocking):', fetchError);
+                        // Still continue - webhook might work server-side
+                    } else {
+                        throw fetchError; // Re-throw non-CORS errors
+                    }
                 }
 
                 // Store ID for later use
                 window.currentConfigId = id;
 
-                // Show success section and hide form
+                // Show success section and hide form (even if webhook had CORS issue)
                 document.getElementById('formSection').classList.add('hidden');
                 document.getElementById('successSection').classList.remove('hidden');
                 window.scrollTo(0, 0);
