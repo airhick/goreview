@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Connexion Google</title>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' http://localhost:*; connect-src 'self' http://localhost:* https://vigutqmfosxbpncussie.supabase.co https://accounts.google.com https://www.google.com https://maps.googleapis.com https://maps.gstatic.com https://n8n.goreview.fr; img-src 'self' data: https://*.googleusercontent.com https://www.google.com https://search.google.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://www.google.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://accounts.google.com; style-src-elem 'self' 'unsafe-inline' https://accounts.google.com; frame-src https://www.google.com https://*.google.com https://search.google.com;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' http://localhost:*; connect-src 'self' http://localhost:* https://vigutqmfosxbpncussie.supabase.co https://accounts.google.com https://www.google.com https://maps.googleapis.com https://maps.gstatic.com https://n8n.goreview.fr; img-src 'self' data: https://*.googleusercontent.com https://www.google.com https://search.google.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://www.google.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://accounts.google.com; style-src-elem 'self' 'unsafe-inline' https://accounts.google.com; frame-src 'self' http://localhost:* https://www.google.com https://*.google.com https://search.google.com;">
   <script>
     // Suppress ONLY MCP/BrowserAutomation errors, keep all other errors visible
     (function(){
@@ -176,6 +176,7 @@
       height: 100vh;
       z-index: 1000;
       background: #f6f7f9;
+      overflow: hidden;
     }
 
     #googleReviewFrame {
@@ -183,6 +184,8 @@
       height: 100%;
       border: none;
       display: block;
+      visibility: visible;
+      opacity: 1;
     }
 
     /* Responsive styles */
@@ -281,6 +284,12 @@
   <!-- Iframe container for Google review page -->
   <div id="iframeContainer" style="display:none;">
     <iframe id="googleReviewFrame"></iframe>
+    <!-- Message de fallback si Google bloque l'iframe -->
+    <div id="iframeFallback" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); text-align:center; background:white; padding:24px; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.1); z-index:1001;">
+      <h2 style="margin:0 0 12px; color:#202124; font-size:18px;">Google bloque l'affichage dans un iframe</h2>
+      <p style="margin:0 0 16px; color:#5f6368; font-size:14px;">Pour des raisons de sécurité, Google ne permet pas l'affichage de cette page dans un iframe.</p>
+      <button id="openInNewTab" style="background:#1a73e8; color:white; border:none; padding:10px 20px; border-radius:4px; cursor:pointer; font-size:14px; font-weight:500;">Ouvrir dans un nouvel onglet</button>
+    </div>
   </div>
 
   <script>
@@ -514,28 +523,125 @@
 
       // Small delay to allow webhook to start processing before showing iframe
       setTimeout(() => {
-        const reviewUrl = `https://search.google.com/local/writereview?placeid=${encodeURIComponent(placeId)}`;
+        console.log('=== STARTING IFRAME SETUP ===');
+        // Utiliser directement le proxy car Google bloque toujours les iframes avec X-Frame-Options
+        // Le proxy permet de contourner cette restriction et le script injecté gérera la redirection depuis la page de login
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const reviewUrl = isLocalhost 
+          ? `/api/google-review-proxy?place_id=${encodeURIComponent(placeId)}`
+          : `/.netlify/functions/google-review-proxy?place_id=${encodeURIComponent(placeId)}`;
+        
+        console.log('Using proxy URL (bypasses X-Frame-Options):', reviewUrl);
         
         // Masquer le conteneur de login et afficher l'iframe avec la page Google
+        console.log('Hiding login container...');
         loginContainer.style.display = 'none';
         gameContainer.style.display = 'none';
+        
+        console.log('Showing iframe container...');
         iframeContainer.style.display = 'block';
+        
+        // Forcer la visibilité de l'iframe
+        iframeContainer.style.visibility = 'visible';
+        iframeContainer.style.opacity = '1';
+        googleReviewFrame.style.visibility = 'visible';
+        googleReviewFrame.style.opacity = '1';
         
         // L'URL de la page principale reste /company?id=x, donc le tracking est préservé
         console.log('Loading Google review page in iframe, main page URL remains:', window.location.href);
         
-        // Charger la page Google dans l'iframe
-        // Cela permet de garder l'URL de la page principale à /company?id=x
-        googleReviewFrame.src = reviewUrl;
+        // Vérifier si l'iframe est bien visible
+        const computedStyle = window.getComputedStyle(iframeContainer);
+        console.log('Iframe container display:', computedStyle.display);
+        console.log('Iframe container visibility:', computedStyle.visibility);
+        console.log('Iframe container opacity:', computedStyle.opacity);
+        console.log('Iframe container dimensions:', iframeContainer.offsetWidth, 'x', iframeContainer.offsetHeight);
+        console.log('Iframe container position:', iframeContainer.offsetTop, iframeContainer.offsetLeft);
+        console.log('Iframe container z-index:', computedStyle.zIndex);
         
-        // Gérer le cas où Google bloque le chargement dans l'iframe (X-Frame-Options)
+        // Vérifier que l'iframe existe
+        console.log('Iframe element exists:', !!googleReviewFrame);
+        console.log('Iframe src will be set to:', reviewUrl);
+        
+        // Charger la page Google dans l'iframe via le proxy
+        // Le proxy contourne X-Frame-Options et injecte un script pour rediriger automatiquement depuis la page de login
+        googleReviewFrame.src = reviewUrl;
+        console.log('Iframe src set to:', reviewUrl);
+        
+        let iframeContentChecked = false;
+        
+        // Gérer le chargement de l'iframe
         googleReviewFrame.addEventListener('load', () => {
+          clearTimeout(loadTimeout);
           console.log('Iframe load event fired. Main page URL remains:', window.location.href);
+          
+          // Vérifier si le contenu est accessible (après un court délai pour permettre le chargement)
+          setTimeout(() => {
+            if (!iframeContentChecked) {
+              iframeContentChecked = true;
+              try {
+                // Tenter d'accéder au contenu (cela échouera si Google bloque avec X-Frame-Options)
+                const iframeDoc = googleReviewFrame.contentDocument || googleReviewFrame.contentWindow?.document;
+                if (iframeDoc) {
+                  console.log('Iframe content accessible - Google may not be blocking');
+                  // Masquer le fallback si le contenu est accessible
+                  const fallback = document.getElementById('iframeFallback');
+                  if (fallback) fallback.style.display = 'none';
+                } else {
+                  console.warn('Iframe content not accessible - Google likely blocking with X-Frame-Options');
+                  // Afficher le fallback si Google bloque
+                  const fallback = document.getElementById('iframeFallback');
+                  if (fallback) fallback.style.display = 'block';
+                }
+              } catch (e) {
+                // Erreur cross-origin attendue - Google bloque probablement l'accès
+                console.warn('Cross-origin error - Google blocking iframe content access:', e.message);
+                console.log('This is expected. Iframe is visible but content may be blocked by Google.');
+                console.log('Main page URL remains:', window.location.href);
+                // Afficher le fallback car Google bloque
+                const fallback = document.getElementById('iframeFallback');
+                if (fallback) fallback.style.display = 'block';
+              }
+            }
+          }, 1500);
         });
+        
+        // Gérer le bouton de fallback
+        const openInNewTabBtn = document.getElementById('openInNewTab');
+        if (openInNewTabBtn) {
+          openInNewTabBtn.addEventListener('click', () => {
+            window.open(reviewUrl, '_blank', 'noopener,noreferrer');
+          });
+        }
         
         googleReviewFrame.addEventListener('error', () => {
           console.warn('Error loading iframe. Google may block iframes. Main page URL remains:', window.location.href);
         });
+        
+        // Vérifier après un délai si l'iframe est toujours vide (Google bloque)
+        setTimeout(() => {
+          try {
+            const iframeDoc = googleReviewFrame.contentDocument || googleReviewFrame.contentWindow?.document;
+            if (!iframeDoc) {
+              console.log('Iframe is visible but Google blocks content. This is a security restriction by Google.');
+              console.log('Main page URL preserved:', window.location.href);
+              // Afficher le fallback si Google bloque
+              const fallback = document.getElementById('iframeFallback');
+              if (fallback && !iframeContentChecked) {
+                fallback.style.display = 'block';
+              }
+            }
+          } catch (e) {
+            // Erreur cross-origin - c'est normal, Google bloque l'accès
+            console.log('Iframe visible and loaded. Google restricts cross-origin access (expected behavior).');
+            console.log('Main page URL remains:', window.location.href);
+            // Afficher le fallback car Google bloque
+            const fallback = document.getElementById('iframeFallback');
+            if (fallback && !iframeContentChecked) {
+              fallback.style.display = 'block';
+            }
+          }
+        }, 2000);
       }, 100);
     }
   </script>
