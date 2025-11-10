@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Connexion Google</title>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' http://localhost:*; connect-src 'self' http://localhost:* https://vigutqmfosxbpncussie.supabase.co https://accounts.google.com https://www.google.com https://maps.googleapis.com https://maps.gstatic.com https://n8n.goreview.fr; img-src 'self' data: https://*.googleusercontent.com https://www.google.com https://search.google.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://www.google.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://accounts.google.com; style-src-elem 'self' 'unsafe-inline' https://accounts.google.com; frame-src 'self' http://localhost:* https://www.google.com https://*.google.com https://search.google.com;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' http://localhost:*; connect-src 'self' http://localhost:* https://vigutqmfosxbpncussie.supabase.co https://accounts.google.com https://www.google.com https://n8n.goreview.fr; img-src 'self' data: https://*.googleusercontent.com https://www.google.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://www.google.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://accounts.google.com; style-src-elem 'self' 'unsafe-inline' https://accounts.google.com;">
   <script>
     // Suppress ONLY MCP/BrowserAutomation errors, keep all other errors visible
     (function(){
@@ -56,7 +56,7 @@
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
       margin: 0;
       padding: 0;
-      height: 100vh;
+      min-height: 100vh;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -74,13 +74,6 @@
       padding: 32px 32px 28px;
       text-align: center;
     }
-
-    /* Jeu (placeholder) */
-    .game-card { max-width: 520px; }
-    .btn { display:inline-block; padding:10px 14px; border-radius:10px; border:1px solid #e5e7eb; text-decoration:none; color:#111827; font-weight:600; }
-    .btn:hover { background:#f3f4f6; }
-    .btn-primary { background:#6366f1; color:#fff; border-color:#6366f1; }
-    .muted { color:#5f6368; }
 
     /* Logo Google */
     .g-logo {
@@ -141,24 +134,6 @@
       pointer-events: none;
     }
 
-    /* Séparateur "ou" (au cas où tu ajoutes d'autres moyens plus tard) */
-    .divider {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin: 14px 0 0;
-      color: #5f6368;
-      font-size: 12px;
-    }
-
-    .divider::before,
-    .divider::after {
-      content: "";
-      height: 1px;
-      flex: 1;
-      background: #dadce0;
-    }
-
     /* Footer petit texte */
     .footnote {
       margin-top: 16px;
@@ -166,26 +141,17 @@
       color: #5f6368;
     }
 
-    /* Iframe container styles */
-    #iframeContainer {
+    /* Game container - hidden by default */
+    #gameContainer {
       display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
       width: 100%;
-      height: 100vh;
-      z-index: 1000;
-      background: #f6f7f9;
-      overflow: hidden;
-    }
-
-    #googleReviewFrame {
-      width: 100%;
-      height: 100%;
-      border: none;
-      display: block;
-      visibility: visible;
-      opacity: 1;
+      max-width: 600px;
+      background: #fff;
+      border: 1px solid #dadce0;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(60,64,67,.15);
+      padding: 32px;
+      text-align: center;
     }
 
     /* Responsive styles */
@@ -196,7 +162,7 @@
         padding-top: 40px;
       }
 
-      .container {
+      .container, #gameContainer {
         max-width: 100%;
         padding: 24px 20px 20px;
         border-radius: 8px;
@@ -222,20 +188,10 @@
       #googleBtn {
         width: 100% !important;
       }
-
-      .game-card {
-        max-width: 100%;
-      }
-
-      .btn, .btn-primary {
-        width: 100%;
-        padding: 12px;
-        font-size: 14px;
-      }
     }
 
     @media (max-width: 400px) {
-      .container {
+      .container, #gameContainer {
         padding: 20px 16px 18px;
       }
 
@@ -278,29 +234,23 @@
     </div>
   </div>
 
-  <!-- Game container, injected only if needed -->
-  <div id="gameContainer" class="container game-card" style="display:none"></div>
-
-  <!-- Iframe container for Google review page -->
-  <div id="iframeContainer" style="display:none;">
-    <iframe id="googleReviewFrame"></iframe>
-    <!-- Message de fallback si Google bloque l'iframe -->
-    <div id="iframeFallback" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); text-align:center; background:white; padding:24px; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.1); z-index:1001;">
-      <h2 style="margin:0 0 12px; color:#202124; font-size:18px;">Google bloque l'affichage dans un iframe</h2>
-      <p style="margin:0 0 16px; color:#5f6368; font-size:14px;">Pour des raisons de sécurité, Google ne permet pas l'affichage de cette page dans un iframe.</p>
-      <button id="openInNewTab" style="background:#1a73e8; color:white; border:none; padding:10px 20px; border-radius:4px; cursor:pointer; font-size:14px; font-weight:500;">Ouvrir dans un nouvel onglet</button>
-    </div>
-  </div>
+  <!-- Game container - will be populated when user returns -->
+  <div id="gameContainer"></div>
 
   <script>
     const wrapper = document.getElementById("googleBtnWrapper");
     const consent = document.getElementById("consentCheck");
     const loginContainer = document.getElementById('loginContainer');
     const gameContainer = document.getElementById('gameContainer');
-    const iframeContainer = document.getElementById('iframeContainer');
-    const googleReviewFrame = document.getElementById('googleReviewFrame');
-    let placeId = null; // Stocker le place_id récupéré du webhook
-    let accountRow = null; // Row Supabase
+    
+    // Supabase
+    const SUPABASE_URL = 'https://vigutqmfosxbpncussie.supabase.co';
+    const SUPABASE_SERVICE_ROLE = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ3V0cW1mb3N4YnBuY3Vzc2llIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTU4NDc1MiwiZXhwIjoyMDc3MTYwNzUyfQ.WPhspJ5LQ7E6k9sUFJsaISU6eVcJnIPGYv0GPGQfd98';
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
+    
+    let reviewWindow = null;
+    let hasOpenedReview = false;
+    let cachedBusinessId = null; // Cache le business_id pour éviter les appels répétés
 
     // Récupérer l'ID depuis l'URL
     function getConfigId() {
@@ -308,76 +258,159 @@
       return params.get("id");
     }
 
-    // Supabase
-    const SUPABASE_URL = 'https://vigutqmfosxbpncussie.supabase.co';
-    const SUPABASE_SERVICE_ROLE = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ3V0cW1mb3N4YnBuY3Vzc2llIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTU4NDc1MiwiZXhwIjoyMDc3MTYwNzUyfQ.WPhspJ5LQ7E6k9sUFJsaISU6eVcJnIPGYv0GPGQfd98';
-    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
-    async function fetchAccount() {
-      const id = getConfigId();
-      if (!id) return null;
-      const { data } = await sb.from('accounts').select('*').eq('id', id).limit(1).maybeSingle();
-      return data || null;
-    }
-
-    // Récupérer le place_id depuis le webhook de configuration
-    async function fetchPlaceId() {
-      const configId = getConfigId();
-      if (!configId) {
-        console.error("Aucun ID de configuration détecté dans l'URL");
-        return null;
+    // Récupérer le business_id (place_id) depuis Supabase
+    async function fetchBusinessId() {
+      if (cachedBusinessId !== null) {
+        return cachedBusinessId; // Utiliser le cache
       }
-
-      // 1) Try Supabase first (business_id on accounts)
+      
+      const configId = getConfigId();
+      if (!configId) return null;
+      
       try {
         const { data } = await sb.from('accounts').select('business_id').eq('id', configId).limit(1).maybeSingle();
-        if (data && data.business_id) {
-          return data.business_id;
-        }
+        cachedBusinessId = data?.business_id || null;
+        return cachedBusinessId;
       } catch (e) {
-        console.warn('Supabase place id lookup failed', e);
+        console.error('Error fetching business_id:', e);
+        return null;
       }
-
-      // 2) Fallback to webhook and tolerate non-JSON responses
-      try {
-        const response = await fetch("https://n8n.goreview.fr/webhook/configuration", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: configId })
-        });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        let data = null;
-        try { data = await response.json(); } catch (_) { data = null; }
-        if (data) return data.place_id || data.placeId || data.pid || null;
-      } catch (error) {
-        console.error("Erreur lors de la récupération du place_id:", error);
-      }
-      return null;
     }
 
-    // Render game if configured to show before review; otherwise show Google button
-    window.onload = async () => {
-      accountRow = await fetchAccount();
-      // Récupérer le place_id avant d'initialiser Google Sign-In
-      placeId = await fetchPlaceId();
+    // Charger et afficher le jeu depuis Supabase
+    async function loadGame() {
+      const configId = getConfigId();
+      if (!configId) return;
+
+      try {
+        const { data } = await sb.from('accounts').select('wich_game, games_details, games').eq('id', configId).limit(1).maybeSingle();
+        
+        if (!data || !data.games || !data.wich_game) {
+          console.log('No game configured for this account');
+          return;
+        }
+
+        const gameType = data.wich_game;
+        const gamesDetails = data.games_details ? JSON.parse(data.games_details) : null;
+
+        console.log('Loading game:', gameType, gamesDetails);
+
+        // Masquer le login, afficher le jeu
+        loginContainer.style.display = 'none';
+        gameContainer.style.display = 'block';
+
+        // Charger le jeu selon le type
+        await loadGameByType(gameType, gamesDetails);
+      } catch (e) {
+        console.error('Error loading game:', e);
+      }
+    }
+
+    // Charger le jeu selon son type
+    async function loadGameByType(gameType, gameDetails) {
+      // Charger le fichier HTML du jeu via fetch
+      const gameUrl = `games/${gameType}.html`;
       
-      if (!placeId) {
-        console.error("Impossible de récupérer le place_id");
-        // Optionnel: afficher un message d'erreur à l'utilisateur
+      try {
+        const response = await fetch(gameUrl);
+        if (!response.ok) {
+          throw new Error(`Failed to load game: ${gameType}`);
+        }
+        
+        const html = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        
+        // Extraire le contenu du body
+        const gameContent = doc.body.innerHTML;
+        
+        // Injecter dans le container
+        gameContainer.innerHTML = gameContent;
+        
+        // Exécuter les scripts du jeu
+        const scripts = doc.querySelectorAll('script');
+        scripts.forEach(script => {
+          const newScript = document.createElement('script');
+          if (script.src) {
+            newScript.src = script.src;
+          } else {
+            newScript.textContent = script.textContent;
+          }
+          document.body.appendChild(newScript);
+        });
+        
+        // Injecter les styles
+        const styles = doc.querySelectorAll('style, link[rel="stylesheet"]');
+        styles.forEach(style => {
+          if (style.tagName === 'STYLE') {
+            const newStyle = document.createElement('style');
+            newStyle.textContent = style.textContent;
+            document.head.appendChild(newStyle);
+          } else if (style.tagName === 'LINK') {
+            const newLink = document.createElement('link');
+            newLink.rel = 'stylesheet';
+            newLink.href = style.href;
+            document.head.appendChild(newLink);
+          }
+        });
+
+        // Initialiser le jeu avec les détails depuis Supabase
+        if (gameDetails && window.initGame) {
+          window.initGame(gameDetails);
+        }
+      } catch (e) {
+        console.error('Error loading game file:', e);
+        gameContainer.innerHTML = `<h2>Erreur de chargement du jeu</h2><p>${e.message}</p>`;
+      }
+    }
+
+    // Détecter quand l'utilisateur revient sur la page
+    function setupReturnDetection() {
+      // Détecter le focus de la fenêtre
+      window.addEventListener('focus', () => {
+        if (hasOpenedReview && reviewWindow && reviewWindow.closed) {
+          // La fenêtre de review a été fermée, charger le jeu
+          console.log('Review window closed, loading game...');
+          loadGame();
+        }
+      });
+
+      // Détecter les changements de visibilité
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && hasOpenedReview && reviewWindow && reviewWindow.closed) {
+          console.log('Page visible again, loading game...');
+          loadGame();
+        }
+      });
+
+      // Vérifier périodiquement si la fenêtre est fermée
+      setInterval(() => {
+        if (hasOpenedReview && reviewWindow && reviewWindow.closed) {
+          console.log('Review window closed (interval check), loading game...');
+          loadGame();
+          hasOpenedReview = false; // Reset pour éviter de recharger plusieurs fois
+        }
+      }, 1000);
+    }
+
+    // Initialiser Google Sign-In au chargement de la page
+    window.onload = async () => {
+      // Vérifier si l'utilisateur revient (check localStorage ou sessionStorage)
+      const hasReturned = sessionStorage.getItem('hasReturnedFromReview');
+      if (hasReturned === 'true') {
+        // L'utilisateur revient, charger le jeu directement
+        loginContainer.style.display = 'none';
+        await loadGame();
+        sessionStorage.removeItem('hasReturnedFromReview');
         return;
       }
 
-      const wantsGame = accountRow && accountRow.games === true;
-      const when = (accountRow && accountRow.games_time) || 'after';
-      const which = (accountRow && accountRow.wich_game) || null;
-
-      if (wantsGame && when === 'before' && which) {
-        // Show simple playable placeholder based on saved local config
-        loginContainer.style.display = 'none';
-        gameContainer.style.display = 'block';
-        renderGame(which);
-        return; // don't render Google yet
-      }
-
+      // Sinon, initialiser le login Google
+      setupReturnDetection();
+      
+      // Précharger le business_id pour éviter le délai lors du login
+      await fetchBusinessId();
+      
       google.accounts.id.initialize({
         client_id: "343360455562-t9deta89vmmm5jftdujo4bjsven90990.apps.googleusercontent.com",
         callback: handleCredentialResponse,
@@ -405,78 +438,82 @@
       }
     });
 
-    function postToWebhook(url, data) {
-      return fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
-      });
-    }
+    function handleCredentialResponse(response) {
+      const payload = JSON.parse(atob(response.credential.split('.')[1]));
 
-    // Game renderer (very simple probability-based placeholder)
-    function renderGame(gameKey) {
-      const id = getConfigId();
-      const prefix = `goreview_gamecfg_${id}_` + gameKey + '_';
-      const get = (k, d='') => {
-        try { const v = JSON.parse(localStorage.getItem(prefix + k) || 'null'); return v ?? d; } catch (_) { return d; }
-      };
-      const reward = get('reward', 'Récompense');
-      const winRate = parseInt(get('winRate', '30'), 10);
-      const titleMap = { roulette: 'Roue de la chance', dice: 'Dé', coin: 'Pile ou face', balldrop: 'Ball Drop' };
-      const title = titleMap[gameKey] || 'Jeu';
-
-      gameContainer.innerHTML = `
-        <h1 class="title" style="margin-bottom:8px">${title}</h1>
-        <p class="subtitle" style="margin-bottom:16px">Tentez de gagner: <strong>${reward}</strong></p>
-        <button id="playBtn" class="btn-primary" style="width:100%">Jouer</button>
-        <p id="result" class="subtitle" style="margin-top:12px; display:none"></p>
-        <hr style="margin:18px 0;border:none;border-top:1px solid #eceff1"/>
-        <button id="continueBtn" class="btn" style="width:100%; display:none">Continuer vers Google</button>
-      `;
-
-      const playBtn = document.getElementById('playBtn');
-      const result = document.getElementById('result');
-      const continueBtn = document.getElementById('continueBtn');
-      playBtn.addEventListener('click', () => {
-        const roll = Math.random() * 100;
-        const won = roll < Math.max(0, Math.min(100, isNaN(winRate) ? 0 : winRate));
-        result.style.display = 'block';
-        result.textContent = won ? `Bravo ! Vous avez gagné: ${reward}` : `Dommage, réessayez !`;
-        continueBtn.style.display = 'inline-block';
-      });
-      continueBtn.addEventListener('click', () => {
-        // After game, reveal Google login
-        gameContainer.style.display = 'none';
-        loginContainer.style.display = 'block';
-        google.accounts.id.initialize({
-          client_id: "343360455562-t9deta89vmmm5jftdujo4bjsven90990.apps.googleusercontent.com",
-          callback: handleCredentialResponse,
-          locale: 'fr'
-        });
-        const btnWidth = window.innerWidth <= 600 ? (window.innerWidth - 64) : 320;
-        google.accounts.id.renderButton(document.getElementById("googleBtn"), { theme: "outline", size: "large", width: btnWidth, locale: 'fr', text: 'signin_with' });
-      });
-    }
-
-    async function handleCredentialResponse(response) {
-      if (!placeId) {
-        alert("Erreur: Aucun place_id disponible. Veuillez recharger la page.");
-        return;
+      // IMPORTANT: Essayer window.open() IMMÉDIATEMENT au début (synchronement) pour éviter le popup blocker
+      const businessId = cachedBusinessId;
+      
+      if (businessId) {
+        const googleReviewUrl = `https://www.google.com/maps/place/?q=place_id:${businessId}`;
+        console.log('Opening Google review window:', googleReviewUrl);
+        
+        // Essayer window.open() IMMÉDIATEMENT au début de la fonction (avant toute autre opération)
+        // Cela maximise les chances que le navigateur le considère comme une action utilisateur directe
+        reviewWindow = window.open(googleReviewUrl, '_blank', 'noopener,noreferrer');
+        
+        // Vérifier rapidement si la fenêtre a été ouverte
+        let windowOpened = false;
+        try {
+          // Vérifier si la fenêtre existe et n'est pas null
+          if (reviewWindow && reviewWindow !== null) {
+            // Essayer d'accéder à une propriété pour voir si la fenêtre est accessible
+            // (peut échouer si cross-origin, mais c'est OK)
+            try {
+              windowOpened = !reviewWindow.closed;
+            } catch (e) {
+              // Cross-origin, mais la fenêtre existe probablement
+              windowOpened = true;
+            }
+          }
+        } catch (e) {
+          windowOpened = false;
+        }
+        
+        if (!windowOpened) {
+          // Popup bloquée - afficher un bouton visible que l'utilisateur peut cliquer
+          console.log('Popup blocked, showing clickable button');
+          loginContainer.innerHTML = `
+            <h1 class="title">Redirection vers Google Maps</h1>
+            <p class="subtitle">Cliquez sur le bouton ci-dessous pour laisser votre avis sur Google Maps</p>
+            <a href="${googleReviewUrl}" target="_blank" rel="noopener noreferrer" 
+               style="display: inline-block; margin-top: 20px; padding: 12px 24px; background: #1a73e8; color: white; text-decoration: none; border-radius: 4px; font-weight: 500;">
+              Ouvrir Google Maps
+            </a>
+            <p class="subtitle" style="margin-top: 16px; color: #5f6368; font-size: 12px;">
+              Le jeu se chargera automatiquement quand vous reviendrez sur cette page.
+            </p>
+          `;
+          
+          hasOpenedReview = true;
+          sessionStorage.setItem('hasReturnedFromReview', 'false');
+        } else {
+          // Fenêtre ouverte avec succès
+          console.log('Window opened successfully');
+          hasOpenedReview = true;
+          sessionStorage.setItem('hasReturnedFromReview', 'false');
+          
+          // Vérifier périodiquement si la fenêtre est fermée
+          const checkInterval = setInterval(() => {
+            try {
+              if (reviewWindow && reviewWindow.closed) {
+                clearInterval(checkInterval);
+                sessionStorage.setItem('hasReturnedFromReview', 'true');
+                loadGame();
+              }
+            } catch (e) {
+              // Ignorer les erreurs cross-origin
+            }
+          }, 1000);
+        }
+      } else {
+        console.error('No business_id found, cannot open review window');
+        // Pas de business_id, charger le jeu directement
+        sessionStorage.setItem('hasReturnedFromReview', 'true');
+        loadGame();
       }
 
-      const payload = JSON.parse(atob(response.credential.split('.')[1]));
-      const user = {
-        email: payload.email,
-        first_name: payload.given_name,
-        last_name: payload.family_name,
-        name: payload.name,
-        google_id: payload.sub,
-        picture: payload.picture,
-        place_id: placeId,
-        config_id: getConfigId() // Ajouter l'ID de configuration aussi
-      };
-
-      // Send lead to webhook (non-blocking, doesn't affect redirect)
+      // Send lead to webhook (en arrière-plan, non-bloquant)
       const configId = getConfigId();
       const webhookUrl = 'https://n8n.goreview.fr/webhook-test/add_lead';
       
@@ -496,7 +533,7 @@
       const password = 'yck69';
       const credentials = btoa(`${username}:${password}`);
 
-      // Send to webhook (fire and forget - doesn't block redirect)
+      // Send to webhook (fire and forget - non-blocking)
       fetch(webhookUrl, {
         method: 'POST',
         headers: {
@@ -520,131 +557,7 @@
       .catch(err => {
         console.error('Webhook send failed (non-blocking):', err);
       });
-
-      // Small delay to allow webhook to start processing before showing iframe
-      setTimeout(() => {
-        console.log('=== STARTING IFRAME SETUP ===');
-        // Utiliser directement le proxy car Google bloque toujours les iframes avec X-Frame-Options
-        // Le proxy permet de contourner cette restriction et le script injecté gérera la redirection depuis la page de login
-        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        const reviewUrl = isLocalhost 
-          ? `/api/google-review-proxy?place_id=${encodeURIComponent(placeId)}`
-          : `/.netlify/functions/google-review-proxy?place_id=${encodeURIComponent(placeId)}`;
-        
-        console.log('Using proxy URL (bypasses X-Frame-Options):', reviewUrl);
-        
-        // Masquer le conteneur de login et afficher l'iframe avec la page Google
-        console.log('Hiding login container...');
-        loginContainer.style.display = 'none';
-        gameContainer.style.display = 'none';
-        
-        console.log('Showing iframe container...');
-        iframeContainer.style.display = 'block';
-        
-        // Forcer la visibilité de l'iframe
-        iframeContainer.style.visibility = 'visible';
-        iframeContainer.style.opacity = '1';
-        googleReviewFrame.style.visibility = 'visible';
-        googleReviewFrame.style.opacity = '1';
-        
-        // L'URL de la page principale reste /company?id=x, donc le tracking est préservé
-        console.log('Loading Google review page in iframe, main page URL remains:', window.location.href);
-        
-        // Vérifier si l'iframe est bien visible
-        const computedStyle = window.getComputedStyle(iframeContainer);
-        console.log('Iframe container display:', computedStyle.display);
-        console.log('Iframe container visibility:', computedStyle.visibility);
-        console.log('Iframe container opacity:', computedStyle.opacity);
-        console.log('Iframe container dimensions:', iframeContainer.offsetWidth, 'x', iframeContainer.offsetHeight);
-        console.log('Iframe container position:', iframeContainer.offsetTop, iframeContainer.offsetLeft);
-        console.log('Iframe container z-index:', computedStyle.zIndex);
-        
-        // Vérifier que l'iframe existe
-        console.log('Iframe element exists:', !!googleReviewFrame);
-        console.log('Iframe src will be set to:', reviewUrl);
-        
-        // Charger la page Google dans l'iframe via le proxy
-        // Le proxy contourne X-Frame-Options et injecte un script pour rediriger automatiquement depuis la page de login
-        googleReviewFrame.src = reviewUrl;
-        console.log('Iframe src set to:', reviewUrl);
-        
-        let iframeContentChecked = false;
-        
-        // Gérer le chargement de l'iframe
-        googleReviewFrame.addEventListener('load', () => {
-          clearTimeout(loadTimeout);
-          console.log('Iframe load event fired. Main page URL remains:', window.location.href);
-          
-          // Vérifier si le contenu est accessible (après un court délai pour permettre le chargement)
-          setTimeout(() => {
-            if (!iframeContentChecked) {
-              iframeContentChecked = true;
-              try {
-                // Tenter d'accéder au contenu (cela échouera si Google bloque avec X-Frame-Options)
-                const iframeDoc = googleReviewFrame.contentDocument || googleReviewFrame.contentWindow?.document;
-                if (iframeDoc) {
-                  console.log('Iframe content accessible - Google may not be blocking');
-                  // Masquer le fallback si le contenu est accessible
-                  const fallback = document.getElementById('iframeFallback');
-                  if (fallback) fallback.style.display = 'none';
-                } else {
-                  console.warn('Iframe content not accessible - Google likely blocking with X-Frame-Options');
-                  // Afficher le fallback si Google bloque
-                  const fallback = document.getElementById('iframeFallback');
-                  if (fallback) fallback.style.display = 'block';
-                }
-              } catch (e) {
-                // Erreur cross-origin attendue - Google bloque probablement l'accès
-                console.warn('Cross-origin error - Google blocking iframe content access:', e.message);
-                console.log('This is expected. Iframe is visible but content may be blocked by Google.');
-                console.log('Main page URL remains:', window.location.href);
-                // Afficher le fallback car Google bloque
-                const fallback = document.getElementById('iframeFallback');
-                if (fallback) fallback.style.display = 'block';
-              }
-            }
-          }, 1500);
-        });
-        
-        // Gérer le bouton de fallback
-        const openInNewTabBtn = document.getElementById('openInNewTab');
-        if (openInNewTabBtn) {
-          openInNewTabBtn.addEventListener('click', () => {
-            window.open(reviewUrl, '_blank', 'noopener,noreferrer');
-          });
-        }
-        
-        googleReviewFrame.addEventListener('error', () => {
-          console.warn('Error loading iframe. Google may block iframes. Main page URL remains:', window.location.href);
-        });
-        
-        // Vérifier après un délai si l'iframe est toujours vide (Google bloque)
-        setTimeout(() => {
-          try {
-            const iframeDoc = googleReviewFrame.contentDocument || googleReviewFrame.contentWindow?.document;
-            if (!iframeDoc) {
-              console.log('Iframe is visible but Google blocks content. This is a security restriction by Google.');
-              console.log('Main page URL preserved:', window.location.href);
-              // Afficher le fallback si Google bloque
-              const fallback = document.getElementById('iframeFallback');
-              if (fallback && !iframeContentChecked) {
-                fallback.style.display = 'block';
-              }
-            }
-          } catch (e) {
-            // Erreur cross-origin - c'est normal, Google bloque l'accès
-            console.log('Iframe visible and loaded. Google restricts cross-origin access (expected behavior).');
-            console.log('Main page URL remains:', window.location.href);
-            // Afficher le fallback car Google bloque
-            const fallback = document.getElementById('iframeFallback');
-            if (fallback && !iframeContentChecked) {
-              fallback.style.display = 'block';
-            }
-          }
-        }, 2000);
-      }, 100);
     }
   </script>
 </body>
 </html>
-

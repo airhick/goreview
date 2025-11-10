@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Recevez une plaquette RFID gratuite pour générer des avis Google clients et boostez votre visibilité. GoReview : leads qualifiés, zéro frais.">
+    <meta name="google-maps-key" content="YOUR_GOOGLE_MAPS_API_KEY">
     <title>GoReview - Avis Google Gratuits | Plaque NFC Gratuite</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -20,6 +21,9 @@
                     <span class="logo-text">GoReview</span>
                 </a>
                 <div class="nav-actions">
+                    <button class="cart-tab" type="button" data-action="scroll-cart">
+                        Panier (<span data-cart-count>0</span>)
+                    </button>
                     <a href="https://goreview.fr/products/plaque-nfc-rfid-gratuite-limitee-a-une-commande-par-personne" class="btn-primary" target="_blank" rel="noopener noreferrer">Obtenir ma plaque</a>
                 </div>
             </div>
@@ -36,6 +40,118 @@
                 <div class="hero-buttons">
                     <a href="https://goreview.fr/products/plaque-nfc-rfid-gratuite-limitee-a-une-commande-par-personne" class="btn-primary large" target="_blank" rel="noopener noreferrer">Obtenir ma plaque gratuite</a>
                     <a href="#concept" class="btn-secondary large">Découvrir comment</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Cart & Checkout Section -->
+    <section id="cart" class="cart-section section-padding">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">Panier & commande</span>
+                <h2>Finalisez votre plaque GoReview gratuite</h2>
+                <p class="section-description">Ajoutez la plaque à votre panier, renseignez vos informations et validez votre commande gratuite en quelques secondes.</p>
+            </div>
+            <div class="cart-grid">
+                <div class="cart-card">
+                    <h3>Votre panier</h3>
+                    <p class="cart-subtitle">La plaque NFC est gratuite (quantité limitée à une par établissement).</p>
+                    <div class="cart-items-wrapper">
+                        <p class="cart-empty" data-cart-empty>Votre panier est vide.</p>
+                        <ul class="cart-items" data-cart-items></ul>
+                    </div>
+                    <div class="cart-total">
+                        <span>Total</span>
+                        <span data-cart-total>0€</span>
+                    </div>
+                    <p class="cart-footnote">Les frais de port sont offerts.</p>
+                </div>
+                <div class="checkout-card">
+                    <h3>Informations de commande</h3>
+                    <form class="checkout-form" data-checkout-form novalidate>
+                        <div class="form-group">
+                            <label for="order-phone">Numéro de téléphone</label>
+                            <div class="phone-input">
+                                <select id="order-phone-prefix" name="phonePrefix" required>
+                                    <option value="+33">+33 (France)</option>
+                                    <option value="+41">+41 (Suisse)</option>
+                                </select>
+                                <input type="tel" id="order-phone" name="phoneNumber" inputmode="tel" placeholder="6 12 34 56 78" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="order-email">Adresse e-mail</label>
+                            <input type="email" id="order-email" name="email" placeholder="votre.email@entreprise.com" autocomplete="email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="order-address">Adresse de livraison</label>
+                            <input type="text" id="order-address" name="address" placeholder="Commencez à taper votre adresse..." autocomplete="shipping address-line1" required>
+                            <small class="form-hint">Utilisez l’autocomplétion Google pour retrouver votre adresse plus rapidement.</small>
+                        </div>
+                        <div class="form-feedback" data-order-status hidden></div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn-primary large" data-submit-order>Confirmer la commande gratuite</button>
+                        </div>
+                        <p class="form-hint">En validant, vous recevrez la plaque NFC GoReview gratuitement (une par établissement).</p>
+                    </form>
+                    <div class="order-confirmation" data-order-confirmation hidden>
+                        <h4>Commande confirmée 🎉</h4>
+                        <p>Merci ! Votre demande a bien été envoyée. Notre équipe vous contactera très rapidement pour vous confirmer l’expédition.</p>
+                        <div class="order-summary" data-order-summary></div>
+                        <button type="button" class="btn-secondary" data-new-order>Commander une autre plaque</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Product Section -->
+    <section id="produit" class="product-highlight section-padding">
+        <div class="container">
+            <div class="product-layout">
+                <div class="product-visual">
+                    <div class="product-card">
+                        <div class="product-badge">Best-seller</div>
+                        <h2>Plaque NFC GoReview</h2>
+                        <p class="product-description">
+                            Plaque RFID/NFC prête à poser, configurée pour rediriger vos clients vers votre page Google Avis.
+                            Offre limitée à une plaque gratuite par établissement.
+                        </p>
+                        <ul class="product-features">
+                            <li>✔ Plaque NFC premium avec adhésif 3M</li>
+                            <li>✔ Configuration personnalisée incluse</li>
+                            <li>✔ Expédition offerte sous 48h</li>
+                        </ul>
+                        <div class="product-cta">
+                            <span class="product-price">0€</span>
+                            <button class="btn-primary large" id="addPlaqueToCart" data-product-id="plaque-nfc" data-product-name="Plaque NFC GoReview" data-product-price="0">
+                                Ajouter au panier
+                            </button>
+                        </div>
+                        <p class="product-note">Stock limité • Une seule commande gratuite par client</p>
+                    </div>
+                </div>
+                <div class="product-details">
+                    <h3>Pourquoi nos clients adorent la plaque GoReview ?</h3>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <span class="detail-title">Activation en quelques minutes</span>
+                            <p>Nous préparons votre plaque à l'expédition. Vous n'avez plus qu'à la poser et récolter des avis.</p>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-title">Compatible iOS & Android</span>
+                            <p>Fonctionne avec tous les smartphones NFC récents. Aucun téléchargement requis.</p>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-title">Tableau de bord inclus</span>
+                            <p>Suivez vos avis et contacts collectés depuis un espace dédié, accessible en ligne.</p>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-title">Support personnalisé</span>
+                            <p>Notre équipe vous accompagne gratuitement pour optimiser votre récolte d'avis.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
