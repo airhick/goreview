@@ -71,6 +71,19 @@
   status = 200
   force = false
 
+# Pages/Configuration redirect to /create with id parameter
+[[redirects]]
+  from = "/pages/configuration"
+  to = "/create"
+  status = 301
+  force = false
+
+[[redirects]]
+  from = "/pages/configuration/"
+  to = "/create"
+  status = 301
+  force = false
+
 # SPA fallback (if needed in future)
 # [[redirects]]
 #   from = "/*"

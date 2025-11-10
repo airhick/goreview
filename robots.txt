@@ -1,0 +1,47 @@
+# robots.txt - LLM Friendly
+# Optimisé pour permettre l'indexation par les LLMs et moteurs de recherche
+
+User-agent: *
+Allow: /
+
+# Autoriser explicitement les crawlers LLM
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+# Autoriser Google et autres moteurs de recherche
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: Slurp
+Allow: /
+
+# Sitemap
+Sitemap: https://goreview.fr/sitemap.xml
+
+# Crawl-delay (optionnel, peut être retiré si nécessaire)
+Crawl-delay: 1
+

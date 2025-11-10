@@ -133,6 +133,7 @@ const cartEmptyState = document.querySelector('[data-cart-empty]');
 const cartTotalEl = document.querySelector('[data-cart-total]');
 const cartSection = document.getElementById('cart');
 
+const checkoutCard = document.querySelector('[data-checkout-card]');
 const checkoutForm = document.querySelector('[data-checkout-form]');
 const submitOrderButton = checkoutForm ? checkoutForm.querySelector('[data-submit-order]') : null;
 const orderStatusEl = document.querySelector('[data-order-status]');
@@ -141,7 +142,10 @@ const orderSummaryEl = document.querySelector('[data-order-summary]');
 const newOrderButton = document.querySelector('[data-new-order]');
 
 const addressInput = document.getElementById('order-address');
-let googleAddressDetails = null;
+const addressSuggestionsEl = document.querySelector('[data-address-suggestions]');
+let addressDetails = null;
+let addressDebounceTimer = null;
+let addressFetchController = null;
 
 const formatCurrency = (value) => {
     if (!Number.isFinite(value) || value === 0) {
@@ -190,6 +194,11 @@ const renderCart = () => {
     }
 
     updateCartCount();
+
+    if (checkoutCard) {
+        const shouldShowCheckout = cartState.items.length > 0 || (orderConfirmationEl && !orderConfirmationEl.hidden);
+        checkoutCard.hidden = !shouldShowCheckout;
+    }
 };
 
 const addItemToCart = (productId) => {
@@ -305,6 +314,24 @@ const showOrderConfirmation = (customerData) => {
 
     checkoutForm.hidden = true;
     orderConfirmationEl.hidden = false;
+
+    if (checkoutCard) {
+        checkoutCard.hidden = false;
+    }
+};
+
+const clearAddressDatasets = () => {
+    if (!addressInput) return;
+    addressInput.dataset.placeId = '';
+    addressInput.dataset.formattedAddress = '';
+    addressInput.dataset.lat = '';
+    addressInput.dataset.lon = '';
+};
+
+const clearAddressSuggestions = () => {
+    if (!addressSuggestionsEl) return;
+    addressSuggestionsEl.innerHTML = '';
+    addressSuggestionsEl.hidden = true;
 };
 
 const resetOrderFlow = () => {
@@ -314,11 +341,9 @@ const resetOrderFlow = () => {
     checkoutForm.reset();
     checkoutForm.hidden = false;
     orderConfirmationEl.hidden = true;
-    googleAddressDetails = null;
-    if (addressInput) {
-        addressInput.dataset.placeId = '';
-        addressInput.dataset.formattedAddress = '';
-    }
+    addressDetails = null;
+    clearAddressDatasets();
+    clearAddressSuggestions();
 };
 
 if (newOrderButton) {
@@ -328,79 +353,138 @@ if (newOrderButton) {
     });
 }
 
-if (addressInput) {
-    addressInput.addEventListener('input', () => {
-        addressInput.dataset.placeId = '';
-        addressInput.dataset.formattedAddress = '';
-        googleAddressDetails = null;
-    });
-}
-
-window.initAddressAutocomplete = () => {
-    if (!addressInput || typeof google === 'undefined' || !google.maps?.places) {
+const renderAddressSuggestions = (results) => {
+    if (!addressSuggestionsEl) {
         return;
     }
 
-    const options = {
-        componentRestrictions: { country: ['fr', 'ch'] },
-        fields: ['formatted_address', 'geometry', 'address_components', 'place_id'],
-        types: ['geocode']
-    };
+    addressSuggestionsEl.innerHTML = '';
 
-    const autocomplete = new google.maps.places.Autocomplete(addressInput, options);
-    autocomplete.addListener('place_changed', () => {
-        const place = autocomplete.getPlace();
-        if (!place) {
+    if (!results || !results.length) {
+        addressSuggestionsEl.hidden = true;
+        return;
+    }
+
+    results.forEach((result) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'address-suggestion';
+        button.innerHTML = `
+            <span class="address-suggestion-main">${result.display_name}</span>
+        `;
+
+        button.addEventListener('click', () => {
+            const formattedAddress = result.display_name;
+            addressInput.value = formattedAddress;
+            addressInput.dataset.placeId = result.place_id || '';
+            addressInput.dataset.formattedAddress = formattedAddress;
+            addressInput.dataset.lat = result.lat || '';
+            addressInput.dataset.lon = result.lon || '';
+
+            addressDetails = {
+                provider: 'openstreetmap',
+                displayName: formattedAddress,
+                placeId: result.place_id || null,
+                lat: result.lat ? Number(result.lat) : null,
+                lon: result.lon ? Number(result.lon) : null,
+                address: result.address || null,
+                raw: result
+            };
+
+            clearAddressSuggestions();
+        });
+
+        addressSuggestionsEl.appendChild(button);
+    });
+
+    addressSuggestionsEl.hidden = false;
+};
+
+const fetchAddressSuggestions = async (query) => {
+    if (!addressInput) {
+        return;
+    }
+
+    if (addressFetchController) {
+        addressFetchController.abort();
+    }
+    addressFetchController = new AbortController();
+
+    const params = new URLSearchParams({
+        q: query,
+        format: 'jsonv2',
+        addressdetails: '1',
+        limit: '5',
+        countrycodes: 'fr,ch',
+        'accept-language': 'fr'
+    });
+
+    try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
+            signal: addressFetchController.signal,
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Adresse indisponible (${response.status})`);
+        }
+
+        const results = await response.json();
+        renderAddressSuggestions(results);
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            return;
+        }
+        console.error('Erreur lors de la recherche d’adresse', error);
+        clearAddressSuggestions();
+    }
+};
+
+if (addressInput) {
+    addressInput.addEventListener('input', () => {
+        addressDetails = null;
+        clearAddressDatasets();
+
+        const value = addressInput.value.trim();
+
+        if (addressDebounceTimer) {
+            clearTimeout(addressDebounceTimer);
+        }
+
+        if (!value || value.length < 3) {
+            if (addressFetchController) {
+                addressFetchController.abort();
+            }
+            clearAddressSuggestions();
             return;
         }
 
-        const formattedAddress = place.formatted_address || addressInput.value;
-        addressInput.value = formattedAddress;
-        addressInput.dataset.placeId = place.place_id || '';
-        addressInput.dataset.formattedAddress = formattedAddress;
-
-        googleAddressDetails = {
-            placeId: place.place_id || null,
-            formattedAddress,
-            addressComponents: place.address_components || null,
-            location: place.geometry?.location
-                ? {
-                      lat: typeof place.geometry.location.lat === 'function'
-                          ? place.geometry.location.lat()
-                          : place.geometry.location.lat,
-                      lng: typeof place.geometry.location.lng === 'function'
-                          ? place.geometry.location.lng()
-                          : place.geometry.location.lng
-                  }
-                : null
-        };
+        addressDebounceTimer = setTimeout(() => {
+            fetchAddressSuggestions(value);
+        }, 300);
     });
-};
 
-const loadGooglePlacesScript = () => {
-    const meta = document.querySelector('meta[name="google-maps-key"]');
-    if (!meta) {
-        return;
-    }
-    const key = meta.content && meta.content.trim();
-    if (!key || key === 'YOUR_GOOGLE_MAPS_API_KEY') {
-        console.warn('Clé Google Maps non définie. L’autocomplétion d’adresse nécessitera une clé API valide.');
-        return;
-    }
+    addressInput.addEventListener('focus', () => {
+        if (addressSuggestionsEl && addressSuggestionsEl.children.length > 0) {
+            addressSuggestionsEl.hidden = false;
+        }
+    });
+}
 
-    if (document.querySelector('script[data-google-places]')) {
-        return;
-    }
+if (addressSuggestionsEl) {
+    addressSuggestionsEl.addEventListener('mousedown', (event) => {
+        // Prevent input blur before click handlers run
+        event.preventDefault();
+    });
 
-    const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&libraries=places&callback=initAddressAutocomplete`;
-    script.async = true;
-    script.defer = true;
-    script.dataset.googlePlaces = 'true';
-    document.head.appendChild(script);
-};
-
-loadGooglePlacesScript();
+    document.addEventListener('click', (event) => {
+        if (!addressSuggestionsEl.contains(event.target) && event.target !== addressInput) {
+            clearAddressSuggestions();
+        }
+    });
+}
 
 const sendOrderToWebhook = async (payload) => {
     const webhookUrl = 'https://n8n.goreview.fr/webhook-test/commandes';
@@ -461,7 +545,7 @@ if (checkoutForm) {
                 phonePrefix,
                 phoneNumber,
                 address,
-                googleAddress: googleAddressDetails
+                addressDetails
             },
             metadata: {
                 source: 'landing-page',

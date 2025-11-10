@@ -322,10 +322,15 @@ body {
 }
 
 .product-layout {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    display: flex;
+    flex-direction: column;
     gap: var(--spacing-lg);
-    align-items: stretch;
+}
+
+.product-visual,
+.product-card,
+.product-details {
+    width: 100%;
 }
 
 .product-card {
@@ -337,6 +342,20 @@ body {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-sm);
+}
+
+.product-image {
+    position: relative;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: var(--bg-secondary);
+    margin-bottom: var(--spacing-sm);
+}
+
+.product-image img {
+    width: 100%;
+    display: block;
+    object-fit: cover;
 }
 
 .product-badge {
@@ -538,6 +557,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+    position: relative;
 }
 
 .form-group label {
@@ -553,6 +573,45 @@ body {
     font-size: 1rem;
     font-family: inherit;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.address-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 0.25rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--bg-primary);
+    box-shadow: var(--shadow-md);
+    max-height: 220px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    z-index: 20;
+}
+
+.address-suggestion {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 0.75rem 1rem;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(229, 231, 235, 0.6);
+    cursor: pointer;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+}
+
+.address-suggestion:last-child {
+    border-bottom: none;
+}
+
+.address-suggestion:hover,
+.address-suggestion:focus {
+    background: var(--bg-secondary);
 }
 
 .form-group input:focus,

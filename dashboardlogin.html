@@ -102,14 +102,7 @@
                 e.preventDefault();
                 statusEl.className = 'status';
 
-                const params = new URLSearchParams(window.location.search);
-                const urlId = params.get('id');
                 const email = (document.getElementById('email').value || '').trim().toLowerCase();
-
-                if (!urlId) {
-                    showStatus("ID manquant dans l'URL.", 'error');
-                    return;
-                }
 
                 if (!validateEmail(email)) {
                     showStatus("Veuillez entrer une adresse email valide.", 'error');
@@ -133,11 +126,10 @@
 
                     const client = supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
                     
-                    // Check if account exists with matching id and email
+                    // Find account by email only
                     const { data, error } = await client
                         .from('accounts')
                         .select('id, email')
-                        .eq('id', urlId)
                         .eq('email', email)
                         .maybeSingle();
 
@@ -148,12 +140,12 @@
                     }
 
                     if (!data || !data.id) {
-                        showStatus("Email incorrect.", 'error');
+                        showStatus("Aucun compte trouvé avec cet email.", 'error');
                         return;
                     }
 
-                    // Email and ID match, redirect to dashboard
-                    window.location.href = `/dashboard.html?id=${encodeURIComponent(urlId)}`;
+                    // Email found, redirect to dashboard with the account ID
+                    window.location.href = `/dashboard.html?id=${encodeURIComponent(data.id)}`;
                 } catch (err) {
                     console.error('Login error:', err);
                     showStatus("Une erreur est survenue. Veuillez réessayer.", 'error');

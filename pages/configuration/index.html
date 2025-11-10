@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redirection - GoReview</title>
+    <script>
+        // Redirection côté client pour préserver le paramètre id
+        (function() {
+            const params = new URLSearchParams(window.location.search);
+            const id = params.get('id');
+            
+            if (id) {
+                // Rediriger vers /create avec le paramètre id
+                window.location.replace('/create?id=' + encodeURIComponent(id));
+            } else {
+                // Si pas d'id, rediriger vers la page d'accueil
+                window.location.replace('/');
+            }
+        })();
+    </script>
+    <noscript>
+        <meta http-equiv="refresh" content="0;url=/">
+        <p>Redirection en cours... <a href="/">Cliquez ici si la redirection ne fonctionne pas</a></p>
+    </noscript>
+</head>
+<body>
+    <p>Redirection en cours...</p>
+</body>
+</html>
+

@@ -16,6 +16,10 @@
 /company /company.html 200
 /company/* /company.html 200
 
+# Pages/Configuration redirect to /create with id parameter
+/pages/configuration /create?id=:id 301
+/pages/configuration/ /create?id=:id 301
+
 # API redirects (if needed in future)
 # /api/* https://your-api-url.com/:splat 200
 
