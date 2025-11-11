@@ -7,7 +7,7 @@
     <!-- Primary Meta Tags -->
     <title>GoReview - Avis Google Gratuits | Plaque NFC Gratuite | Collecte de Leads</title>
     <meta name="title" content="GoReview - Avis Google Gratuits | Plaque NFC Gratuite | Collecte de Leads">
-    <meta name="description" content="Recevez une plaquette RFID gratuite pour générer des avis Google clients et boostez votre visibilité. GoReview : leads qualifiés, zéro frais. Collecte automatique des contacts clients, mini-jeu de remerciement, 100% gratuit.">
+    <meta name="description" content="Recevez une plaquette RFID gratuite pour générer des avis Google clients et boostez votre visibilité. GoReview : leads qualifiés, zéro frais. Collecte automatique des contacts clients, 100% gratuit.">
     <meta name="keywords" content="avis Google, plaque NFC, RFID, collecte leads, avis clients, Google Reviews, marketing local, génération d'avis, NFC gratuit, plaquette NFC">
     <meta name="author" content="GoReview">
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
@@ -124,7 +124,7 @@
         "name": "Comment fonctionne la plaque NFC GoReview ?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Vos clients posent simplement leur téléphone sur la plaque NFC. Ils sont redirigés vers votre page d'avis Google, se connectent avec leur compte Google, laissent un avis, puis jouent à un mini-jeu de remerciement. Leurs coordonnées (nom, prénom, email) sont automatiquement collectées."
+                "text": "Vos clients posent simplement leur téléphone sur la plaque NFC. Ils sont redirigés vers votre page d'avis Google, se connectent avec leur compte Google et laissent un avis. Leurs coordonnées (nom, prénom, email) sont automatiquement collectées."
         }
       }, {
         "@type": "Question",
@@ -159,9 +159,15 @@
                     <span class="logo-text">GoReview</span>
                 </a>
                 <div class="nav-actions">
-                    <button class="cart-tab" type="button" data-action="scroll-cart">
-                        Panier (<span data-cart-count>0</span>)
-                    </button>
+                    <a href="/cart.html" class="cart-tab">
+                        <svg class="cart-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="9" cy="21" r="1"></circle>
+                            <circle cx="20" cy="21" r="1"></circle>
+                            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                        </svg>
+                        <span class="cart-text">Panier</span>
+                        (<span data-cart-count>0</span>)
+                    </a>
                 </div>
             </div>
         </div>
@@ -169,16 +175,46 @@
 
     <!-- Hero Section -->
     <section class="hero">
-        <div class="container">
+        <div class="container hero-container">
+            <div class="hero-grid">
             <div class="hero-content">
                 <h1>Acquérez des leads et des <span class="gradient-text">avis Google gratuitement</span></h1>
                 <h2>Recevez une plaquette RFID gratuite</h2>
-                <p class="hero-description">
-                    Pourquoi nos clients adorent GoReview&nbsp;: mini-jeu automatique après l’avis pour remercier, collecte instantanée des contacts, parcours Google guidé sans friction et plaque NFC prête à poser, 100&nbsp;% gratuite.
-                </p>
                 <div class="hero-buttons">
-                    <a href="https://goreview.fr/products/plaque-nfc-rfid-gratuite-limitee-a-une-commande-par-personne" class="btn-primary large" target="_blank" rel="noopener noreferrer">Obtenir ma plaque gratuite</a>
-                    <a href="#concept" class="btn-secondary large">Découvrir comment</a>
+                        <a href="#produit" class="btn-primary large">Obtenir ma plaque gratuite</a>
+                    </div>
+                </div>
+                <div class="hero-visual">
+                        <img src="photos/product/cardcropped.jpg" alt="Plaque NFC GoReview" class="hero-card" loading="lazy">
+                </div>
+            </div>
+        </div>
+        <div class="hero-sliding-banner">
+            <div class="hero-sliding-track">
+                <div class="hero-sliding-item">
+                    <span class="hero-sliding-icon">✔</span>
+                    <span>Collecte automatique des nom, email et téléphone</span>
+                </div>
+                <div class="hero-sliding-item">
+                    <span class="hero-sliding-icon">✔</span>
+                    <span>Parcours Google guidé : login, avis, redirection en 1 scan</span>
+                </div>
+                <div class="hero-sliding-item">
+                    <span class="hero-sliding-icon">✔</span>
+                    <span>Plaque NFC prête à poser, 100% gratuite</span>
+                </div>
+                <!-- Dupliquer pour animation continue -->
+                <div class="hero-sliding-item">
+                    <span class="hero-sliding-icon">✔</span>
+                    <span>Collecte automatique des nom, email et téléphone</span>
+                </div>
+                <div class="hero-sliding-item">
+                    <span class="hero-sliding-icon">✔</span>
+                    <span>Parcours Google guidé : login, avis, redirection en 1 scan</span>
+                </div>
+                <div class="hero-sliding-item">
+                    <span class="hero-sliding-icon">✔</span>
+                    <span>Plaque NFC prête à poser, 100% gratuite</span>
                 </div>
             </div>
         </div>
@@ -188,21 +224,37 @@
     <section id="produit" class="product-highlight section-padding">
         <div class="container">
             <div class="product-layout">
-                <div class="product-visual">
-                    <div class="product-card">
-                        <div class="product-image">
-                            <img src="photos/product/card.jpg" alt="Plaque NFC GoReview" loading="lazy">
-                        </div>
-                        <div class="product-badge">Best-seller</div>
+                <div class="product-image-wrapper">
+                    <div class="product-image">
+                        <img src="photos/product/card.jpg" alt="Plaque NFC GoReview" loading="lazy">
+                    </div>
+                </div>
+                <div class="product-info">
                         <h2>Plaque NFC GoReview</h2>
                         <p class="product-description">
-                            Plaque RFID/NFC prête à poser avec parcours Google optimisé : connexion guidée, redirection vers votre page d’avis, mini-jeu de remerciement et collecte automatique des contacts.
-                            Le tout 100% gratuit, limité à une plaque par établissement.
+                        Plaque RFID/NFC prête à poser avec parcours Google optimisé. Connexion guidée, redirection vers votre page d'avis et collecte automatique des contacts.
                         </p>
                         <ul class="product-features">
-                            <li>✔ Parcours complet : connexion Google, avis, mini-jeu de remerciement</li>
-                            <li>✔ Collecte automatique des noms, emails et téléphone des clients</li>
-                            <li>✔ 100% gratuit : plaque, configuration personnalisée et expédition</li>
+                        <li>
+                            <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                            </svg>
+                            <span>Parcours complet : connexion Google et avis</span>
+                        </li>
+                        <li>
+                            <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                                <circle cx="12" cy="10" r="3"></circle>
+                            </svg>
+                            <span>Collecte automatique des noms, emails et téléphone des clients</span>
+                        </li>
+                        <li>
+                            <svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                            </svg>
+                            <span>100% gratuit : plaque, configuration personnalisée et expédition</span>
+                        </li>
                         </ul>
                         <div class="product-cta">
                             <span class="product-price">0€</span>
@@ -210,316 +262,23 @@
                                 Ajouter au panier
                             </button>
                         </div>
-                        <p class="product-note">Stock limité • Une seule commande gratuite par client</p>
-                    </div>
                 </div>
                 <div class="product-details">
-                    <h3>Pourquoi nos clients adorent la plaque GoReview ?</h3>
+                    <h3>Pourquoi la plaque GoReview séduit tout le monde ?</h3>
                     <div class="detail-grid">
                         <div class="detail-item">
-                            <span class="detail-title">Mini-jeu après l’avis</span>
-                            <p>Un jeu ludique se lance automatiquement quand le client revient sur votre page, augmentant l’engagement et la satisfaction.</p>
+                            <span class="detail-title">Pour votre établissement</span>
+                            <p>Plus d’avis Google, des coordonnées clients prêtes pour vos relances, et une image innovante sans le moindre frais.</p>
                         </div>
                         <div class="detail-item">
-                            <span class="detail-title">Collecte de contacts</span>
-                            <p>À chaque avis validé, nous stockons automatiquement le nom, le prénom, l’e-mail et le téléphone pour vos relances.</p>
+                            <span class="detail-title">Pour votre équipe</span>
+                            <p>Aucun script à apprendre : la plaque s’occupe de tout. Vos collaborateurs restent concentrés sur le service.</p>
                         </div>
                         <div class="detail-item">
-                            <span class="detail-title">Parcours guidé</span>
-                            <p>Login Google, envoi du lead, ouverture de la page d’avis dans un nouvel onglet : tout est automatisé pour que l’utilisateur ne se perde jamais.</p>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-title">Gratuit & prêt à poser</span>
-                            <p>Plaque NFC premium livrée configurée sous 48&nbsp;h, aucun frais caché, une seule commande gratuite par client.</p>
+                            <span class="detail-title">Pour vos futurs prospects</span>
+                            <p>Des avis récents, authentiques et visibles qui rassurent en quelques secondes avant la réservation ou l’achat.</p>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Cart & Checkout Section -->
-    <section id="cart" class="cart-section section-padding">
-        <div class="container">
-            <div class="section-header">
-                <span class="section-label">Panier & commande</span>
-                <h2>Finalisez votre plaque GoReview gratuite</h2>
-                <p class="section-description">Ajoutez la plaque à votre panier, renseignez vos informations et validez votre commande gratuite en quelques secondes.</p>
-            </div>
-            <div class="cart-grid">
-                <div class="cart-card">
-                    <h3>Votre panier</h3>
-                    <p class="cart-subtitle">La plaque NFC est gratuite (quantité limitée à une par établissement).</p>
-                    <div class="cart-items-wrapper">
-                        <p class="cart-empty" data-cart-empty>Votre panier est vide.</p>
-                        <ul class="cart-items" data-cart-items></ul>
-                    </div>
-                    <div class="cart-total">
-                        <span>Total</span>
-                        <span data-cart-total>0€</span>
-                    </div>
-                    <p class="cart-footnote">Les frais de port sont offerts.</p>
-                </div>
-                <div class="checkout-card" data-checkout-card hidden>
-                    <h3>Informations de commande</h3>
-                    <form class="checkout-form" data-checkout-form novalidate>
-                        <div class="form-group">
-                            <label for="order-phone">Numéro de téléphone</label>
-                            <div class="phone-input">
-                                <select id="order-phone-prefix" name="phonePrefix" required>
-                                    <option value="+33">+33</option>
-                                    <option value="+41">+41</option>
-                                </select>
-                                <input type="tel" id="order-phone" name="phoneNumber" inputmode="tel" placeholder="6 12 34 56 78" required>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label for="order-email">Adresse e-mail</label>
-                            <input type="email" id="order-email" name="email" placeholder="votre.email@entreprise.com" autocomplete="email" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="order-address">Adresse de livraison</label>
-                            <input type="text" id="order-address" name="address" placeholder="Commencez à taper votre adresse..." autocomplete="shipping address-line1" required data-place-id="" data-formatted-address="">
-                            <div class="address-suggestions" data-address-suggestions hidden></div>
-                            <small class="form-hint">Utilisez la recherche OpenStreetMap pour retrouver votre adresse plus rapidement.</small>
-                        </div>
-                        <div class="form-feedback" data-order-status hidden></div>
-                        <div class="form-actions">
-                            <button type="submit" class="btn-primary large" data-submit-order>Confirmer la commande gratuite</button>
-                        </div>
-                        <p class="form-hint">En validant, vous recevrez la plaque NFC GoReview gratuitement (une par établissement).</p>
-                    </form>
-                    <div class="order-confirmation" data-order-confirmation hidden>
-                        <h4>Commande confirmée 🎉</h4>
-                        <p>Merci ! Votre demande a bien été envoyée. Notre équipe vous contactera très rapidement pour vous confirmer l’expédition.</p>
-                        <div class="order-summary" data-order-summary></div>
-                        <button type="button" class="btn-secondary" data-new-order>Commander une autre plaque</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Concept Section -->
-    <section id="concept" class="concept section-padding">
-        <div class="container">
-            <div class="section-header">
-                <span class="section-label">Comment ça marche</span>
-                <h2>Une solution simple en 3 étapes</h2>
-            </div>
-            <div class="concept-grid">
-                <div class="concept-card">
-                    <div class="icon-circle">
-                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-                            <polyline points="7.5 4.21 12 6.81 16.5 4.21"/>
-                            <polyline points="7.5 19.79 7.5 14.6 3 12"/>
-                            <polyline points="21 12 16.5 14.6 16.5 19.79"/>
-                            <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
-                            <line x1="12" y1="22.08" x2="12" y2="12"/>
-                        </svg>
-                    </div>
-                    <h3>1. Commandez votre plaque</h3>
-                    <p>Recevez gratuitement votre plaquette NFC GoReview (envoi compris). Offre limitée à une plaque gratuite par personne.</p>
-                </div>
-                <div class="concept-card">
-                    <div class="icon-circle">
-                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                        </svg>
-                    </div>
-                    <h3>2. Installation rapide</h3>
-                    <p>Configurez votre plaque en quelques minutes. Tout vous est expliqué à la réception avec un guide simple et clair.</p>
-                </div>
-                <div class="concept-card">
-                    <div class="icon-circle">
-                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                            <polyline points="22 4 12 14.01 9 11.01"/>
-                        </svg>
-                    </div>
-                    <h3>3. Récoltez les avis</h3>
-                    <p>Vos clients posent simplement leur téléphone sur la plaque et sont redirigés vers votre page d'avis Google. C'est tout !</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Pros and Cons Section -->
-    <section id="avantages" class="pros-cons section-padding">
-        <div class="container">
-            <div class="section-header">
-                <span class="section-label">Pourquoi GoReview ?</span>
-                <h2>Boostez votre visibilité en ligne</h2>
-            </div>
-            
-            <div class="pros-cons-grid">
-                <!-- Pros -->
-                <div class="pros-section">
-                    <div class="section-badge positive">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="20 6 9 17 4 12"/>
-                        </svg>
-                        <span>Avantages</span>
-                    </div>
-                    <div class="benefit-list">
-                        <div class="benefit-item">
-                            <div class="tick-icon"></div>
-                            <div>
-                                <h4>+400% d'avis en moyenne</h4>
-                                <p>Boostez considérablement la récolte d'avis Google de votre établissement grâce à l'accès simplifié à votre page d'avis.</p>
-                            </div>
-                        </div>
-                        <div class="benefit-item">
-                            <div class="tick-icon"></div>
-                            <div>
-                                <h4>Récolte des contacts</h4>
-                                <p>Collectez automatiquement les noms, prénoms et e-mails des clients qui laissent un avis, contrairement à vos concurrents.</p>
-                            </div>
-                        </div>
-                        <div class="benefit-item">
-                            <div class="tick-icon"></div>
-                            <div>
-                                <h4>100% Gratuit</h4>
-                                <p>Plaque NFC gratuite, envoi gratuit. Aucun frais caché. Cette solution est un projet annexe, profitez-en !</p>
-                            </div>
-                        </div>
-                        <div class="benefit-item">
-                            <div class="tick-icon"></div>
-                            <div>
-                                <h4>Installation simple</h4>
-                                <p>Mise en place rapide et très simple. Tout vous est expliqué à la réception, vous n'avez rien à faire.</p>
-                            </div>
-                        </div>
-                        <div class="benefit-item">
-                            <div class="tick-icon"></div>
-                            <div>
-                                <h4>Tableau de bord inclus</h4>
-                                <p>Suivez tous vos avis et contacts clients dans un tableau de bord personnalisé et facile à utiliser.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Cons/Challenges -->
-                <div class="cons-section">
-                    <div class="section-badge neutral">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                        </svg>
-                        <span>Points à considérer</span>
-                    </div>
-                    <div class="challenge-list">
-                        <div class="challenge-item">
-                            <div class="info-icon"></div>
-                            <div>
-                                <h4>Une plaque par personne</h4>
-                                <p>Offre limitée à une plaque gratuite par personne pour permettre à un maximum d'entreprises d'en profiter.</p>
-                            </div>
-                        </div>
-                        <div class="challenge-item">
-                            <div class="info-icon"></div>
-                            <div>
-                                <h4>Nécessite un smartphone NFC</h4>
-                                <p>Les clients doivent avoir un smartphone compatible NFC pour utiliser la plaque (la majorité des smartphones récents en sont équipés).</p>
-                            </div>
-                        </div>
-                        <div class="challenge-item">
-                            <div class="info-icon"></div>
-                            <div>
-                                <h4>Connexion Google requise</h4>
-                                <p>Les clients doivent se connecter avec leur compte Google pour laisser un avis et que leurs coordonnées soient collectées.</p>
-                            </div>
-                        </div>
-                        <div class="challenge-item">
-                            <div class="info-icon"></div>
-                            <div>
-                                <h4>Placée visiblement</h4>
-                                <p>La plaque doit être installée dans un endroit visible et accessible de votre établissement pour maximiser son utilisation.</p>
-                            </div>
-                        </div>
-                        <div class="challenge-item">
-                            <div class="info-icon"></div>
-                            <div>
-                                <h4>Projet annexe</h4>
-                                <p>Cette solution est un projet secondaire, le service peut évoluer ou être modifié à l'avenir en fonction des retours.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Features Section -->
-    <section id="features" class="features section-padding">
-        <div class="container">
-            <div class="section-header">
-                <span class="section-label">Fonctionnalités</span>
-                <h2>Tout ce dont vous avez besoin pour booster vos avis</h2>
-            </div>
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                            <polyline points="22 4 12 14.01 9 11.01"/>
-                        </svg>
-                    </div>
-                    <h3>Parcours d’avis sans friction</h3>
-                    <p>Scan, login Google, avis : la plaque déclenche automatiquement chaque étape et ouvre la page d’avis dans un nouvel onglet.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                            <circle cx="9" cy="7" r="4"/>
-                            <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
-                        </svg>
-                    </div>
-                    <h3>Mini-jeu de remerciement</h3>
-                    <p>À leur retour sur votre page, vos clients découvrent un jeu récompense ; résultat&nbsp;: plus d’avis et une expérience mémorable.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                            <polyline points="14 2 14 8 20 8"/>
-                            <line x1="16" y1="13" x2="8" y2="13"/>
-                            <line x1="16" y1="17" x2="8" y2="17"/>
-                            <polyline points="10 9 9 9 8 9"/>
-                        </svg>
-                    </div>
-                    <h3>Collecte automatique de contacts</h3>
-                    <p>Chaque avis déclenche l’envoi du lead vers votre webhook : nom, prénom, e-mail et téléphone sont captés sans action supplémentaire.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-                        </svg>
-                    </div>
-                    <h3>Plaque NFC offerte</h3>
-                    <p>Plaque premium, configuration personnalisée et expédition 48&nbsp;h incluses. 0€ à payer, une plaque gratuite par établissement.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                        </svg>
-                    </div>
-                    <h3>Installation express</h3>
-                    <p>Posez la plaque, scannez, c’est fait. Le guide d’activation et l’équipe GoReview vous assistent gratuitement au moindre besoin.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="10"/>
-                            <path d="M12 8v4M12 16h.01"/>
-                        </svg>
-                    </div>
-                    <h3>0€ d’abonnement</h3>
-                    <p>Pas de frais cachés, pas d’engagement. Vous profitez d’un tunnel d’avis complet, du jeu et de la collecte de leads gratuitement.</p>
                 </div>
             </div>
         </div>
@@ -532,7 +291,6 @@
                 <h2>Prêt à booster vos avis Google ?</h2>
                 <p>Rejoignez les entreprises qui augmentent leur visibilité en ligne gratuitement avec GoReview.</p>
                 <div class="cta-buttons">
-                    <a href="https://goreview.fr/products/plaque-nfc-rfid-gratuite-limitee-a-une-commande-par-personne" class="btn-primary large" target="_blank" rel="noopener noreferrer">Obtenir ma plaque gratuite</a>
                     <a href="https://goreview.fr/pages/contact" class="btn-secondary large" target="_blank" rel="noopener noreferrer">Nous contacter</a>
                 </div>
             </div>

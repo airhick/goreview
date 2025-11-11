@@ -20,6 +20,10 @@
 /pages/configuration /create?id=:id 301
 /pages/configuration/ /create?id=:id 301
 
+# Cart page
+/cart /cart.html 200
+/cart/ /cart.html 200
+
 # API redirects (if needed in future)
 # /api/* https://your-api-url.com/:splat 200
 

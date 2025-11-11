@@ -84,6 +84,19 @@
   status = 301
   force = false
 
+# Cart page
+[[redirects]]
+  from = "/cart"
+  to = "/cart.html"
+  status = 200
+  force = false
+
+[[redirects]]
+  from = "/cart/"
+  to = "/cart.html"
+  status = 200
+  force = false
+
 # SPA fallback (if needed in future)
 # [[redirects]]
 #   from = "/*"

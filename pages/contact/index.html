@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact - GoReview</title>
+    <link rel="stylesheet" href="../../styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-content">
+                <a href="/" class="nav-logo">
+                    <img src="../../logo.png" alt="GoReview Logo" class="logo-img" style="height:38px;width:auto;margin-right:10px;vertical-align:middle;">
+                    <span class="logo-text">GoReview</span>
+                </a>
+                <div class="nav-actions">
+                    <a href="/" class="btn-secondary">Retour à l'accueil</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Contact Section -->
+    <section class="section-padding" style="padding-top: calc(var(--spacing-xl) + 80px);">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">Contact</span>
+                <h2>Contactez-nous</h2>
+                <p class="section-description">Une question ? Un besoin spécifique ? N'hésitez pas à nous écrire, nous vous répondrons dans les plus brefs délais.</p>
+            </div>
+            
+            <div style="max-width: 600px; margin: 0 auto;">
+                <div class="checkout-card">
+                    <form class="checkout-form" id="contact-form" novalidate>
+                        <div class="form-group">
+                            <label for="contact-email">Adresse e-mail</label>
+                            <input type="email" id="contact-email" name="email" placeholder="votre.email@exemple.com" autocomplete="email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="contact-message">Message</label>
+                            <textarea id="contact-message" name="message" rows="6" placeholder="Votre message..." required></textarea>
+                        </div>
+                        <div class="form-feedback" id="contact-status" hidden></div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn-primary large" id="submit-contact">Envoyer le message</button>
+                        </div>
+                    </form>
+                    <div class="order-confirmation" id="contact-confirmation" hidden>
+                        <h4>Message envoyé 🎉</h4>
+                        <p>Merci ! Votre message a bien été envoyé. Nous vous répondrons très rapidement.</p>
+                        <button type="button" class="btn-secondary" id="new-message">Envoyer un autre message</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 GoReview. Tous droits réservés.</p>
+            <div class="footer-links">
+                <a href="/contact">Contact</a>
+                <a href="/mentions-legales">Mentions Légales</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const contactForm = document.getElementById('contact-form');
+        const contactStatus = document.getElementById('contact-status');
+        const contactConfirmation = document.getElementById('contact-confirmation');
+        const submitButton = document.getElementById('submit-contact');
+        const newMessageButton = document.getElementById('new-message');
+
+        const setContactStatus = (message, type = 'info') => {
+            if (!contactStatus) return;
+            if (!message) {
+                contactStatus.hidden = true;
+                contactStatus.textContent = '';
+                contactStatus.classList.remove('is-error', 'is-success', 'is-info');
+                return;
+            }
+
+            contactStatus.hidden = false;
+            contactStatus.textContent = message;
+            contactStatus.classList.remove('is-error', 'is-success', 'is-info');
+            if (type === 'error') {
+                contactStatus.classList.add('is-error');
+            } else if (type === 'success') {
+                contactStatus.classList.add('is-success');
+            } else {
+                contactStatus.classList.add('is-info');
+            }
+        };
+
+        const toggleFormLoading = (isLoading) => {
+            if (!submitButton) return;
+            submitButton.disabled = isLoading;
+            if (isLoading) {
+                submitButton.dataset.originalText = submitButton.textContent;
+                submitButton.textContent = 'Envoi en cours...';
+            } else if (submitButton.dataset.originalText) {
+                submitButton.textContent = submitButton.dataset.originalText;
+                delete submitButton.dataset.originalText;
+            }
+        };
+
+        const sendContactToWebhook = async (data) => {
+            const webhookUrl = 'https://n8n.goreview.fr/webhook-test/contact';
+            
+            const response = await fetch(webhookUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text().catch(() => null);
+                throw new Error(errorText || `Erreur ${response.status}`);
+            }
+
+            return response.json().catch(() => ({}));
+        };
+
+        if (contactForm) {
+            contactForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+
+                if (!contactForm.reportValidity()) {
+                    return;
+                }
+
+                const formData = new FormData(contactForm);
+                const email = (formData.get('email') || '').toString().trim();
+                const message = (formData.get('message') || '').toString().trim();
+
+                // Validation de l'email
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!email || !emailRegex.test(email)) {
+                    setContactStatus('Veuillez entrer une adresse email valide.', 'error');
+                    return;
+                }
+
+                if (!message || message.length < 10) {
+                    setContactStatus('Votre message doit contenir au moins 10 caractères.', 'error');
+                    return;
+                }
+
+                const payload = {
+                    email,
+                    message,
+                    timestamp: new Date().toISOString(),
+                    source: 'contact-page'
+                };
+
+                try {
+                    setContactStatus('Envoi de votre message...', 'info');
+                    toggleFormLoading(true);
+                    await sendContactToWebhook(payload);
+                    setContactStatus('', 'info');
+                    contactForm.hidden = true;
+                    contactConfirmation.hidden = false;
+                } catch (error) {
+                    console.error('Erreur lors de l\'envoi du message', error);
+                    setContactStatus('Impossible d\'envoyer le message. Merci de réessayer ou de nous contacter directement.', 'error');
+                } finally {
+                    toggleFormLoading(false);
+                }
+            });
+        }
+
+        if (newMessageButton) {
+            newMessageButton.addEventListener('click', () => {
+                contactForm.reset();
+                contactForm.hidden = false;
+                contactConfirmation.hidden = true;
+                setContactStatus('', 'info');
+            });
+        }
+    </script>
+</body>
+</html>
+
