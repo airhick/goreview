@@ -35,9 +35,20 @@ document.querySelectorAll('.concept-card, .feature-card, .benefit-item, .challen
     observer.observe(el);
 });
 
-// Button click handlers
+// Button click handlers (ignorer le bouton addPlaqueToCart qui a son propre handler)
 document.querySelectorAll('.btn-primary, .btn-secondary').forEach(button => {
+    // Ignorer le bouton "Ajouter au panier"
+    if (button.id === 'addPlaqueToCart') {
+        console.log('ℹ️ Bouton addPlaqueToCart ignoré par le gestionnaire général');
+        return;
+    }
+    
     button.addEventListener('click', function(e) {
+        // Ne pas traiter si c'est le bouton addPlaqueToCart (sécurité supplémentaire)
+        if (this.id === 'addPlaqueToCart' || e.target.id === 'addPlaqueToCart') {
+            return;
+        }
+        
         const text = this.textContent.trim();
         if (text === 'Get Started' || text === 'Start Free Trial') {
             // Handle sign up
@@ -158,6 +169,13 @@ const saveCartToStorage = () => {
 
 loadCartFromStorage();
 
+// Mettre à jour l'UI après le chargement du panier
+// Utiliser setTimeout pour s'assurer que le DOM est prêt
+setTimeout(() => {
+    updateCartCount();
+    console.log('Panier chargé depuis localStorage:', cartState);
+}, 100);
+
 const productCatalog = {
     'plaque-nfc': {
         id: 'plaque-nfc',
@@ -192,11 +210,16 @@ const formatCurrency = (value) => {
 };
 
 const updateCartIcon = () => {
+    // Chercher les éléments à chaque appel au cas où ils seraient ajoutés dynamiquement
     const cartIcon = document.querySelector('.cart-icon');
     const cartTab = document.querySelector('.cart-tab');
-    if (!cartIcon || !cartTab) return;
+    if (!cartIcon || !cartTab) {
+        console.log('Éléments cart-icon ou cart-tab non trouvés');
+        return;
+    }
     
     const hasItems = cartState.items.length > 0;
+    console.log('Mise à jour de l\'icône du panier, hasItems:', hasItems);
     
     if (hasItems) {
         // Panier plein - cercles remplis
@@ -218,9 +241,17 @@ const updateCartIcon = () => {
 };
 
 const updateCartCount = () => {
-    if (!cartCountEl) return;
+    // Chercher l'élément à chaque appel au cas où il serait ajouté dynamiquement
+    const cartCountElement = document.querySelector('[data-cart-count]');
+    if (!cartCountElement) {
+        console.log('Élément data-cart-count non trouvé');
+        updateCartIcon(); // Mettre à jour l'icône quand même
+        return;
+    }
+    
     const totalQuantity = cartState.items.reduce((sum, item) => sum + item.quantity, 0);
-    cartCountEl.textContent = totalQuantity;
+    cartCountElement.textContent = totalQuantity;
+    console.log('Compteur du panier mis à jour:', totalQuantity);
     updateCartIcon();
 };
 
@@ -266,9 +297,18 @@ const renderCart = () => {
         const shouldShowCheckout = cartState.items.length > 0 || hasConfirmation;
         checkoutCard.hidden = !shouldShowCheckout;
     }
+
+    // Désactiver le bouton de soumission si le panier est vide
+    if (submitOrderButton) {
+        const totalQuantity = cartState.items.reduce((sum, item) => sum + item.quantity, 0);
+        submitOrderButton.disabled = totalQuantity === 0;
+    }
 };
 
 const addItemToCart = (productId) => {
+    console.log('addItemToCart appelé avec:', productId);
+    console.log('État actuel du panier:', cartState);
+    
     const product = productCatalog[productId];
     if (!product) {
         console.warn(`Produit introuvable pour l'ID ${productId}`);
@@ -295,7 +335,21 @@ const addItemToCart = (productId) => {
         quantity: 1
     });
 
-    renderCart();
+    console.log('Nouvel état du panier:', cartState);
+    
+    // Toujours mettre à jour le compteur et l'icône, même si les autres éléments n'existent pas
+    updateCartCount();
+    saveCartToStorage();
+    
+    // Afficher un message de succès
+    showCartToast('✅ Plaque ajoutée au panier !', 'success');
+    
+    // Rendre le panier seulement si les éléments existent
+    if (cartItemsContainer && cartTotalEl && cartEmptyState) {
+        renderCart();
+    } else {
+        console.log('Éléments de la page cart non trouvés, mise à jour du compteur uniquement');
+    }
 };
 
 const removeItemFromCart = (productId) => {
@@ -355,15 +409,120 @@ const triggerCartAnimation = () => {
     updateCartIcon();
 };
 
-const addPlaqueButton = document.getElementById('addPlaqueToCart');
-if (addPlaqueButton) {
-    addPlaqueButton.addEventListener('click', (event) => {
-        event.preventDefault();
-        const productId = addPlaqueButton.dataset.productId;
+// Gestionnaire simple et direct pour le bouton "Ajouter au panier"
+const handleAddToCartClick = (event) => {
+    console.log('🔍 handleAddToCartClick appelé', event);
+    
+    // Empêcher la propagation pour éviter les doubles déclenchements
+    if (event.defaultPrevented) {
+        console.log('⚠️ Événement déjà traité, ignore');
+        return;
+    }
+    
+    // Trouver le bouton - vérifier plusieurs façons
+    let button = null;
+    const target = event.target;
+    
+    console.log('🎯 Target:', target, 'Target ID:', target?.id);
+    
+    // Vérifier si le target est directement le bouton
+    if (target && target.id === 'addPlaqueToCart') {
+        button = target;
+        console.log('✅ Bouton trouvé directement');
+    }
+    // Sinon, chercher dans les parents
+    else if (target) {
+        button = target.closest('#addPlaqueToCart');
+        if (button) {
+            console.log('✅ Bouton trouvé via closest');
+        }
+    }
+    // Dernier recours: chercher par ID
+    if (!button) {
+        button = document.getElementById('addPlaqueToCart');
+        if (button) {
+            console.log('✅ Bouton trouvé via getElementById');
+        }
+    }
+    
+    if (!button) {
+        console.error('❌ Bouton addPlaqueToCart non trouvé');
+        return;
+    }
+    
+    // Vérifier si le bouton est désactivé
+    if (button.disabled) {
+        console.log('⚠️ Bouton désactivé, ignore le clic');
+        return;
+    }
+    
+    // Empêcher la propagation maintenant qu'on a confirmé que c'est le bon bouton
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    
+    // Récupérer le productId
+    const productId = button.getAttribute('data-product-id') || button.dataset.productId;
+    if (!productId) {
+        console.error('❌ Product ID manquant sur le bouton');
+        console.error('Bouton attributes:', button.attributes);
+        return;
+    }
+    
+    console.log('✅ Clic détecté - Ajout au panier, Product ID:', productId);
+    console.log('📦 Appel de addItemToCart avec:', productId);
+    
+    try {
         addItemToCart(productId);
         triggerCartAnimation();
+        console.log('✅ addItemToCart terminé avec succès');
+    } catch (error) {
+        console.error('❌ Erreur lors de l\'ajout au panier:', error);
+        showCartToast('❌ Erreur lors de l\'ajout au panier', 'error');
+    }
+};
+
+// Délégation d'événements globale - fonctionne toujours
+document.addEventListener('click', (event) => {
+    const target = event.target;
+    // Vérifier si le clic est sur le bouton ou un de ses enfants
+    const isButtonClick = target.id === 'addPlaqueToCart' || target.closest('#addPlaqueToCart');
+    
+    if (isButtonClick) {
+        console.log('🎯 Délégation d\'événements: clic détecté sur addPlaqueToCart');
+        handleAddToCartClick(event);
+    }
+}, true); // Utiliser capture phase pour intercepter tôt
+
+// Initialiser aussi directement sur le bouton quand il est disponible
+const setupDirectListener = () => {
+    const button = document.getElementById('addPlaqueToCart');
+    if (button) {
+        // Vérifier si le listener n'est pas déjà attaché
+        if (!button.hasAttribute('data-listener-setup')) {
+            button.setAttribute('data-listener-setup', 'true');
+            button.addEventListener('click', handleAddToCartClick, { capture: false });
+            console.log('✅ Listener direct attaché au bouton addPlaqueToCart');
+        } else {
+            console.log('ℹ️ Listener déjà attaché au bouton');
+        }
+    } else {
+        console.log('⚠️ Bouton addPlaqueToCart non trouvé lors de setupDirectListener');
+    }
+};
+
+// Initialiser quand le DOM est prêt
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(setupDirectListener, 50);
     });
+} else {
+    setTimeout(setupDirectListener, 50);
 }
+
+// Réessayer après un délai au cas où le bouton serait chargé dynamiquement
+setTimeout(setupDirectListener, 500);
+setTimeout(setupDirectListener, 1000);
 
 if (cartItemsContainer) {
     cartItemsContainer.addEventListener('click', (event) => {
@@ -432,46 +591,18 @@ const clearFieldErrors = () => {
 };
 
 const showOrderConfirmation = (customerData) => {
-    if (!checkoutForm || !checkoutCard) return;
-
-    // Supprimer toute confirmation existante
-    const existingConfirmation = checkoutCard.querySelector('.order-confirmation');
-    if (existingConfirmation) {
-        existingConfirmation.remove();
+    // Sauvegarder les données de confirmation dans sessionStorage
+    try {
+        sessionStorage.setItem('orderConfirmation', JSON.stringify({
+            ...customerData,
+            timestamp: new Date().toISOString()
+        }));
+    } catch (e) {
+        console.error('Erreur lors de la sauvegarde de la confirmation', e);
     }
 
-    // Créer la confirmation dynamiquement
-    const confirmationDiv = document.createElement('div');
-    confirmationDiv.className = 'order-confirmation';
-    confirmationDiv.innerHTML = `
-        <h4>Commande confirmée 🎉</h4>
-        <p>Merci ! Votre demande a bien été envoyée. Notre équipe vous contactera très rapidement pour vous confirmer l'expédition.</p>
-        <div class="order-summary">
-            <p><strong>Nom :</strong> ${customerData.fullName}</p>
-            <p><strong>Email :</strong> ${customerData.email}</p>
-            <p><strong>Téléphone :</strong> ${customerData.phone}</p>
-            <p><strong>Adresse :</strong> ${customerData.address}</p>
-        </div>
-        <button type="button" class="btn-secondary" data-new-order>Commander une autre plaque</button>
-    `;
-
-    // Ajouter le gestionnaire d'événement pour le bouton "Commander une autre plaque"
-    const newOrderButton = confirmationDiv.querySelector('[data-new-order]');
-    if (newOrderButton) {
-        newOrderButton.addEventListener('click', () => {
-            resetOrderFlow();
-            if (cartSection && typeof cartSection.scrollIntoView === 'function') {
-                cartSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            } else {
-                window.location.href = '/';
-            }
-        });
-    }
-
-    // Masquer le formulaire et afficher la confirmation
-    checkoutForm.hidden = true;
-    checkoutCard.appendChild(confirmationDiv);
-    checkoutCard.hidden = false;
+    // Rediriger vers la page de confirmation
+    window.location.href = '/confirmation.html';
 };
 
 const clearAddressDatasets = () => {
@@ -505,8 +636,6 @@ const resetOrderFlow = () => {
     clearAddressDatasets();
     clearAddressSuggestions();
 };
-
-// Le gestionnaire d'événement pour "Commander une autre plaque" est maintenant créé dynamiquement dans showOrderConfirmation
 
 const renderAddressSuggestions = (results) => {
     if (!addressSuggestionsEl) {
@@ -571,69 +700,48 @@ const fetchAddressSuggestions = async (query) => {
         addressSuggestionsEl.hidden = false;
     }
 
-    // Multiple search strategies for better results
-    const searchQueries = [
-        query, // Original query
-        query + ', France', // Add country for better results
-        query + ', Suisse' // Add country for Switzerland
-    ];
-
-    const allResults = [];
-    const seenPlaceIds = new Set();
-
     try {
-        // Search with multiple strategies in parallel
-        const searchPromises = searchQueries.map(async (searchQuery) => {
-            const params = new URLSearchParams({
-                q: searchQuery,
-                format: 'jsonv2',
-                addressdetails: '1',
-                limit: '10', // Increased from 5 to 10 per query
-                countrycodes: 'fr,ch',
-                'accept-language': 'fr',
-                extratags: '1',
-                namedetails: '1'
-            });
-
-            const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
-                signal: addressFetchController.signal,
-                headers: {
-                    'Accept': 'application/json',
-                    'User-Agent': 'GoReview/1.0'
-                }
-            });
-
-            if (!response.ok) {
-                return [];
-            }
-
-            return await response.json();
+        // Requête unique optimisée pour une réponse plus rapide
+        const params = new URLSearchParams({
+            q: query,
+            format: 'jsonv2',
+            addressdetails: '1',
+            limit: '20', // Plus de résultats en une seule requête
+            countrycodes: 'fr,ch',
+            'accept-language': 'fr',
+            extratags: '1',
+            namedetails: '1'
         });
 
-        const resultsArrays = await Promise.all(searchPromises);
-
-        // Combine and deduplicate results
-        resultsArrays.forEach(results => {
-            if (Array.isArray(results)) {
-                results.forEach(result => {
-                    const placeId = result.place_id || result.osm_id;
-                    if (placeId && !seenPlaceIds.has(placeId)) {
-                        seenPlaceIds.add(placeId);
-                        allResults.push(result);
-                    }
-                });
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
+            signal: addressFetchController.signal,
+            headers: {
+                'Accept': 'application/json',
+                'User-Agent': 'GoReview/1.0'
             }
         });
 
-        // Sort by relevance (importance score if available)
-        allResults.sort((a, b) => {
+        if (!response.ok) {
+            clearAddressSuggestions();
+            return;
+        }
+
+        const results = await response.json();
+
+        if (!Array.isArray(results)) {
+            clearAddressSuggestions();
+            return;
+        }
+
+        // Trier par pertinence (score d'importance)
+        results.sort((a, b) => {
             const scoreA = a.importance || 0;
             const scoreB = b.importance || 0;
             return scoreB - scoreA;
         });
 
-        // Limit to top 15 results
-        const finalResults = allResults.slice(0, 15);
+        // Limiter à 15 résultats les plus pertinents
+        const finalResults = results.slice(0, 15);
         renderAddressSuggestions(finalResults);
     } catch (error) {
         if (error.name === 'AbortError') {
@@ -663,10 +771,10 @@ if (addressInput) {
             return;
         }
 
-        // Faster debounce for better responsiveness
+        // Debounce réduit pour une réponse beaucoup plus rapide
         addressDebounceTimer = setTimeout(() => {
             fetchAddressSuggestions(value);
-        }, 200);
+        }, 50);
     });
 
     addressInput.addEventListener('focus', () => {
@@ -704,15 +812,39 @@ const sendOrderToWebhook = async (payload) => {
         throw new Error(errorText || `Erreur ${response.status}`);
     }
 
-    return response.json().catch(() => ({}));
+    // Vérifier que la réponse correspond au format attendu
+    let responseData;
+    try {
+        responseData = await response.json();
+    } catch (e) {
+        throw new Error('Réponse invalide du serveur : format JSON attendu');
+    }
+
+    // Vérifier que la réponse est un tableau avec le format attendu
+    if (!Array.isArray(responseData) || 
+        responseData.length === 0 || 
+        !responseData[0] || 
+        responseData[0].status !== 'success') {
+        throw new Error('Réponse invalide du serveur : format de réponse incorrect');
+    }
+
+    return responseData;
 };
 
 if (checkoutForm) {
     checkoutForm.addEventListener('submit', async (event) => {
         event.preventDefault();
 
+        // Vérifier que le panier contient au moins un article
         if (!cartState.items.length) {
             setOrderStatus('Ajoutez la plaque gratuite à votre panier avant de confirmer la commande.', 'error');
+            return;
+        }
+
+        // Vérifier la quantité totale (doit être au moins 1 et au maximum 1)
+        const totalQuantity = cartState.items.reduce((sum, item) => sum + item.quantity, 0);
+        if (totalQuantity === 0) {
+            setOrderStatus('Votre panier est vide. Ajoutez au moins un article avant de passer commande.', 'error');
             return;
         }
 
@@ -726,7 +858,6 @@ if (checkoutForm) {
         }
 
         // Vérifier que la quantité totale ne dépasse pas 1
-        const totalQuantity = cartState.items.reduce((sum, item) => sum + item.quantity, 0);
         if (totalQuantity > 1) {
             setOrderStatus('Une seule plaque par commande (offre limitée).', 'error');
             // Forcer la quantité à 1
@@ -859,8 +990,16 @@ if (checkoutForm) {
                 address
             });
         } catch (error) {
-            console.error('Erreur lors de l’envoi de la commande', error);
-            setOrderStatus('Impossible d’envoyer la commande. Merci de réessayer ou de nous contacter.', 'error');
+            console.error('Erreur lors de l'envoi de la commande', error);
+            // Afficher un message d'erreur spécifique selon le type d'erreur
+            let errorMessage = 'Impossible d'envoyer la commande. Merci de réessayer ou de nous contacter.';
+            if (error.message && (
+                error.message.includes('format de réponse incorrect') || 
+                error.message.includes('format JSON attendu')
+            )) {
+                errorMessage = 'Erreur de communication avec le serveur. Veuillez réessayer dans quelques instants.';
+            }
+            setOrderStatus(errorMessage, 'error');
         } finally {
             toggleFormLoading(false);
         }
@@ -920,47 +1059,5 @@ if (window.location.pathname === '/cart' || window.location.pathname === '/cart.
     }
 }
 
-// Hero card animation on scroll
-const heroCard = document.querySelector('.hero-card');
-if (heroCard) {
-    const heroSection = heroCard.closest('.hero');
-    let ticking = false;
-
-    const updateHeroCard = () => {
-        if (!heroSection) return;
-
-        const rect = heroSection.getBoundingClientRect();
-        const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
-
-        // Calculate progress of hero section within viewport
-        const sectionCenter = rect.top + rect.height / 2;
-        const progress = 1 - (sectionCenter / viewportHeight);
-        const clampedProgress = Math.max(Math.min(progress, 1), -0.5);
-
-        const rotate = -10 + clampedProgress * 18;
-        const translateY = clampedProgress * 16;
-        const scale = 1 + Math.max(clampedProgress, 0) * 0.04;
-
-        heroCard.style.transform = `rotate(${rotate}deg) translateY(${translateY}px) scale(${scale})`;
-
-        if (Math.abs(clampedProgress) > 0.05) {
-            heroCard.classList.add('is-active');
-        } else {
-            heroCard.classList.remove('is-active');
-        }
-
-        ticking = false;
-    };
-
-    const handleScroll = () => {
-        if (!ticking) {
-            window.requestAnimationFrame(updateHeroCard);
-            ticking = true;
-        }
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    window.addEventListener('resize', handleScroll);
-    updateHeroCard();
-}
+// Hero card animation is now handled entirely by CSS (3D rotation)
 

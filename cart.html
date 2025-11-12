@@ -31,15 +31,9 @@
     <!-- Cart & Checkout Section -->
     <section class="cart-section section-padding" style="padding-top: calc(var(--spacing-xl) + 80px);">
         <div class="container">
-            <div class="section-header">
-                <span class="section-label">Panier & commande</span>
-                <h2>Finalisez votre plaque GoReview gratuite</h2>
-                <p class="section-description">Ajoutez la plaque à votre panier, renseignez vos informations et validez votre commande gratuite en quelques secondes.</p>
-            </div>
             <div class="cart-grid">
                 <div class="cart-card">
                     <h3>Votre panier</h3>
-                    <p class="cart-subtitle">La plaque NFC est gratuite (quantité limitée à une par établissement).</p>
                     <div class="cart-items-wrapper">
                         <p class="cart-empty" data-cart-empty>Votre panier est vide. <a href="/">Ajouter une plaque au panier</a></p>
                         <ul class="cart-items" data-cart-items></ul>
@@ -75,7 +69,6 @@
                             <label for="order-address">Adresse de livraison</label>
                             <input type="text" id="order-address" name="address" placeholder="Commencez à taper votre adresse..." autocomplete="shipping address-line1" required data-place-id="" data-formatted-address="">
                             <div class="address-suggestions" data-address-suggestions hidden></div>
-                            <small class="form-hint">Utilisez la recherche OpenStreetMap pour retrouver votre adresse plus rapidement.</small>
                         </div>
                         <div class="form-feedback" data-order-status hidden></div>
                         <div class="form-actions">

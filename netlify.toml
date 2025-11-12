@@ -97,6 +97,19 @@
   status = 200
   force = false
 
+# Confirmation page
+[[redirects]]
+  from = "/confirmation"
+  to = "/confirmation.html"
+  status = 200
+  force = false
+
+[[redirects]]
+  from = "/confirmation/"
+  to = "/confirmation.html"
+  status = 200
+  force = false
+
 # SPA fallback (if needed in future)
 # [[redirects]]
 #   from = "/*"

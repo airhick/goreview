@@ -24,6 +24,10 @@
 /cart /cart.html 200
 /cart/ /cart.html 200
 
+# Confirmation page
+/confirmation /confirmation.html 200
+/confirmation/ /confirmation.html 200
+
 # API redirects (if needed in future)
 # /api/* https://your-api-url.com/:splat 200
 
