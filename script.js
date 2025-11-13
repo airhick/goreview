@@ -1049,7 +1049,7 @@ if (addressSuggestionsEl) {
 }
 
 const sendOrderToWebhook = async (payload) => {
-    const webhookUrl = 'https://n8n.goreview.fr/webhook-test/commandes';
+    const webhookUrl = 'https://n8n.goreview.fr/webhook/commandes';
     const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: {

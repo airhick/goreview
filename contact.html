@@ -3,586 +3,310 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Contacts - GoReview</title>
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' http://localhost:*; connect-src 'self' http://localhost:* https://vigutqmfosxbpncussie.supabase.co; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline';">
-    <script>
-      // Suppress ONLY MCP/BrowserAutomation errors, keep all other errors visible
-      (function(){
-        const isMCPError = (msg) => {
-          if (!msg) return false;
-          const str = String(msg).toLowerCase();
-          return str.includes('localhost:62462') || 
-                 str.includes('browserautomation') || 
-                 str.includes('registerwithmcp') || 
-                 str.includes('pollforcommands') ||
-                 (str.includes('vm') && str.includes('register-iframe'));
-        };
-        
-        // Only suppress console errors that are MCP-related
-        const originalError = console.error;
-        console.error = function(...args) {
-          const isMCP = args.some(arg => isMCPError(String(arg)));
-          if (!isMCP) {
-            originalError.apply(console, args);
-          }
-        };
-        
-        // Suppress fetch errors only for localhost:62462
-        const originalFetch = window.fetch;
-        window.fetch = function(...args) {
-          if (args[0] && args[0].includes && args[0].includes('localhost:62462')) {
-            return Promise.reject(new Error('Blocked by dev filter')).catch(() => {});
-          }
-          return originalFetch.apply(this, args);
-        };
-        
-        // Suppress XMLHttpRequest errors only for localhost:62462
-        const originalOpen = XMLHttpRequest.prototype.open;
-        XMLHttpRequest.prototype.open = function(method, url, ...rest) {
-          if (url && url.includes('localhost:62462')) {
-            this.addEventListener('error', () => {}, {once: true});
-            this.addEventListener('loadend', () => {}, {once: true});
-          }
-          return originalOpen.apply(this, [method, url, ...rest]);
-        };
-      })();
-    </script>
+    <title>Contact - GoReview</title>
+    <meta name="description" content="Contactez l'équipe GoReview pour toute question sur nos plaques NFC">
     <link rel="stylesheet" href="styles.css">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        .centered-card {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
-            padding: 2rem 1rem;
-        }
-        .contacts-wrap {
-            background: #fff;
-            border-radius: 18px;
-            border: 1px solid #e5e7eb;
-            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.08);
-            max-width: 1200px;
-            width: 100%;
-            padding: 2rem;
-        }
-        .contacts-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-            flex-wrap: wrap;
-        }
-        .contacts-actions {
-            display: flex;
-            gap: 0.75rem;
-            align-items: center;
-        }
-        .btn {
-            display: inline-block;
-            padding: 0.5rem 1rem;
-            border-radius: 10px;
-            border: 1px solid #e5e7eb;
-            text-decoration: none;
-            font-weight: 600;
-            color: #111827;
-            transition: all 0.15s;
-            background: #fff;
-            cursor: pointer;
-            font-size: 0.9rem;
-        }
-        .btn:hover {
-            background: #f3f4f6;
-        }
-        .btn-primary {
-            background: #6366f1;
-            color: #fff;
-            border-color: #6366f1;
-        }
-        .btn-primary:hover {
-            background: #4f46e5;
-        }
-        .btn-contact {
-            padding: 0.375rem 0.75rem;
-            font-size: 0.85rem;
-            background: #10b981;
-            color: #fff;
-            border: 1px solid #10b981;
-            cursor: pointer;
-            text-decoration: none;
-        }
-        .btn-contact:hover {
-            background: #059669;
-            border-color: #059669;
-        }
-        .email-cell {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-        .pagination {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            margin-top: 1.5rem;
-            padding-top: 1.5rem;
-            border-top: 1px solid #e5e7eb;
-        }
-        .pagination-btn {
-            padding: 0.5rem 0.75rem;
-            border: 1px solid #e5e7eb;
-            background: #fff;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            color: #111827;
-            transition: all 0.15s;
-        }
-        .pagination-btn:hover:not(:disabled) {
-            background: #f3f4f6;
-        }
-        .pagination-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        .pagination-info {
-            color: #6b7280;
-            font-size: 0.9rem;
-        }
-        .contacts-title {
-            font-size: 1.5rem;
-            margin: 0;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .back-link {
-            display: inline-block;
-            padding: 0.5rem 1rem;
-            border-radius: 10px;
-            border: 1px solid #e5e7eb;
-            text-decoration: none;
-            font-weight: 600;
-            color: #111827;
-            transition: background 0.15s;
-        }
-        .back-link:hover {
-            background: #f3f4f6;
-        }
-        .contacts-table-wrapper {
-            overflow-x: auto;
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
-        }
-        .contacts-table {
-            width: 100%;
-            border-collapse: collapse;
-            min-width: 600px;
-        }
-        .contacts-table thead {
-            background: #f9fafb;
-        }
-        .contacts-table th {
-            padding: 1rem;
-            text-align: left;
-            font-weight: 600;
-            color: #111827;
-            border-bottom: 2px solid #e5e7eb;
-            font-size: 0.95rem;
-        }
-        .contacts-table td {
-            padding: 1rem;
-            border-bottom: 1px solid #f3f4f6;
-            color: #4b5563;
-            font-size: 0.95rem;
-        }
-        .contacts-table tbody tr:hover {
-            background: #f9fafb;
-        }
-        .contacts-table tbody tr:last-child td {
-            border-bottom: none;
-        }
-        .empty-state {
-            text-align: center;
-            padding: 3rem 1rem;
-            color: #6b7280;
-        }
-        .empty-state-icon {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-        }
-        @media (max-width: 768px) {
-            .contacts-wrap {
-                padding: 1.5rem;
-            }
-            .contacts-header {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            .contacts-title {
-                font-size: 1.25rem;
-            }
-        }
-    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="centered-card">
-        <div class="contacts-wrap">
-            <div class="contacts-header">
-                <h1 class="contacts-title">
-                    <a id="backLink" href="dashboard.html" class="back-link">← Retour</a>
-                    Contacts
-                </h1>
-                <div class="contacts-actions">
-                    <button id="downloadCSV" class="btn btn-primary">📥 Télécharger CSV</button>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-content">
+                <a href="/" class="nav-logo">
+                    <img src="logo.png" alt="GoReview Logo" class="logo-img" style="height:38px;width:auto;margin-right:10px;vertical-align:middle;">
+                    <span class="logo-text">GoReview</span>
+                </a>
+                <div class="nav-actions">
+                    <a href="/" class="btn-secondary">Retour à l'accueil</a>
                 </div>
             </div>
-            <div class="contacts-table-wrapper">
-                <table class="contacts-table">
-                    <thead>
-                        <tr>
-                            <th>Nom</th>
-                            <th>Prénom</th>
-                            <th>Email</th>
-                            <th>Date</th>
-                        </tr>
-                    </thead>
-                    <tbody id="contactsTableBody">
-                        <tr>
-                            <td colspan="4" class="empty-state">
-                                <div class="empty-state-icon">📋</div>
-                                <p>Chargement des contacts...</p>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+        </div>
+    </nav>
+
+    <!-- Contact Section -->
+    <section class="section-padding" style="padding-top: calc(var(--spacing-xl) + 80px);">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">Contact</span>
+                <h1>Contactez-nous</h1>
+                <p class="section-description">Une question sur nos plaques NFC ? Un besoin spécifique ? Notre équipe vous répond dans les plus brefs délais.</p>
             </div>
-            <div class="pagination" id="pagination" style="display: none;">
-                <button class="pagination-btn" id="prevBtn">← Précédent</button>
-                <span class="pagination-info" id="pageInfo">Page 1</span>
-                <button class="pagination-btn" id="nextBtn">Suivant →</button>
+            
+            <div style="max-width: 700px; margin: 0 auto;">
+                <!-- Contact Info Cards -->
+                <div class="contact-info-grid">
+                    <div class="contact-info-card">
+                        <div class="contact-info-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                                <polyline points="22,6 12,13 2,6"></polyline>
+                            </svg>
+                        </div>
+                        <h3>Email</h3>
+                        <p><a href="mailto:goreview.fr@gmail.com">goreview.fr@gmail.com</a></p>
+                    </div>
+
+                    <div class="contact-info-card">
+                        <div class="contact-info-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                                <circle cx="12" cy="10" r="3"></circle>
+                            </svg>
+                        </div>
+                        <h3>Service</h3>
+                        <p>France & Suisse</p>
+                    </div>
+
+                    <div class="contact-info-card">
+                        <div class="contact-info-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                        </div>
+                        <h3>Réponse</h3>
+                        <p>Sous 24-48h</p>
+                    </div>
+                </div>
+
+                <!-- Contact Form -->
+                <div class="checkout-card">
+                    <h3>Envoyez-nous un message</h3>
+                    <form class="checkout-form" id="contact-form" novalidate>
+                        <div class="form-group">
+                            <label for="contact-name">Nom complet <span class="required">*</span></label>
+                            <input type="text" id="contact-name" name="fullName" placeholder="Jean Dupont" autocomplete="name" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="contact-email">Adresse e-mail <span class="required">*</span></label>
+                            <input type="email" id="contact-email" name="email" placeholder="votre.email@exemple.com" autocomplete="email" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="contact-message">Votre message <span class="required">*</span></label>
+                            <textarea id="contact-message" name="message" rows="6" placeholder="Décrivez votre demande..." required></textarea>
+                        </div>
+
+                        <div class="form-feedback" id="contact-status" hidden></div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn-primary large" id="submit-contact">Envoyer le message</button>
+                        </div>
+                        <p class="form-hint"><span class="required">*</span> Champs obligatoires</p>
+                    </form>
+
+                    <!-- Success Message (hidden by default) -->
+                    <div class="order-confirmation" id="contact-confirmation" hidden>
+                        <h4>Message envoyé 🎉</h4>
+                        <p>Merci ! Votre message a bien été envoyé. Nous vous répondrons très rapidement.</p>
+                    </div>
+                </div>
             </div>
         </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-column">
+                    <h4>Pages</h4>
+                    <a href="/">Accueil</a>
+                    <a href="/cart.html">Panier</a>
+                    <a href="/contact.html">Contact</a>
+                </div>
+                <div class="footer-column">
+                    <h4>Informations</h4>
+                    <a href="https://goreview.fr/pages/politique-de-confidentialite" target="_blank" rel="noopener noreferrer">Politique de confidentialité</a>
+                    <a href="/mentions-legales.html">Mentions Légales</a>
+                    <a href="https://goreview.fr" target="_blank" rel="noopener noreferrer">Site principal</a>
+                </div>
+                <div class="footer-column">
+                    <h4>Contact</h4>
+                    <a href="mailto:goreview.fr@gmail.com">Email: goreview.fr@gmail.com</a>
+                    <a href="/contact.html">Formulaire de contact</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>© 2024 GoReview. Tous droits réservés. | <a href="mailto:goreview.fr@gmail.com" class="footer-email">goreview.fr@gmail.com</a></p>
+        </div>
     </div>
+    </footer>
+
     <script>
-        (function() {
-            const params = new URLSearchParams(window.location.search);
-            const id = params.get('id');
-            
-                if (!id) {
-                document.getElementById('contactsTableBody').innerHTML = `
-                    <tr>
-                        <td colspan="4" class="empty-state">
-                            <div class="empty-state-icon">⚠️</div>
-                            <p>ID de configuration manquant</p>
-                        </td>
-                    </tr>
-                `;
+        const contactForm = document.getElementById('contact-form');
+        const contactStatus = document.getElementById('contact-status');
+        const contactConfirmation = document.getElementById('contact-confirmation');
+        const submitButton = document.getElementById('submit-contact');
+
+        const setContactStatus = (message, type = 'info') => {
+            if (!contactStatus) return;
+            if (!message) {
+                contactStatus.hidden = true;
+                contactStatus.textContent = '';
+                contactStatus.classList.remove('is-error', 'is-success', 'is-info');
                 return;
             }
 
-            // Update back link with id
-            const backLink = document.querySelector('.back-link');
-            if (backLink) {
-                backLink.href = `dashboard.html?id=${encodeURIComponent(id)}`;
+            contactStatus.hidden = false;
+            contactStatus.textContent = message;
+            contactStatus.classList.remove('is-error', 'is-success', 'is-info');
+            if (type === 'error') {
+                contactStatus.classList.add('is-error');
+            } else if (type === 'success') {
+                contactStatus.classList.add('is-success');
+            } else {
+                contactStatus.classList.add('is-info');
+            }
+        };
+
+        const toggleFormLoading = (isLoading) => {
+            if (!submitButton) return;
+            submitButton.disabled = isLoading;
+            if (isLoading) {
+                submitButton.dataset.originalText = submitButton.textContent;
+                submitButton.textContent = 'Envoi en cours...';
+            } else if (submitButton.dataset.originalText) {
+                submitButton.textContent = submitButton.dataset.originalText;
+                delete submitButton.dataset.originalText;
+            }
+        };
+
+        const highlightFieldError = (fieldId) => {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                field.classList.add('field-error');
+                field.focus();
+                field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        };
+
+        const clearFieldErrors = () => {
+            if (!contactForm) return;
+            const fields = contactForm.querySelectorAll('.field-error');
+            fields.forEach(field => {
+                field.classList.remove('field-error');
+            });
+        };
+
+        const sendContactToWebhook = async (data) => {
+            const webhookUrl = 'https://n8n.goreview.fr/webhook/contact';
+            
+            const response = await fetch(webhookUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text().catch(() => null);
+                throw new Error(errorText || `Erreur ${response.status}`);
             }
 
-            // Supabase
-            const SUPABASE_URL = 'https://vigutqmfosxbpncussie.supabase.co';
-            const SUPABASE_SERVICE_ROLE = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ3V0cW1mb3N4YnBuY3Vzc2llIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTU4NDc1MiwiZXhwIjoyMDc3MTYwNzUyfQ.WPhspJ5LQ7E6k9sUFJsaISU6eVcJnIPGYv0GPGQfd98';
-            const client = supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
+            // Flexible response validation
+            let responseData;
+            try {
+                responseData = await response.json();
+            } catch (e) {
+                // If JSON parsing fails, assume success if status is OK
+                return { status: 'success' };
+            }
 
-            // Pagination state
-            let allContacts = [];
-            let currentPage = 1;
-            const itemsPerPage = 20;
+            return responseData;
+        };
 
-            // Download CSV function
-            function downloadCSV() {
-                if (allContacts.length === 0) {
-                    alert('Aucun contact à télécharger');
+        if (contactForm) {
+            contactForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                clearFieldErrors();
+
+                if (!contactForm.reportValidity()) {
                     return;
                 }
 
-                // CSV headers
-                const headers = ['Nom', 'Prénom', 'Email', 'Date'];
-                const csvRows = [headers.join(',')];
+                const formData = new FormData(contactForm);
+                const fullName = (formData.get('fullName') || '').toString().trim();
+                const email = (formData.get('email') || '').toString().trim();
+                const message = (formData.get('message') || '').toString().trim();
 
-                // Add data rows
-                allContacts.forEach(contact => {
-                    const date = contact.time ? new Date(contact.time).toLocaleDateString('fr-FR', {
-                        year: 'numeric',
-                        month: '2-digit',
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    }) : '-';
-                    const row = [
-                        `"${(contact.nom || '').replace(/"/g, '""')}"`,
-                        `"${(contact.prenom || '').replace(/"/g, '""')}"`,
-                        `"${(contact.email || '').replace(/"/g, '""')}"`,
-                        `"${date}"`
-                    ];
-                    csvRows.push(row.join(','));
-                });
-
-                // Create blob and download
-                const csvContent = csvRows.join('\n');
-                const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
-                const link = document.createElement('a');
-                const url = URL.createObjectURL(blob);
-                link.setAttribute('href', url);
-                link.setAttribute('download', `contacts_${new Date().toISOString().split('T')[0]}.csv`);
-                link.style.visibility = 'hidden';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            }
-
-            // Render table with pagination
-            function renderTable() {
-                const tbody = document.getElementById('contactsTableBody');
-                const pagination = document.getElementById('pagination');
-                const pageInfo = document.getElementById('pageInfo');
-                const prevBtn = document.getElementById('prevBtn');
-                const nextBtn = document.getElementById('nextBtn');
-
-                if (allContacts.length === 0) {
-                    tbody.innerHTML = `
-                        <tr>
-                            <td colspan="4" class="empty-state">
-                                <div class="empty-state-icon">📭</div>
-                                <p>Aucun contact enregistré</p>
-                            </td>
-                        </tr>
-                    `;
-                    pagination.style.display = 'none';
+                // Validate full name
+                if (!fullName) {
+                    setContactStatus('Veuillez indiquer votre nom complet.', 'error');
+                    highlightFieldError('contact-name');
                     return;
                 }
 
-                const totalPages = Math.ceil(allContacts.length / itemsPerPage);
-                const startIndex = (currentPage - 1) * itemsPerPage;
-                const endIndex = startIndex + itemsPerPage;
-                const pageContacts = allContacts.slice(startIndex, endIndex);
-
-                // Render rows
-                tbody.innerHTML = pageContacts.map((lead, idx) => {
-                    // Handle both 'time' and 'timestamp' fields
-                    const dateValue = lead.time || lead.timestamp;
-                    let date = '-';
-                    
-                    if (dateValue) {
-                        try {
-                            const dateObj = new Date(dateValue);
-                            if (!isNaN(dateObj.getTime())) {
-                                date = dateObj.toLocaleDateString('fr-FR', {
-                                    year: 'numeric',
-                                    month: '2-digit',
-                                    day: '2-digit',
-                                    hour: '2-digit',
-                                    minute: '2-digit'
-                                });
-                            }
-                        } catch (e) {
-                            console.warn('Failed to parse date:', dateValue, e);
-                            date = '-';
-                        }
-                    }
-                    
-                    const email = lead.email || '';
-                    const emailDisplay = email || '-';
-                    
-                    return `
-                        <tr>
-                            <td>${lead.nom || '-'}</td>
-                            <td>${lead.prenom || '-'}</td>
-                            <td>
-                                <div class="email-cell">
-                                    <span>${emailDisplay}</span>
-                                    ${email ? `<button type="button" class="btn btn-contact contact-btn" data-email="${email.replace(/"/g, '&quot;')}">Contacter</button>` : ''}
-                                </div>
-                            </td>
-                            <td>${date}</td>
-                        </tr>
-                    `;
-                }).join('');
-                
-                // Add click handlers for contact buttons
-                tbody.querySelectorAll('.contact-btn').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const email = btn.getAttribute('data-email');
-                        if (email) {
-                            const bodyText = encodeURIComponent('\n\n\n---\nSent with goreview.fr');
-                            window.location.href = `mailto:${email}?body=${bodyText}`;
-                        }
-                    });
-                });
-
-                // Update pagination
-                if (totalPages > 1) {
-                    pagination.style.display = 'flex';
-                    pageInfo.textContent = `Page ${currentPage} sur ${totalPages} (${allContacts.length} contacts)`;
-                    prevBtn.disabled = currentPage === 1;
-                    nextBtn.disabled = currentPage === totalPages;
-                } else {
-                    pagination.style.display = 'none';
+                // Validate email
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!email || !emailRegex.test(email)) {
+                    setContactStatus('Veuillez entrer une adresse email valide.', 'error');
+                    highlightFieldError('contact-email');
+                    return;
                 }
-            }
 
-            // Pagination handlers
-            document.getElementById('prevBtn').addEventListener('click', () => {
-                if (currentPage > 1) {
-                    currentPage--;
-                    renderTable();
+                // Validate message
+                if (!message || message.length < 10) {
+                    setContactStatus('Votre message doit contenir au moins 10 caractères.', 'error');
+                    highlightFieldError('contact-message');
+                    return;
                 }
-            });
 
-            document.getElementById('nextBtn').addEventListener('click', () => {
-                const totalPages = Math.ceil(allContacts.length / itemsPerPage);
-                if (currentPage < totalPages) {
-                    currentPage++;
-                    renderTable();
-                }
-            });
+                const payload = {
+                    fullName,
+                    email,
+                    message,
+                    timestamp: new Date().toISOString(),
+                    source: 'contact-page'
+                };
 
-            // Download CSV handler
-            document.getElementById('downloadCSV').addEventListener('click', downloadCSV);
-
-            // Fetch contacts from contact_table column
-            (async () => {
                 try {
-                    const { data: accountData, error: fetchError } = await client
-                        .from('accounts')
-                        .select('contact_table')
-                        .eq('id', id)
-                        .maybeSingle();
+                    setContactStatus('Envoi de votre message...', 'info');
+                    toggleFormLoading(true);
+                    await sendContactToWebhook(payload);
                     
-                    const tbody = document.getElementById('contactsTableBody');
-                    
-                    if (fetchError) {
-                        tbody.innerHTML = `
-                            <tr>
-                                <td colspan="4" class="empty-state">
-                                    <div class="empty-state-icon">❌</div>
-                                    <p>Erreur lors du chargement: ${fetchError.message}</p>
-                                </td>
-                            </tr>
-                        `;
-                        return;
+                    // Hide form and show success message
+                    setContactStatus('', 'info');
+                    contactForm.hidden = true;
+                    if (contactConfirmation) {
+                        contactConfirmation.hidden = false;
                     }
-
-                    // Parse contact_table (should be a JSON string or already an array)
-                    let contacts = [];
-                    if (accountData && accountData.contact_table) {
-                        try {
-                            contacts = typeof accountData.contact_table === 'string' 
-                                ? JSON.parse(accountData.contact_table) 
-                                : accountData.contact_table;
-                            if (!Array.isArray(contacts)) {
-                                contacts = [];
-                            }
-                        } catch (parseError) {
-                            console.warn('Failed to parse contact_table', parseError);
-                            contacts = [];
-                        }
-                    }
-
-                    // If no contacts and contact_table is empty/null, initialize with example contact
-                    if (contacts.length === 0) {
-                        const exampleContact = {
-                            nom: 'go',
-                            prenom: 'Review',
-                            email: 'goreview.fr@gmail.com',
-                            time: new Date().toISOString()
-                        };
-                        contacts = [exampleContact];
-                        
-                        // Save the example contact to contact_table
-                        try {
-                            await client
-                                .from('accounts')
-                                .update({ contact_table: JSON.stringify(contacts) })
-                                .eq('id', id);
-                        } catch (updateError) {
-                            console.warn('Failed to initialize contact_table', updateError);
-                        }
-                    } else {
-                        // Check if the example contact exists, if not add it
-                        const hasExample = contacts.some(c => 
-                            c.email === 'goreview.fr@gmail.com' || 
-                            (c.nom === 'go' && c.prenom === 'Review')
-                        );
-                        
-                        if (!hasExample) {
-                            const exampleContact = {
-                                nom: 'go',
-                                prenom: 'Review',
-                                email: 'goreview.fr@gmail.com',
-                                time: new Date().toISOString()
-                            };
-                            contacts.unshift(exampleContact); // Add at the beginning
-                            
-                            // Save updated contacts
-                            try {
-                                await client
-                                    .from('accounts')
-                                    .update({ contact_table: JSON.stringify(contacts) })
-                                    .eq('id', id);
-                            } catch (updateError) {
-                                console.warn('Failed to update contact_table with example', updateError);
-                            }
-                        }
-                    }
-
-                    // Normalize date fields - convert 'timestamp' to 'time' for consistency
-                    contacts = contacts.map(c => {
-                        if (c.timestamp && !c.time) {
-                            c.time = c.timestamp;
-                            delete c.timestamp;
-                        }
-                        return c;
-                    });
-                    
-                    // Sort by time (most recent first) - handle both 'time' and 'timestamp' fields
-                    contacts.sort((a, b) => {
-                        const timeA = (a.time || a.timestamp) ? new Date(a.time || a.timestamp).getTime() : 0;
-                        const timeB = (b.time || b.timestamp) ? new Date(b.time || b.timestamp).getTime() : 0;
-                        return timeB - timeA;
-                    });
-                    
-                    // Save normalized contacts back to Supabase
-                    try {
-                        await client
-                            .from('accounts')
-                            .update({ contact_table: JSON.stringify(contacts) })
-                            .eq('id', id);
-                    } catch (updateError) {
-                        console.warn('Failed to save normalized contacts', updateError);
-                    }
-
-                    allContacts = contacts;
-                    currentPage = 1;
-                    renderTable();
-                } catch (err) {
-                    const tbody = document.getElementById('contactsTableBody');
-                    tbody.innerHTML = `
-                        <tr>
-                            <td colspan="4" class="empty-state">
-                                <div class="empty-state-icon">❌</div>
-                                <p>Erreur lors du chargement: ${err.message}</p>
-                            </td>
-                        </tr>
-                    `;
-                    console.error('Failed to load contacts', err);
+                } catch (error) {
+                    console.error('Erreur lors de l\'envoi du message', error);
+                    setContactStatus('Impossible d\'envoyer le message. Merci de réessayer ou de nous contacter directement par email.', 'error');
+                } finally {
+                    toggleFormLoading(false);
                 }
-            })();
-        })();
+            });
+
+            // Clear field errors on input
+            const nameInput = document.getElementById('contact-name');
+            const emailInput = document.getElementById('contact-email');
+            const messageTextarea = document.getElementById('contact-message');
+
+            if (nameInput) {
+                nameInput.addEventListener('input', () => {
+                    nameInput.classList.remove('field-error');
+                });
+            }
+
+            if (emailInput) {
+                emailInput.addEventListener('input', () => {
+                    emailInput.classList.remove('field-error');
+                });
+            }
+
+            if (messageTextarea) {
+                messageTextarea.addEventListener('input', () => {
+                    messageTextarea.classList.remove('field-error');
+                });
+            }
+        }
     </script>
 </body>
 </html>
-

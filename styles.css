@@ -1845,3 +1845,303 @@ img, svg, video, canvas {
     }
 }
 
+/* Legal Pages Styles */
+.legal-header {
+    text-align: center;
+    margin-bottom: var(--spacing-xl);
+    padding-bottom: var(--spacing-lg);
+    border-bottom: 2px solid var(--border-color);
+}
+
+.legal-header h1 {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-sm);
+    letter-spacing: -0.02em;
+}
+
+.legal-intro {
+    font-size: 1.125rem;
+    color: var(--text-secondary);
+    line-height: 1.7;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.legal-content {
+    background: var(--bg-primary);
+}
+
+.legal-section {
+    margin-bottom: var(--spacing-xl);
+}
+
+.legal-section h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-md);
+    padding-bottom: var(--spacing-xs);
+    border-bottom: 2px solid var(--primary-color);
+    display: inline-block;
+}
+
+.legal-section p {
+    color: var(--text-secondary);
+    line-height: 1.8;
+    margin-bottom: var(--spacing-sm);
+}
+
+.legal-section a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.legal-section a:hover {
+    text-decoration: underline;
+}
+
+.legal-box {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    margin: var(--spacing-sm) 0;
+}
+
+.legal-box p {
+    margin-bottom: 0.75rem;
+}
+
+.legal-box p:last-child {
+    margin-bottom: 0;
+}
+
+.legal-box strong {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.contact-box {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(139, 92, 246, 0.05));
+    border-color: rgba(99, 102, 241, 0.2);
+}
+
+.legal-list {
+    list-style: none;
+    padding-left: 0;
+    margin: var(--spacing-sm) 0;
+}
+
+.legal-list li {
+    position: relative;
+    padding-left: 1.5rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.legal-list li::before {
+    content: "•";
+    position: absolute;
+    left: 0.5rem;
+    color: var(--primary-color);
+    font-weight: 700;
+    font-size: 1.2rem;
+}
+
+.legal-footer {
+    margin-top: var(--spacing-xl);
+    padding-top: var(--spacing-lg);
+    border-top: 1px solid var(--border-color);
+    text-align: center;
+}
+
+.legal-footer em {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+@media (max-width: 768px) {
+    .legal-header h1 {
+        font-size: 2rem;
+    }
+    
+    .legal-intro {
+        font-size: 1rem;
+    }
+    
+    .legal-section h2 {
+        font-size: 1.25rem;
+    }
+    
+    .legal-box {
+        padding: var(--spacing-sm);
+    }
+}
+
+/* Contact Page Styles */
+.contact-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-xl);
+}
+
+.contact-info-card {
+    text-align: center;
+    padding: var(--spacing-md);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    transition: all 0.3s ease;
+}
+
+.contact-info-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary-color);
+}
+
+.contact-info-icon {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto var(--spacing-sm);
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+.contact-info-icon svg {
+    width: 28px;
+    height: 28px;
+}
+
+.contact-info-card h3 {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.contact-info-card p {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    margin: 0;
+}
+
+.contact-info-card a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.contact-info-card a:hover {
+    text-decoration: underline;
+}
+
+.required {
+    color: #dc2626;
+    font-weight: 700;
+}
+
+.contact-success {
+    text-align: center;
+    padding: var(--spacing-xl) var(--spacing-md);
+}
+
+.success-icon {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, var(--success-color), #059669);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    color: white;
+    margin: 0 auto var(--spacing-md);
+    box-shadow: 0 10px 30px rgba(16, 185, 129, 0.3);
+}
+
+.contact-success h4 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-sm);
+}
+
+.contact-success p {
+    color: var(--text-secondary);
+    font-size: 1.125rem;
+    margin-bottom: var(--spacing-md);
+    line-height: 1.6;
+}
+
+.contact-faq {
+    margin-top: var(--spacing-xl);
+    padding: var(--spacing-lg);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+}
+
+.contact-faq h3 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-md);
+    text-align: center;
+}
+
+.faq-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--spacing-md);
+}
+
+.faq-item {
+    background: var(--bg-primary);
+    padding: var(--spacing-md);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+}
+
+.faq-item h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.faq-item p {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    line-height: 1.6;
+    margin: 0;
+}
+
+@media (max-width: 768px) {
+    .contact-info-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .faq-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .success-icon {
+        width: 60px;
+        height: 60px;
+        font-size: 2rem;
+    }
+    
+    .contact-success h4 {
+        font-size: 1.5rem;
+    }
+}
+
