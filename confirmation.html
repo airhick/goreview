@@ -28,11 +28,96 @@
     <!-- Confirmation Section -->
     <section class="section-padding" style="padding-top: calc(var(--spacing-xl) + 80px);">
         <div class="container">
-            <div style="max-width: 600px; margin: 0 auto;">
+            <div style="max-width: 700px; margin: 0 auto;">
+                <!-- Success Banner -->
+                <div class="confirmation-banner">
+                    <div class="confirmation-icon">✓</div>
+                    <h1>Commande confirmée !</h1>
+                    <p class="confirmation-subtitle">Merci pour votre commande. Nous avons bien reçu votre demande.</p>
+                </div>
+
+                <!-- Email Confirmation Notice -->
+                <div class="confirmation-notice">
+                    <svg class="notice-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                        <polyline points="22,6 12,13 2,6"></polyline>
+                    </svg>
+                    <div>
+                        <strong>Email de confirmation envoyé</strong>
+                        <p>Un email récapitulatif a été envoyé à <span id="customer-email"></span></p>
+                    </div>
+                </div>
+
+                <!-- Order Details Card -->
                 <div class="checkout-card">
-                    <div class="order-confirmation">
-                        <h4>Commande confirmée 🎉</h4>
-                        <p>Merci ! Votre demande a bien été envoyée. Notre équipe vous contactera très rapidement pour vous confirmer l'expédition.</p>
+                    <h3>Récapitulatif de commande</h3>
+                    
+                    <div class="order-section">
+                        <h4 class="section-title">Produit commandé</h4>
+                        <div class="order-product">
+                            <div class="product-image-mini">
+                                <img src="photos/product/cardcropped.jpg" alt="Plaque NFC GoReview">
+                            </div>
+                            <div class="product-details-mini">
+                                <span class="product-name-mini">Plaque NFC GoReview</span>
+                                <span class="product-quantity">Quantité : 1</span>
+                                <span class="product-price-mini">Gratuit</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="order-section">
+                        <h4 class="section-title">Informations de livraison</h4>
+                        <div class="delivery-info">
+                            <div class="info-row">
+                                <span class="info-label">Destinataire</span>
+                                <span class="info-value" id="delivery-name"></span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Adresse</span>
+                                <span class="info-value" id="delivery-address"></span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Email</span>
+                                <span class="info-value" id="delivery-email"></span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Téléphone</span>
+                                <span class="info-value" id="delivery-phone"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="order-section">
+                        <h4 class="section-title">Prochaines étapes</h4>
+                        <div class="next-steps">
+                            <div class="step">
+                                <div class="step-number">1</div>
+                                <div class="step-content">
+                                    <strong>Traitement de votre commande</strong>
+                                    <p>Notre équipe prépare votre plaque NFC personnalisée</p>
+                                </div>
+                            </div>
+                            <div class="step">
+                                <div class="step-number">2</div>
+                                <div class="step-content">
+                                    <strong>Expédition</strong>
+                                    <p>Vous recevrez un email avec le numéro de suivi</p>
+                                </div>
+                            </div>
+                            <div class="step">
+                                <div class="step-number">3</div>
+                                <div class="step-content">
+                                    <strong>Réception et activation</strong>
+                                    <p>Suivez notre guide pour configurer votre plaque</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="confirmation-footer">
+                        <p class="footer-note">Des questions ? <a href="https://goreview.fr/pages/contact" target="_blank">Contactez-nous</a></p>
+                        <a href="/" class="btn-primary large">Retour à l'accueil</a>
                     </div>
                 </div>
             </div>
@@ -51,19 +136,28 @@
     </footer>
 
     <script>
-        // Vérifier si on a des données de confirmation dans sessionStorage
-        // Si non, rediriger vers la page d'accueil (pour éviter l'accès direct)
+        // Populate order confirmation details from sessionStorage
         try {
-            const confirmationData = sessionStorage.getItem('orderConfirmation');
-            if (!confirmationData) {
-                // Pas de données de confirmation, rediriger vers l'accueil
+            const confirmationDataStr = sessionStorage.getItem('orderConfirmation');
+            if (!confirmationDataStr) {
+                // No confirmation data, redirect to home
                 window.location.href = '/';
             } else {
-                // Nettoyer les données après affichage (optionnel)
+                const data = JSON.parse(confirmationDataStr);
+                
+                // Populate customer information
+                document.getElementById('customer-email').textContent = data.email || '';
+                document.getElementById('delivery-name').textContent = data.fullName || '';
+                document.getElementById('delivery-address').textContent = data.address || '';
+                document.getElementById('delivery-email').textContent = data.email || '';
+                document.getElementById('delivery-phone').textContent = data.phone || '';
+                
+                // Optional: Clear sessionStorage after display (uncomment if needed)
                 // sessionStorage.removeItem('orderConfirmation');
             }
         } catch (e) {
-            console.error('Erreur lors de la vérification de la confirmation', e);
+            console.error('Error loading confirmation data', e);
+            // If error, redirect to home
             window.location.href = '/';
         }
     </script>
