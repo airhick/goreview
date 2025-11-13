@@ -197,6 +197,7 @@ const orderStatusEl = document.querySelector('[data-order-status]');
 
 const addressInput = document.getElementById('order-address');
 const addressSuggestionsEl = document.querySelector('[data-address-suggestions]');
+const countrySelect = document.getElementById('order-country');
 let addressDetails = null;
 let addressDebounceTimer = null;
 let addressFetchController = null;
@@ -773,9 +774,13 @@ const fetchAddressSuggestions = async (query) => {
     }
 
     try {
-        // Primary: Google Places Autocomplete (fast, accurate, restricted to FR/CH)
+        // Get selected country for filtering
+        const selectedCountry = countrySelect ? countrySelect.value : 'FR';
+        
+        // Primary: Google Places Autocomplete (fast, accurate, restricted to selected country)
         const googleUrl = `/.netlify/functions/google-autocomplete?${new URLSearchParams({
-            input: query
+            input: query,
+            country: selectedCountry
         }).toString()}`;
 
         const response = await fetch(googleUrl, {
@@ -1002,6 +1007,21 @@ const fetchAddressSuggestionsFallback = async (query) => {
     }
 };
 
+// Clear address cache and suggestions when country changes
+if (countrySelect) {
+    countrySelect.addEventListener('change', () => {
+        addressCache.clear(); // Clear cache for new country
+        lastAddressQuery = '';
+        if (addressInput) {
+            addressInput.value = ''; // Clear address input
+            addressInput.dataset.country = countrySelect.value;
+        }
+        clearAddressSuggestions();
+        clearAddressDatasets();
+        addressDetails = null;
+    });
+}
+
 if (addressInput) {
     addressInput.addEventListener('input', () => {
         addressDetails = null;
@@ -1022,10 +1042,10 @@ if (addressInput) {
             return;
         }
 
-        // Debounce optimized for Google Places API (300ms is ideal for API calls)
+        // Debounce optimized for Google Places API (200ms for faster response)
         addressDebounceTimer = setTimeout(() => {
             fetchAddressSuggestions(value);
-        }, 300);
+        }, 200);
     });
 
     addressInput.addEventListener('focus', () => {
