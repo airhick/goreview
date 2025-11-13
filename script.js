@@ -35,17 +35,16 @@ document.querySelectorAll('.concept-card, .feature-card, .benefit-item, .challen
     observer.observe(el);
 });
 
-// Button click handlers (ignorer le bouton addPlaqueToCart qui a son propre handler)
+// Button click handlers
 document.querySelectorAll('.btn-primary, .btn-secondary').forEach(button => {
-    // Ignorer le bouton "Ajouter au panier"
-    if (button.id === 'addPlaqueToCart') {
-        console.log('ℹ️ Bouton addPlaqueToCart ignoré par le gestionnaire général');
+    // Ignorer le bouton "Ajouter au panier" qui a son propre handler
+    if (button.id === 'addPlaqueToCart' || button.id === 'viewCartButton') {
         return;
     }
     
     button.addEventListener('click', function(e) {
         // Ne pas traiter si c'est le bouton addPlaqueToCart (sécurité supplémentaire)
-        if (this.id === 'addPlaqueToCart' || e.target.id === 'addPlaqueToCart') {
+        if (this.id === 'addPlaqueToCart' || e.target.id === 'addPlaqueToCart' || e.target.closest('#addPlaqueToCart')) {
             return;
         }
         
@@ -389,140 +388,141 @@ const showCartToast = (message, type = 'success') => {
     }, 2200);
 };
 
-const triggerCartAnimation = () => {
-    const addPlaqueButton = document.getElementById('addPlaqueToCart');
-    if (addPlaqueButton) {
-        const originalText = addPlaqueButton.textContent;
-        addPlaqueButton.textContent = 'Ajouté';
-        addPlaqueButton.classList.add('btn-added');
-        addPlaqueButton.disabled = true;
-        
-        // Réinitialiser après 2 secondes
-        setTimeout(() => {
-            addPlaqueButton.textContent = originalText;
-            addPlaqueButton.classList.remove('btn-added');
-            addPlaqueButton.disabled = false;
-        }, 2000);
-    }
+// Gestionnaire pour le bouton "Ajouter au panier"
+function handleAddToCartClick(event) {
+    console.log('🔍 handleAddToCartClick appelé');
     
-    // Mettre à jour l'icône du panier
-    updateCartIcon();
-};
-
-// Gestionnaire simple et direct pour le bouton "Ajouter au panier"
-const handleAddToCartClick = (event) => {
-    console.log('🔍 handleAddToCartClick appelé', event);
+    // Empêcher la propagation
+    event.preventDefault();
+    event.stopPropagation();
     
-    // Empêcher la propagation pour éviter les doubles déclenchements
-    if (event.defaultPrevented) {
-        console.log('⚠️ Événement déjà traité, ignore');
-        return;
-    }
-    
-    // Trouver le bouton - vérifier plusieurs façons
-    let button = null;
-    const target = event.target;
-    
-    console.log('🎯 Target:', target, 'Target ID:', target?.id);
-    
-    // Vérifier si le target est directement le bouton
-    if (target && target.id === 'addPlaqueToCart') {
-        button = target;
-        console.log('✅ Bouton trouvé directement');
-    }
-    // Sinon, chercher dans les parents
-    else if (target) {
-        button = target.closest('#addPlaqueToCart');
-        if (button) {
-            console.log('✅ Bouton trouvé via closest');
-        }
-    }
-    // Dernier recours: chercher par ID
-    if (!button) {
-        button = document.getElementById('addPlaqueToCart');
-        if (button) {
-            console.log('✅ Bouton trouvé via getElementById');
-        }
-    }
-    
+    // Trouver le bouton
+    const button = event.target.closest('#addPlaqueToCart') || document.getElementById('addPlaqueToCart');
     if (!button) {
         console.error('❌ Bouton addPlaqueToCart non trouvé');
         return;
     }
     
-    // Vérifier si le bouton est désactivé
-    if (button.disabled) {
-        console.log('⚠️ Bouton désactivé, ignore le clic');
+    // Vérifier si le bouton est déjà en état "Ajouté" ou désactivé
+    if (button.disabled || button.textContent.trim() === 'Ajouté') {
+        console.log('⚠️ Bouton déjà ajouté ou désactivé');
         return;
     }
-    
-    // Empêcher la propagation maintenant qu'on a confirmé que c'est le bon bouton
-    event.preventDefault();
-    event.stopPropagation();
-    event.stopImmediatePropagation();
     
     // Récupérer le productId
-    const productId = button.getAttribute('data-product-id') || button.dataset.productId;
+    const productId = button.getAttribute('data-product-id');
     if (!productId) {
-        console.error('❌ Product ID manquant sur le bouton');
-        console.error('Bouton attributes:', button.attributes);
+        console.error('❌ Product ID manquant');
         return;
     }
     
-    console.log('✅ Clic détecté - Ajout au panier, Product ID:', productId);
-    console.log('📦 Appel de addItemToCart avec:', productId);
+    console.log('✅ Ajout au panier - Product ID:', productId);
     
+    // Ajouter au panier
     try {
         addItemToCart(productId);
-        triggerCartAnimation();
-        console.log('✅ addItemToCart terminé avec succès');
+        
+        // Changer le bouton en "Ajouté"
+        button.textContent = 'Ajouté';
+        button.classList.add('btn-added');
+        button.disabled = true;
+        
+        // Afficher le bouton "Voir le panier"
+        const viewCartButton = document.getElementById('viewCartButton');
+        if (viewCartButton) {
+            viewCartButton.style.display = 'inline-block';
+        }
+        
+        // Animation de l'icône du panier
+        animateCartIcon();
+        
+        console.log('✅ Item ajouté au panier avec succès');
     } catch (error) {
-        console.error('❌ Erreur lors de l\'ajout au panier:', error);
+        console.error('❌ Erreur:', error);
         showCartToast('❌ Erreur lors de l\'ajout au panier', 'error');
     }
-};
+}
 
-// Délégation d'événements globale - fonctionne toujours
-document.addEventListener('click', (event) => {
-    const target = event.target;
-    // Vérifier si le clic est sur le bouton ou un de ses enfants
-    const isButtonClick = target.id === 'addPlaqueToCart' || target.closest('#addPlaqueToCart');
-    
-    if (isButtonClick) {
-        console.log('🎯 Délégation d\'événements: clic détecté sur addPlaqueToCart');
-        handleAddToCartClick(event);
+// Animation de l'icône du panier
+function animateCartIcon() {
+    const cartTab = document.querySelector('.cart-tab');
+    if (!cartTab) {
+        return;
     }
-}, true); // Utiliser capture phase pour intercepter tôt
+    
+    cartTab.classList.add('cart-tab--pop');
+    cartTab.classList.add('cart-tab--pulse');
+    
+    setTimeout(() => {
+        cartTab.classList.remove('cart-tab--pop');
+        cartTab.classList.remove('cart-tab--pulse');
+    }, 1500);
+}
 
-// Initialiser aussi directement sur le bouton quand il est disponible
-const setupDirectListener = () => {
+// Initialiser le bouton "Ajouter au panier"
+function initAddToCartButton() {
     const button = document.getElementById('addPlaqueToCart');
     if (button) {
-        // Vérifier si le listener n'est pas déjà attaché
-        if (!button.hasAttribute('data-listener-setup')) {
-            button.setAttribute('data-listener-setup', 'true');
-            button.addEventListener('click', handleAddToCartClick, { capture: false });
-            console.log('✅ Listener direct attaché au bouton addPlaqueToCart');
+        // Vérifier si l'item est déjà dans le panier
+        const productId = button.getAttribute('data-product-id');
+        const isInCart = cartState.items.some(item => item.id === productId);
+        
+        if (isInCart) {
+            // Si déjà dans le panier, afficher "Ajouté"
+            button.textContent = 'Ajouté';
+            button.classList.add('btn-added');
+            button.disabled = true;
+            
+            // Afficher le bouton "Voir le panier"
+            const viewCartButton = document.getElementById('viewCartButton');
+            if (viewCartButton) {
+                viewCartButton.style.display = 'inline-block';
+            }
         } else {
-            console.log('ℹ️ Listener déjà attaché au bouton');
+            // S'assurer que le bouton n'est pas désactivé
+            button.disabled = false;
+            button.style.opacity = '1';
+            button.style.cursor = 'pointer';
+            
+            // Supprimer les anciens listeners en clonant le bouton
+            const newButton = button.cloneNode(true);
+            button.parentNode.replaceChild(newButton, button);
+            
+            // Attacher le nouveau listener
+            newButton.addEventListener('click', handleAddToCartClick);
+            console.log('✅ Listener attaché au bouton addPlaqueToCart');
         }
     } else {
-        console.log('⚠️ Bouton addPlaqueToCart non trouvé lors de setupDirectListener');
+        console.log('⚠️ Bouton addPlaqueToCart non trouvé lors de l\'initialisation');
     }
-};
+}
+
+// Délégation d'événements globale en backup (capture phase pour intercepter tôt)
+document.addEventListener('click', function(event) {
+    const button = event.target.closest('#addPlaqueToCart');
+    if (button && !button.disabled && button.textContent.trim() !== 'Ajouté') {
+        // Vérifier si l'événement n'a pas déjà été traité
+        if (!event.defaultPrevented && !button.hasAttribute('data-processing')) {
+            button.setAttribute('data-processing', 'true');
+            handleAddToCartClick(event);
+            setTimeout(() => button.removeAttribute('data-processing'), 100);
+        }
+    }
+}, true);
 
 // Initialiser quand le DOM est prêt
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        setTimeout(setupDirectListener, 50);
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(initAddToCartButton, 50);
     });
 } else {
-    setTimeout(setupDirectListener, 50);
+    setTimeout(initAddToCartButton, 50);
 }
 
-// Réessayer après un délai au cas où le bouton serait chargé dynamiquement
-setTimeout(setupDirectListener, 500);
-setTimeout(setupDirectListener, 1000);
+// Réessayer après des délais pour s'assurer que le bouton est trouvé
+setTimeout(initAddToCartButton, 100);
+setTimeout(initAddToCartButton, 300);
+setTimeout(initAddToCartButton, 500);
 
 if (cartItemsContainer) {
     cartItemsContainer.addEventListener('click', (event) => {
@@ -990,9 +990,9 @@ if (checkoutForm) {
                 address
             });
         } catch (error) {
-            console.error('Erreur lors de l'envoi de la commande', error);
+            console.error('Erreur lors de l\'envoi de la commande', error);
             // Afficher un message d'erreur spécifique selon le type d'erreur
-            let errorMessage = 'Impossible d'envoyer la commande. Merci de réessayer ou de nous contacter.';
+            let errorMessage = 'Impossible d\'envoyer la commande. Merci de réessayer ou de nous contacter.';
             if (error.message && (
                 error.message.includes('format de réponse incorrect') || 
                 error.message.includes('format JSON attendu')

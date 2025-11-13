@@ -133,6 +133,10 @@ body {
     cursor: pointer;
     transition: all 0.2s ease;
     text-decoration: none;
+    /* Toujours visible dans la barre du haut */
+    visibility: visible;
+    opacity: 1;
+    position: relative;
 }
 
 .cart-icon {
@@ -149,6 +153,11 @@ body {
     color: var(--primary-color);
 }
 
+.cart-tab--full {
+    border-color: var(--primary-color);
+    background: rgba(99, 102, 241, 0.05);
+}
+
 .cart-tab:hover {
     background: var(--bg-accent);
     border-color: var(--text-primary);
@@ -159,11 +168,52 @@ body {
     animation: cartPulse 1.1s ease;
 }
 
+.cart-tab--pop {
+    animation: cartPop 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    z-index: 1001;
+    position: relative;
+}
+
 @keyframes cartPulse {
     0% { transform: scale(1); }
     35% { transform: scale(1.12); }
     60% { transform: scale(0.96); }
     100% { transform: scale(1); }
+}
+
+@keyframes cartPop {
+    0% { 
+        transform: scale(1) translateY(0);
+        background: white;
+        border-color: var(--border-color);
+    }
+    20% { 
+        transform: scale(1.4) translateY(-10px);
+        background: var(--primary-color);
+        border-color: var(--primary-color);
+        box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
+    }
+    40% { 
+        transform: scale(1.25) translateY(-6px);
+        background: var(--primary-color);
+        border-color: var(--primary-color);
+        box-shadow: 0 6px 16px rgba(99, 102, 241, 0.3);
+    }
+    60% { 
+        transform: scale(1.15) translateY(-3px);
+        background: rgba(99, 102, 241, 0.1);
+        border-color: var(--primary-color);
+    }
+    80% { 
+        transform: scale(1.05) translateY(-1px);
+        background: rgba(99, 102, 241, 0.05);
+        border-color: var(--primary-color);
+    }
+    100% { 
+        transform: scale(1) translateY(0);
+        background: white;
+        border-color: var(--border-color);
+    }
 }
 
 .cart-toast {
@@ -421,93 +471,125 @@ body {
     justify-content: flex-end;
 }
 
-.hero-card {
+.hero-card-wrapper {
     position: relative;
     width: 100%;
     max-width: 280px;
-    border-radius: var(--radius-lg);
-    box-shadow: 0 25px 50px -12px rgba(17, 24, 39, 0.25);
-    transform-origin: center center;
     transform-style: preserve-3d;
+    transform-origin: center center;
     animation: rotate3d 20s linear infinite;
     will-change: transform;
-    /* Fond sombre pour créer l'effet d'épaisseur sur les bords */
-    background: linear-gradient(135deg, rgba(0, 0, 0, 0.12) 0%, rgba(0, 0, 0, 0.18) 100%);
-    padding: 4px;
 }
 
 /* Face avant de la carte (l'image) */
-.hero-card img {
+.hero-card {
     display: block;
-    width: calc(100% - 8px);
+    width: 100%;
     height: auto;
-    margin: 4px;
-    border-radius: calc(var(--radius-lg) - 4px);
+    border-radius: var(--radius-lg);
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
-    transform: translateZ(10px);
+    /* Positionner l'image à l'avant avec une épaisseur de 3px */
+    transform: translateZ(3px);
     position: relative;
     z-index: 2;
+    /* Ombre sur l'image pour la faire ressortir */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 /* Dos blanc de la carte */
-.hero-card::before {
-    content: '';
-    position: absolute;
-    top: 4px;
-    left: 4px;
-    width: calc(100% - 8px);
-    height: calc(100% - 8px);
-    background: #ffffff;
-    border-radius: calc(var(--radius-lg) - 4px);
-    transform: rotateY(180deg) translateZ(10px);
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
-    z-index: 1;
-}
-
-/* Bords de la carte pour l'épaisseur - crée l'effet de profondeur 3D */
-.hero-card::after {
+.hero-card-wrapper::before {
     content: '';
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
+    background: #ffffff;
     border-radius: var(--radius-lg);
-    pointer-events: none;
-    transform: translateZ(0px);
-    z-index: 0;
-    /* Crée l'effet d'épaisseur avec des ombres sur les bords qui simulent les côtés de la carte */
+    /* Positionner le dos à l'arrière avec une épaisseur de 3px */
+    transform: rotateY(180deg) translateZ(3px);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
     box-shadow: 
-        /* Ombre sur le bord droit (visible quand la carte tourne vers la droite) */
-        inset -5px 0 15px -5px rgba(0, 0, 0, 0.3),
-        /* Ombre sur le bord gauche (visible quand la carte tourne vers la gauche) */
-        inset 5px 0 15px -5px rgba(0, 0, 0, 0.3),
-        /* Ombre sur le bord supérieur */
-        inset 0 -5px 15px -5px rgba(0, 0, 0, 0.25),
-        /* Ombre sur le bord inférieur */
-        inset 0 5px 15px -5px rgba(0, 0, 0, 0.25),
-        /* Légère bordure pour définir les bords de la carte */
-        inset 0 0 0 1px rgba(0, 0, 0, 0.15);
+        inset 0 0 0 1px rgba(0, 0, 0, 0.08),
+        0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1;
+    pointer-events: none;
+}
+
+/* Bords latéraux de la carte - crée les 4 côtés visibles en 3D */
+.card-edge {
+    position: absolute;
+    background: linear-gradient(135deg, 
+        rgba(0, 0, 0, 0.3) 0%,
+        rgba(0, 0, 0, 0.4) 50%,
+        rgba(0, 0, 0, 0.3) 100%
+    );
+    pointer-events: none;
+    z-index: 0;
+    transform-style: preserve-3d;
+}
+
+/* Bord droit - visible quand la carte tourne vers la droite */
+.card-edge-right {
+    top: 0;
+    right: 0;
+    width: 3px;
+    height: 100%;
+    border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+    transform: rotateY(90deg) translateZ(3px);
+    transform-origin: right center;
+}
+
+/* Bord gauche - visible quand la carte tourne vers la gauche */
+.card-edge-left {
+    top: 0;
+    left: 0;
+    width: 3px;
+    height: 100%;
+    border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+    transform: rotateY(-90deg) translateZ(3px);
+    transform-origin: left center;
+}
+
+/* Bord supérieur */
+.card-edge-top {
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    transform: rotateX(90deg) translateZ(3px);
+    transform-origin: center top;
+}
+
+/* Bord inférieur */
+.card-edge-bottom {
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    transform: rotateX(-90deg) translateZ(3px);
+    transform-origin: center bottom;
 }
 
 @keyframes rotate3d {
     0% {
-        transform: perspective(1000px) rotateY(0deg) rotateX(-5deg);
+        transform: perspective(1200px) rotateY(0deg) rotateX(-8deg);
     }
     25% {
-        transform: perspective(1000px) rotateY(90deg) rotateX(-5deg);
+        transform: perspective(1200px) rotateY(90deg) rotateX(-8deg);
     }
     50% {
-        transform: perspective(1000px) rotateY(180deg) rotateX(-5deg);
+        transform: perspective(1200px) rotateY(180deg) rotateX(-8deg);
     }
     75% {
-        transform: perspective(1000px) rotateY(270deg) rotateX(-5deg);
+        transform: perspective(1200px) rotateY(270deg) rotateX(-8deg);
     }
     100% {
-        transform: perspective(1000px) rotateY(360deg) rotateX(-5deg);
+        transform: perspective(1200px) rotateY(360deg) rotateX(-8deg);
     }
 }
 
@@ -725,6 +807,11 @@ body {
     align-items: center;
     justify-content: space-between;
     gap: var(--spacing-sm);
+    flex-wrap: wrap;
+}
+
+#viewCartButton {
+    margin-left: auto;
 }
 
 .product-note {
