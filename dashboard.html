@@ -48,7 +48,7 @@
       })();
     </script>
     <link rel="stylesheet" href="styles.css">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="db-proxy.js"></script>
     <style>
         .centered-card {
             min-height: 100vh;
@@ -423,17 +423,13 @@
     }
 
     // Load contacts preview from contact_table column
-    async function loadContactsPreview(clientInstance) {
+    async function loadContactsPreview() {
         const tbody = document.getElementById('contactsPreviewBody');
         if (!tbody) return;
 
         try {
             // First, get the account data to retrieve contact_table
-            const { data: accountData, error: fetchError } = await clientInstance
-                .from('accounts')
-                .select('contact_table')
-                .eq('id', id)
-                .maybeSingle();
+            const { data: accountData, error: fetchError } = await window.dbProxy.select('accounts', { id: id }, { select: ['contact_table'], single: true });
 
             if (fetchError) {
                 tbody.innerHTML = `<tr><td colspan='4' class='contacts-preview-empty'>Erreur: ${fetchError.message}</td></tr>`;
@@ -468,10 +464,7 @@
                 
                 // Save the example contact to contact_table
                 try {
-                    await clientInstance
-                        .from('accounts')
-                        .update({ contact_table: JSON.stringify(contacts) })
-                        .eq('id', id);
+                    await window.dbProxy.update('accounts', { contact_table: JSON.stringify(contacts) }, { id: id });
                 } catch (updateError) {
                     console.warn('Failed to initialize contact_table', updateError);
                 }
@@ -485,12 +478,9 @@
                     return c;
                 });
                 
-                // Save normalized contacts back to Supabase
+                // Save normalized contacts back to database
                     try {
-                        await clientInstance
-                            .from('accounts')
-                            .update({ contact_table: JSON.stringify(contacts) })
-                            .eq('id', id);
+                        await window.dbProxy.update('accounts', { contact_table: JSON.stringify(contacts) }, { id: id });
                     } catch (updateError) {
                         console.warn('Failed to save normalized contacts', updateError);
                     }
@@ -512,10 +502,7 @@
                     
                     // Save updated contacts
                     try {
-                        await clientInstance
-                            .from('accounts')
-                            .update({ contact_table: JSON.stringify(contacts) })
-                            .eq('id', id);
+                        await window.dbProxy.update('accounts', { contact_table: JSON.stringify(contacts) }, { id: id });
                     } catch (updateError) {
                         console.warn('Failed to update contact_table with example', updateError);
                     }
@@ -602,25 +589,19 @@
                 updateRatingDisplay(rating);
                 updateTotalReviewsDisplay(totalReviews);
                 
-                // Optionally update Supabase with fresh data
+                // Optionally update database with fresh data via webhook
                 try {
-                    const SUPABASE_URL = 'https://vigutqmfosxbpncussie.supabase.co';
-                    const SUPABASE_SERVICE_ROLE = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ3V0cW1mb3N4YnBuY3Vzc2llIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTU4NDc1MiwiZXhwIjoyMDc3MTYwNzUyfQ.WPhspJ5LQ7E6k9sUFJsaISU6eVcJnIPGYv0GPGQfd98';
-                    const client = supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
-                    await client.from('accounts').update({
+                    await window.dbProxy.update('accounts', {
                         current_rating: rating,
                         tot_review: totalReviews
-                    }).eq('id', id);
+                    }, { id: id });
                 } catch (e) {
-                    console.warn('Failed to update Supabase with Google data', e);
+                    console.warn('Failed to update database with Google data', e);
                 }
             } else {
                 console.warn('Google Places API error:', data.status, data.error_message);
-                // Fallback to Supabase data
-                const SUPABASE_URL = 'https://vigutqmfosxbpncussie.supabase.co';
-                const SUPABASE_SERVICE_ROLE = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ3V0cW1mb3N4YnBuY3Vzc2llIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTU4NDc1MiwiZXhwIjoyMDc3MTYwNzUyfQ.WPhspJ5LQ7E6k9sUFJsaISU6eVcJnIPGYv0GPGQfd98';
-                const client = supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
-                const { data: accountData } = await client.from('accounts').select('current_rating,tot_review').eq('id', id).maybeSingle();
+                // Fallback to database data via webhook
+                const { data: accountData } = await window.dbProxy.select('accounts', { id: id }, { select: ['current_rating', 'tot_review'], single: true });
                 if (accountData) {
                     updateRatingDisplay(parseFloat(accountData.current_rating) || null);
                     updateTotalReviewsDisplay(parseInt(accountData.tot_review || '0', 10) || null);
@@ -902,26 +883,17 @@
     `;
 
     // Supabase: fetch account row to populate the cards
-    const SUPABASE_URL = 'https://vigutqmfosxbpncussie.supabase.co';
-    const SUPABASE_SERVICE_ROLE = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ3V0cW1mb3N4YnBuY3Vzc2llIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTU4NDc1MiwiZXhwIjoyMDc3MTYwNzUyfQ.WPhspJ5LQ7E6k9sUFJsaISU6eVcJnIPGYv0GPGQfd98';
-
     try {
-        const client = supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
         // Init menu after DOM is ready
         setTimeout(() => initStatusMenu(), 0);
-        client
-            .from('accounts')
-            .select('*')
-            .eq('id', id)
-            .limit(1)
-            .maybeSingle()
+        window.dbProxy.select('accounts', { id: id }, { limit: 1, single: true })
             .then(({ data, error }) => {
                 if (error) {
-                    console.error('Supabase error', error);
+                    console.error('Database error', error);
                     return;
                 }
                 if (!data) return;
-                updateStatusMenu(data, client);
+                updateStatusMenu(data);
                 // Business name in title
                 const name = data.business_name || data.company_name || data.company_nam || ('#' + id);
                 const titleEl = document.getElementById('bizName');

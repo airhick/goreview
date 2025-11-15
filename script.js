@@ -179,7 +179,8 @@ const productCatalog = {
     'plaque-nfc': {
         id: 'plaque-nfc',
         name: 'Plaque NFC GoReview',
-        price: 0
+        price: 0,
+        image: 'photos/product/cardcropped.jpg'
     }
 };
 
@@ -187,6 +188,7 @@ const cartCountEl = document.querySelector('[data-cart-count]');
 const cartItemsContainer = document.querySelector('[data-cart-items]');
 const cartEmptyState = document.querySelector('[data-cart-empty]');
 const cartTotalEl = document.querySelector('[data-cart-total]');
+const cartSubtotalEl = document.querySelector('[data-cart-subtotal]');
 const cartSection = document.getElementById('cart') || document.querySelector('.cart-section');
 
 const checkoutCard = document.querySelector('[data-checkout-card]');
@@ -195,20 +197,18 @@ const submitOrderButton = checkoutForm ? checkoutForm.querySelector('[data-submi
 const orderStatusEl = document.querySelector('[data-order-status]');
 // La confirmation sera créée dynamiquement après un envoi réussi
 
-const addressInput = document.getElementById('order-address');
-const addressSuggestionsEl = document.querySelector('[data-address-suggestions]');
 const countrySelect = document.getElementById('order-country');
-let addressDetails = null;
-let addressDebounceTimer = null;
-let addressFetchController = null;
-let addressCache = new Map(); // Cache to avoid redundant API calls
-let lastAddressQuery = ''; // Track last query to avoid duplicate calls
 
 const formatCurrency = (value) => {
     if (!Number.isFinite(value) || value === 0) {
-        return '0€';
+        return '0,00 €';
     }
-    return value.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' });
+    return value.toLocaleString('fr-FR', { 
+        style: 'currency', 
+        currency: 'EUR',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
 };
 
 const updateCartIcon = () => {
@@ -261,36 +261,54 @@ const renderCart = () => {
     updateCartCount();
     saveCartToStorage();
 
-    if (!cartItemsContainer || !cartTotalEl || !cartEmptyState) {
-        return;
-    }
+    if (cartItemsContainer) {
+        cartItemsContainer.innerHTML = '';
 
-    cartItemsContainer.innerHTML = '';
+        if (cartState.items.length === 0) {
+            if (cartEmptyState) {
+                cartEmptyState.hidden = false;
+            }
+            if (cartTotalEl) {
+                cartTotalEl.textContent = '0,00 €';
+            }
+            if (cartSubtotalEl) {
+                cartSubtotalEl.textContent = '0,00 €';
+            }
+        } else {
+            if (cartEmptyState) {
+                cartEmptyState.hidden = true;
+            }
+            cartState.items.forEach((item) => {
+                const product = productCatalog[item.id];
+                const productImage = product?.image || 'photos/product/cardcropped.jpg';
+                const listItem = document.createElement('li');
+                listItem.className = 'order-item';
+                listItem.dataset.itemId = item.id;
+                listItem.innerHTML = `
+                    <div class="order-item-info">
+                        <div class="order-item-image">
+                            <img src="${productImage}" alt="${item.name}" loading="lazy">
+                        </div>
+                        <div class="order-item-details">
+                            <div class="order-item-name">${item.name}</div>
+                            <div class="order-item-quantity">Quantité : ${item.quantity}</div>
+                        </div>
+                    </div>
+                    <div class="order-item-price">${formatCurrency(item.price * item.quantity)}</div>
+                `;
+                cartItemsContainer.appendChild(listItem);
+            });
 
-    if (cartState.items.length === 0) {
-        cartEmptyState.hidden = false;
-        cartTotalEl.textContent = '0€';
-    } else {
-        cartEmptyState.hidden = true;
-        cartState.items.forEach((item) => {
-            const listItem = document.createElement('li');
-            listItem.className = 'cart-item';
-            listItem.dataset.itemId = item.id;
-            listItem.innerHTML = `
-                <div class="cart-item-main">
-                    <span class="cart-item-name">${item.name}</span>
-                    <span class="cart-item-quantity">Quantité : ${item.quantity}</span>
-                </div>
-                <div class="cart-item-actions">
-                    <span class="cart-item-price">${formatCurrency(item.price * item.quantity)}</span>
-                    <button type="button" class="cart-item-remove" data-action="remove-item">Retirer</button>
-                </div>
-            `;
-            cartItemsContainer.appendChild(listItem);
-        });
-
-        const total = cartState.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-        cartTotalEl.textContent = formatCurrency(total);
+            const subtotal = cartState.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const total = subtotal; // Free shipping, so total = subtotal
+            
+            if (cartSubtotalEl) {
+                cartSubtotalEl.textContent = formatCurrency(subtotal);
+            }
+            if (cartTotalEl) {
+                cartTotalEl.textContent = formatCurrency(total);
+            }
+        }
     }
 
     if (checkoutCard) {
@@ -612,20 +630,6 @@ const showOrderConfirmation = (customerData) => {
     window.location.href = '/confirmation.html';
 };
 
-const clearAddressDatasets = () => {
-    if (!addressInput) return;
-    addressInput.dataset.placeId = '';
-    addressInput.dataset.formattedAddress = '';
-    addressInput.dataset.lat = '';
-    addressInput.dataset.lon = '';
-};
-
-const clearAddressSuggestions = () => {
-    if (!addressSuggestionsEl) return;
-    addressSuggestionsEl.innerHTML = '';
-    addressSuggestionsEl.hidden = true;
-};
-
 const resetOrderFlow = () => {
     if (!checkoutForm || !checkoutCard) return;
     
@@ -639,434 +643,8 @@ const resetOrderFlow = () => {
     setOrderStatus('', 'info');
     checkoutForm.reset();
     checkoutForm.hidden = false;
-    addressDetails = null;
-    clearAddressDatasets();
-    clearAddressSuggestions();
 };
 
-const renderAddressSuggestions = (results) => {
-    if (!addressSuggestionsEl) {
-        return;
-    }
-
-    addressSuggestionsEl.innerHTML = '';
-
-    if (!results || !results.length) {
-        addressSuggestionsEl.hidden = true;
-        return;
-    }
-
-    results.forEach((result) => {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'address-suggestion';
-        button.innerHTML = `
-            <span class="address-suggestion-main">${result.display_name}</span>
-        `;
-
-        button.addEventListener('click', async () => {
-            const formattedAddress = result.display_name;
-            addressInput.value = formattedAddress;
-            
-            // If it's a Google result, fetch the full details (lat/lon, structured address)
-            if (result.provider === 'google' && result.needsGeocoding && result.place_id) {
-                try {
-                    // Show loading in the input
-                    addressInput.disabled = true;
-                    const geocodeUrl = `/.netlify/functions/google-place-geocode?${new URLSearchParams({
-                        place_id: result.place_id
-                    }).toString()}`;
-                    
-                    const geocodeResponse = await fetch(geocodeUrl);
-                    if (geocodeResponse.ok) {
-                        const geocodeData = await geocodeResponse.json();
-                        if (geocodeData.result) {
-                            const location = geocodeData.result.geometry?.location;
-                            addressInput.dataset.placeId = result.place_id;
-                            addressInput.dataset.formattedAddress = geocodeData.result.formatted_address || formattedAddress;
-                            addressInput.dataset.lat = location?.lat || '';
-                            addressInput.dataset.lon = location?.lng || '';
-                            
-                            addressDetails = {
-                                provider: 'google',
-                                displayName: geocodeData.result.formatted_address || formattedAddress,
-                                placeId: result.place_id,
-                                lat: location?.lat || null,
-                                lon: location?.lng || null,
-                                address: geocodeData.result.address_components || null,
-                                raw: geocodeData.result
-                            };
-                        }
-                    }
-                    addressInput.disabled = false;
-                } catch (error) {
-                    console.error('Error fetching place details:', error);
-                    addressInput.disabled = false;
-                    // Fallback: use what we have
-                    addressInput.dataset.placeId = result.place_id || '';
-                    addressInput.dataset.formattedAddress = formattedAddress;
-                    addressInput.dataset.lat = '';
-                    addressInput.dataset.lon = '';
-                    addressDetails = {
-                        provider: result.provider || 'google',
-                        displayName: formattedAddress,
-                        placeId: result.place_id || null,
-                        lat: null,
-                        lon: null,
-                        address: null,
-                        raw: result
-                    };
-                }
-            } else {
-                // For non-Google results (fallback providers)
-                addressInput.dataset.placeId = result.place_id || '';
-                addressInput.dataset.formattedAddress = formattedAddress;
-                addressInput.dataset.lat = result.lat || '';
-                addressInput.dataset.lon = result.lon || '';
-
-                addressDetails = {
-                    provider: result.provider || 'openstreetmap',
-                    displayName: formattedAddress,
-                    placeId: result.place_id || null,
-                    lat: result.lat ? Number(result.lat) : null,
-                    lon: result.lon ? Number(result.lon) : null,
-                    address: result.address || null,
-                    raw: result
-                };
-            }
-
-            clearAddressSuggestions();
-        });
-
-        addressSuggestionsEl.appendChild(button);
-    });
-
-    addressSuggestionsEl.hidden = false;
-};
-
-const fetchAddressSuggestions = async (query) => {
-    if (!addressInput) {
-        return;
-    }
-
-    // Avoid duplicate calls for the same query
-    if (query === lastAddressQuery) {
-        return;
-    }
-    lastAddressQuery = query;
-
-    // Check cache first for instant results
-    if (addressCache.has(query)) {
-        const cachedResults = addressCache.get(query);
-        renderAddressSuggestions(cachedResults);
-        return;
-    }
-
-    if (addressFetchController) {
-        addressFetchController.abort();
-    }
-    addressFetchController = new AbortController();
-
-    // Show loading indicator
-    if (addressSuggestionsEl) {
-        addressSuggestionsEl.innerHTML = '<div class="address-suggestion-loading">Recherche en cours...</div>';
-        addressSuggestionsEl.hidden = false;
-    }
-
-    try {
-        // Get selected country for filtering
-        const selectedCountry = countrySelect ? countrySelect.value : 'FR';
-        
-        // Primary: Google Places Autocomplete (fast, accurate, restricted to selected country)
-        const googleUrl = `/.netlify/functions/google-autocomplete?${new URLSearchParams({
-            input: query,
-            country: selectedCountry
-        }).toString()}`;
-
-        const response = await fetch(googleUrl, {
-            signal: addressFetchController.signal,
-            headers: { 'Accept': 'application/json' }
-        });
-
-        if (!response.ok) {
-            throw new Error('Google Autocomplete API error');
-        }
-
-        const data = await response.json();
-
-        if (!data.predictions || !Array.isArray(data.predictions) || data.predictions.length === 0) {
-            clearAddressSuggestions();
-            return;
-        }
-
-        // Normalize Google predictions to our format
-        const results = data.predictions.map((p) => ({
-            provider: 'google',
-            display_name: p.description,
-            place_id: p.place_id,
-            lat: null, // Will be fetched on selection
-            lon: null, // Will be fetched on selection
-            address: null, // Will be fetched on selection
-            needsGeocoding: true, // Flag to fetch details on selection
-            raw: p
-        }));
-
-        // Cache results for instant retrieval
-        addressCache.set(query, results);
-        // Limit cache size to prevent memory issues (keep last 20 queries)
-        if (addressCache.size > 20) {
-            const firstKey = addressCache.keys().next().value;
-            addressCache.delete(firstKey);
-        }
-
-        renderAddressSuggestions(results);
-    } catch (error) {
-        if (error.name === 'AbortError') {
-            return;
-        }
-        console.error('Erreur lors de la recherche adresse Google', error);
-        // Fallback to open-source providers
-        fetchAddressSuggestionsFallback(query);
-    }
-};
-
-const fetchAddressSuggestionsFallback = async (query) => {
-    if (!addressInput) {
-        return;
-    }
-
-    try {
-        // Fallback providers when Google is unavailable:
-        // - France: BAN (Base Adresse Nationale)
-        // - Suisse: Photon (fast OSM-based)
-        // - Fallback: Nominatim
-
-        const normalizeBan = (data) => {
-            if (!data || !Array.isArray(data.features)) return [];
-            return data.features.map((f) => {
-                const props = f.properties || {};
-                const geom = f.geometry || {};
-                const coords = Array.isArray(geom.coordinates) ? geom.coordinates : [null, null];
-                const lon = coords[0];
-                const lat = coords[1];
-                const label = props.label || [
-                    [props.housenumber, props.street].filter(Boolean).join(' '),
-                    [props.postcode, props.city].filter(Boolean).join(' '),
-                    props.country || 'France'
-                ].filter(Boolean).join(', ');
-                return {
-                    provider: 'ban',
-                    display_name: label,
-                    place_id: props.id || null,
-                    lat,
-                    lon,
-                    address: {
-                        house_number: props.housenumber || null,
-                        road: props.street || null,
-                        postcode: props.postcode || null,
-                        city: props.city || props.locality || null,
-                        country: props.country || 'France'
-                    },
-                    raw: f
-                };
-            });
-        };
-
-        const normalizePhoton = (data) => {
-            if (!data || !Array.isArray(data.features)) return [];
-            return data.features
-                .filter((f) => {
-                    // Only keep France and Switzerland addresses
-                    const country = (f.properties?.country || '').toLowerCase();
-                    const countryCode = (f.properties?.countrycode || '').toLowerCase();
-                    return country === 'france' || country === 'switzerland' || 
-                           country === 'suisse' || countryCode === 'fr' || countryCode === 'ch';
-                })
-                .map((f) => {
-                    const props = f.properties || {};
-                    const geom = f.geometry || {};
-                    const coords = Array.isArray(geom.coordinates) ? geom.coordinates : [null, null];
-                    const lon = coords[0];
-                    const lat = coords[1];
-                    const mainLine = [
-                        [props.housenumber, props.street].filter(Boolean).join(' '),
-                        props.name
-                    ].filter(Boolean).join(' ');
-                    const localityLine = [props.postcode, props.city || props.town || props.village].filter(Boolean).join(' ');
-                    const country = props.country || null;
-                    const label = [mainLine || localityLine, localityLine, country].filter(Boolean).join(', ');
-                    return {
-                        provider: 'photon',
-                        display_name: label || props.name || '',
-                        place_id: props.osm_id ? String(props.osm_id) : null,
-                        lat,
-                        lon,
-                        address: {
-                            house_number: props.housenumber || null,
-                            road: props.street || null,
-                            postcode: props.postcode || null,
-                            city: props.city || props.town || props.village || null,
-                            country: country
-                        },
-                        raw: f
-                    };
-                });
-        };
-
-        const normalizeNominatim = (arr) => {
-            if (!Array.isArray(arr)) return [];
-            return arr.map((r) => ({
-                provider: 'nominatim',
-                display_name: r.display_name,
-                place_id: r.place_id || null,
-                lat: r.lat || null,
-                lon: r.lon || null,
-                address: r.address || null,
-                raw: r
-            }));
-        };
-
-        const banUrl = `https://api-adresse.data.gouv.fr/search/?${new URLSearchParams({
-            q: query,
-            limit: '15',
-            autocomplete: '1',
-            type: 'housenumber,street,locality,municipality'
-        }).toString()}`;
-
-        const photonUrl = `https://photon.komoot.io/api/?${new URLSearchParams({
-            q: query,
-            lang: 'fr',
-            limit: '15',
-            osm_tag: 'boundary:administrative'
-        }).toString()}&lon=6.5&lat=46.5`; // Centered on Switzerland/France region
-
-        const nominatimUrl = `https://nominatim.openstreetmap.org/search?${new URLSearchParams({
-            q: query,
-            format: 'jsonv2',
-            addressdetails: '1',
-            limit: '15',
-            countrycodes: 'fr,ch',
-            'accept-language': 'fr',
-            extratags: '0',
-            namedetails: '0'
-        }).toString()}`;
-
-        const [banRes, photonRes, nomRes] = await Promise.allSettled([
-            fetch(banUrl, { signal: addressFetchController.signal, headers: { 'Accept': 'application/json' } }),
-            fetch(photonUrl, { signal: addressFetchController.signal, headers: { 'Accept': 'application/json' } }),
-            fetch(nominatimUrl, {
-                signal: addressFetchController.signal,
-                headers: { 'Accept': 'application/json', 'User-Agent': 'GoReview/1.0' }
-            })
-        ]);
-
-        const results = [];
-
-        if (banRes.status === 'fulfilled' && banRes.value.ok) {
-            const data = await banRes.value.json().catch(() => null);
-            results.push(...normalizeBan(data));
-        }
-        if (photonRes.status === 'fulfilled' && photonRes.value.ok) {
-            const data = await photonRes.value.json().catch(() => null);
-            results.push(...normalizePhoton(data));
-        }
-        // Use Nominatim only as fallback supplement
-        if (results.length < 8 && nomRes.status === 'fulfilled' && nomRes.value.ok) {
-            const data = await nomRes.value.json().catch(() => null);
-            results.push(...normalizeNominatim(data));
-        }
-
-        if (!results.length) {
-            clearAddressSuggestions();
-            return;
-        }
-
-        // Deduplicate by normalized label + rounded coords
-        const seen = new Set();
-        const deduped = [];
-        for (const r of results) {
-            const key = `${(r.display_name || '').toLowerCase().trim()}|${Number(r.lat).toFixed(5)}|${Number(r.lon).toFixed(5)}`;
-            if (seen.has(key)) continue;
-            seen.add(key);
-            deduped.push(r);
-        }
-
-        // Simple prioritization: BAN first, then PHOTON, then NOMINATIM
-        deduped.sort((a, b) => {
-            const pri = (p) => (p === 'ban' ? 3 : p === 'photon' ? 2 : 1);
-            return pri(b.provider) - pri(a.provider);
-        });
-
-        renderAddressSuggestions(deduped.slice(0, 15));
-    } catch (error) {
-        if (error.name === 'AbortError') {
-            return;
-        }
-        console.error('Erreur lors de la recherche d’adresse', error);
-        clearAddressSuggestions();
-    }
-};
-
-// Clear address cache and suggestions when country changes
-if (countrySelect) {
-    countrySelect.addEventListener('change', () => {
-        addressCache.clear(); // Clear cache for new country
-        lastAddressQuery = '';
-        if (addressInput) {
-            addressInput.value = ''; // Clear address input
-            addressInput.dataset.country = countrySelect.value;
-        }
-        clearAddressSuggestions();
-        clearAddressDatasets();
-        addressDetails = null;
-    });
-}
-
-if (addressInput) {
-    addressInput.addEventListener('input', () => {
-        addressDetails = null;
-        clearAddressDatasets();
-
-        const value = addressInput.value.trim();
-
-        if (addressDebounceTimer) {
-            clearTimeout(addressDebounceTimer);
-        }
-
-        if (!value || value.length < 2) {
-            if (addressFetchController) {
-                addressFetchController.abort();
-            }
-            lastAddressQuery = ''; // Reset query tracker
-            clearAddressSuggestions();
-            return;
-        }
-
-        // Debounce optimized for Google Places API (200ms for faster response)
-        addressDebounceTimer = setTimeout(() => {
-            fetchAddressSuggestions(value);
-        }, 200);
-    });
-
-    addressInput.addEventListener('focus', () => {
-        if (addressSuggestionsEl && addressSuggestionsEl.children.length > 0) {
-            addressSuggestionsEl.hidden = false;
-        }
-    });
-}
-
-if (addressSuggestionsEl) {
-    addressSuggestionsEl.addEventListener('mousedown', (event) => {
-        // Prevent input blur before click handlers run
-        event.preventDefault();
-    });
-
-    document.addEventListener('click', (event) => {
-        if (!addressSuggestionsEl.contains(event.target) && event.target !== addressInput) {
-            clearAddressSuggestions();
-        }
-    });
-}
 
 const sendOrderToWebhook = async (payload) => {
     const webhookUrl = 'https://n8n.goreview.fr/webhook/commandes';
@@ -1171,7 +749,19 @@ if (checkoutForm) {
         const phonePrefix = formData.get('phonePrefix');
         const phoneNumber = (formData.get('phoneNumber') || '').toString().trim();
         const email = (formData.get('email') || '').toString().trim();
-        const address = (formData.get('address') || '').toString().trim();
+        const addressLine1 = (formData.get('address_line1') || '').toString().trim();
+        const addressLine2 = (formData.get('address_line2') || '').toString().trim();
+        const postalCode = (formData.get('postal_code') || '').toString().trim();
+        const city = (formData.get('city') || '').toString().trim();
+        const company = (formData.get('company') || '').toString().trim();
+        
+        // Build full address string from individual fields
+        const addressParts = [addressLine1];
+        if (addressLine2) {
+            addressParts.push(addressLine2);
+        }
+        addressParts.push(postalCode, city);
+        const address = addressParts.filter(part => part).join(', ');
 
         // Validation du nom complet : doit contenir au moins 2 mots
         if (!fullName) {
@@ -1237,6 +827,25 @@ if (checkoutForm) {
             return;
         }
 
+        // Validation des champs d'adresse
+        if (!addressLine1) {
+            setOrderStatus('Veuillez entrer votre adresse (numéro et nom de rue).', 'error');
+            highlightFieldError('order-address-line1');
+            return;
+        }
+
+        if (!postalCode) {
+            setOrderStatus('Veuillez entrer votre code postal.', 'error');
+            highlightFieldError('order-postal-code');
+            return;
+        }
+
+        if (!city) {
+            setOrderStatus('Veuillez entrer votre ville.', 'error');
+            highlightFieldError('order-city');
+            return;
+        }
+
         // Réinitialiser les erreurs de champ
         clearFieldErrors();
 
@@ -1263,7 +872,12 @@ if (checkoutForm) {
                 phonePrefix,
                 phoneNumber,
                 address,
-                addressDetails
+                addressLine1,
+                addressLine2,
+                postalCode,
+                city,
+                company,
+                country: countrySelect ? countrySelect.value : 'FR'
             },
             metadata: {
                 source: 'landing-page',
@@ -1290,7 +904,12 @@ if (checkoutForm) {
                     fullName,
                     email,
                     phone: fullPhone,
-                    address
+                    address,
+                    addressLine1,
+                    addressLine2,
+                    postalCode,
+                    city,
+                    company
                 });
             }, 700);
         } catch (error) {
@@ -1316,6 +935,9 @@ if (checkoutForm) {
     const emailInput = document.getElementById('order-email');
     const phoneInput = document.getElementById('order-phone');
     const phonePrefixSelect = document.getElementById('order-phone-prefix');
+    const addressLine1Input = document.getElementById('order-address-line1');
+    const postalCodeInput = document.getElementById('order-postal-code');
+    const cityInput = document.getElementById('order-city');
 
     if (nameInput) {
         nameInput.addEventListener('input', () => {
@@ -1345,6 +967,30 @@ if (checkoutForm) {
         phonePrefixSelect.addEventListener('change', () => {
             if (phoneInput && phoneInput.classList.contains('field-error')) {
                 phoneInput.classList.remove('field-error');
+            }
+        });
+    }
+
+    if (addressLine1Input) {
+        addressLine1Input.addEventListener('input', () => {
+            if (addressLine1Input.classList.contains('field-error')) {
+                addressLine1Input.classList.remove('field-error');
+            }
+        });
+    }
+
+    if (postalCodeInput) {
+        postalCodeInput.addEventListener('input', () => {
+            if (postalCodeInput.classList.contains('field-error')) {
+                postalCodeInput.classList.remove('field-error');
+            }
+        });
+    }
+
+    if (cityInput) {
+        cityInput.addEventListener('input', () => {
+            if (cityInput.classList.contains('field-error')) {
+                cityInput.classList.remove('field-error');
             }
         });
     }

@@ -31,57 +31,113 @@
     <!-- Cart & Checkout Section -->
     <section class="cart-section section-padding" style="padding-top: calc(var(--spacing-xl) + 80px);">
         <div class="container">
-            <div class="cart-grid">
-                <div class="cart-card">
-                    <h3>Votre panier</h3>
-                    <div class="cart-items-wrapper">
-                        <p class="cart-empty" data-cart-empty>Votre panier est vide. <a href="/">Ajouter une plaque au panier</a></p>
-                        <ul class="cart-items" data-cart-items></ul>
-                    </div>
-                    <div class="cart-total">
-                        <span>Total</span>
-                        <span data-cart-total>0€</span>
-                    </div>
-                    <p class="cart-footnote">Les frais de port sont offerts.</p>
-                </div>
-                <div class="checkout-card" data-checkout-card hidden>
-                    <h3>Informations de commande</h3>
+            <div class="checkout-layout" data-checkout-card hidden>
+                <!-- Left Column: Checkout Form -->
+                <div class="checkout-main">
                     <form class="checkout-form" data-checkout-form novalidate>
-                        <div class="form-group">
-                            <label for="order-name">Nom complet</label>
-                            <input type="text" id="order-name" name="fullName" placeholder="Nom Prénom" autocomplete="name" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="order-phone">Numéro de téléphone</label>
-                            <div class="phone-input">
-                                <select id="order-phone-prefix" name="phonePrefix" required>
-                                    <option value="+33">+33</option>
-                                    <option value="+41">+41</option>
-                                </select>
-                                <input type="tel" id="order-phone" name="phoneNumber" inputmode="tel" placeholder="6 12 34 56 78" required>
+                        <!-- Contact Section -->
+                        <div class="checkout-section">
+                            <h2 class="checkout-section-title">Contact</h2>
+                            <div class="form-group">
+                                <label for="order-email">Adresse e-mail</label>
+                                <input type="email" id="order-email" name="email" placeholder="votre.email@entreprise.com" autocomplete="email" required>
+                            </div>
+                            <div class="form-group checkbox-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="order-newsletter" name="newsletter" checked>
+                                    <span>Envoyez-moi des nouvelles et des offres par e-mail</span>
+                                </label>
                             </div>
                         </div>
-                        <div class="form-group">
-                            <label for="order-email">Adresse e-mail</label>
-                            <input type="email" id="order-email" name="email" placeholder="votre.email@entreprise.com" autocomplete="email" required>
+
+                        <!-- Delivery Section -->
+                        <div class="checkout-section">
+                            <h2 class="checkout-section-title">Livraison</h2>
+                            <div class="form-group">
+                                <label for="order-country">Pays/région</label>
+                                <select id="order-country" name="country" required>
+                                    <option value="FR" selected>France</option>
+                                    <option value="CH">Suisse</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="order-company">Entreprise (optionnel)</label>
+                                <input type="text" id="order-company" name="company" placeholder="Nom de l'entreprise" autocomplete="organization">
+                            </div>
+                            <div class="form-group">
+                                <label for="order-name">Nom et Prénom</label>
+                                <input type="text" id="order-name" name="fullName" placeholder="Nom Prénom" autocomplete="name" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="order-address-line1">Adresse</label>
+                                <input type="text" id="order-address-line1" name="address_line1" placeholder="Numéro et nom de rue" autocomplete="shipping address-line1" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="order-address-line2">Appartement, suite, etc. (optionnel)</label>
+                                <input type="text" id="order-address-line2" name="address_line2" placeholder="Appartement, bâtiment, étage, etc." autocomplete="shipping address-line2">
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="order-postal-code">Code postal</label>
+                                    <input type="text" id="order-postal-code" name="postal_code" placeholder="75001" autocomplete="shipping postal-code" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="order-city">Ville</label>
+                                    <input type="text" id="order-city" name="city" placeholder="Paris" autocomplete="shipping address-level2" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="order-phone">Téléphone</label>
+                                <div class="phone-input">
+                                    <select id="order-phone-prefix" name="phonePrefix" required>
+                                        <option value="+33">+33</option>
+                                        <option value="+41">+41</option>
+                                    </select>
+                                    <input type="tel" id="order-phone" name="phoneNumber" inputmode="tel" placeholder="6 12 34 56 78" required>
+                                </div>
+                            </div>
+                            <div class="form-group checkbox-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="order-save-details" name="saveDetails">
+                                    <span>Sauvegarder mes coordonnées pour la prochaine fois</span>
+                                </label>
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label for="order-country">Pays/région</label>
-                            <select id="order-country" name="country" required>
-                                <option value="FR">France</option>
-                                <option value="CH">Suisse</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="order-address">Adresse de livraison</label>
-                            <input type="text" id="order-address" name="address" placeholder="Commencez à taper votre adresse..." autocomplete="shipping address-line1" required data-place-id="" data-formatted-address="" data-country="FR">
-                            <div class="address-suggestions" data-address-suggestions hidden></div>
-                        </div>
-                        <div class="form-feedback" data-order-status hidden></div>
-                        <div class="form-actions">
-                            <button type="submit" class="btn-primary large" data-submit-order>Confirmer la commande gratuite</button>
+
+                        <!-- Payment Section -->
+                        <div class="checkout-section">
+                            <h2 class="checkout-section-title">Paiement</h2>
+                            <div class="form-feedback" data-order-status hidden></div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn-primary large checkout-submit" data-submit-order>Confirmer la commande gratuite</button>
+                            </div>
                         </div>
                     </form>
+                </div>
+
+                <!-- Right Column: Order Summary -->
+                <div class="checkout-sidebar">
+                    <div class="order-summary">
+                        <h2 class="order-summary-title">Résumé de la commande</h2>
+                        <div class="order-items" data-cart-items>
+                            <p class="cart-empty" data-cart-empty>Votre panier est vide. <a href="/">Ajouter une plaque au panier</a></p>
+                        </div>
+                        <div class="order-totals">
+                            <div class="order-total-line">
+                                <span>Sous-total</span>
+                                <span data-cart-subtotal>0,00 €</span>
+                            </div>
+                            <div class="order-total-line">
+                                <span>Expédition</span>
+                                <span class="free-shipping">Gratuit</span>
+                            </div>
+                            <div class="order-total-line order-total-final">
+                                <span>Total</span>
+                                <span data-cart-total>0,00 €</span>
+                            </div>
+                        </div>
+                        <p class="order-footnote">Les frais de port sont offerts.</p>
+                    </div>
                 </div>
             </div>
         </div>

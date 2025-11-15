@@ -1,4 +1,4 @@
-// Netlify Function to proxy Google Places Autocomplete API requests
+// Netlify Function to proxy Geoapify Autocomplete API requests
 // This provides fast, accurate address suggestions for France and Switzerland
 
 exports.handler = async (event, context) => {
@@ -42,35 +42,36 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Map country codes to full names for components parameter
+    // Map country codes to lowercase for Geoapify
     const countryMap = {
       'FR': 'fr',
       'CH': 'ch'
     };
     const countryCode = countryMap[country] || 'fr';
     
-    // Set origin based on country for better relevance
-    const origins = {
+    // Set bias location based on country for better relevance
+    const biasLocations = {
       'FR': '48.8566,2.3522', // Paris
       'CH': '46.9480,7.4474'  // Bern
     };
-    const origin = origins[country] || origins['FR'];
+    const bias = biasLocations[country] || biasLocations['FR'];
 
-    // Call Google Places Autocomplete API
-    const GOOGLE_MAPS_API_KEY = 'AIzaSyC1zqymSXocGXuCEVvpzXERWYwIzimV0Oo';
-    const googleUrl = 'https://maps.googleapis.com/maps/api/place/autocomplete/json';
+    // Call Geoapify Autocomplete API
+    const GEOAPIFY_API_KEY = '920d6022a9414d50911f0dd93d864876';
+    const geoapifyUrl = 'https://api.geoapify.com/v1/geocode/autocomplete';
+    
     const params = new URLSearchParams({
-      input: input.trim(),
-      key: GOOGLE_MAPS_API_KEY,
-      language: 'fr',
-      components: `country:${countryCode}`, // Restrict to selected country only
-      types: 'address', // Only return full addresses
-      // Optimize for speed and relevance
-      strictbounds: 'false',
-      origin: origin,
+      text: input.trim(),
+      apiKey: GEOAPIFY_API_KEY,
+      lang: 'fr',
+      filter: `countrycode:${countryCode}`, // Restrict to selected country
+      type: 'street', // Only return street addresses
+      format: 'json', // Explicitly request JSON format
+      bias: `proximity:${bias}`, // Bias results near capital city
+      limit: '5' // Limit to 5 results for faster response
     });
 
-    const response = await fetch(`${googleUrl}?${params.toString()}`);
+    const response = await fetch(`${geoapifyUrl}?${params.toString()}`);
     const data = await response.json();
 
     // Return the response with CORS headers
