@@ -64,6 +64,18 @@ class RedirectHandler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             return
         
+        # Handle /pages/configuration - serve the configuration page directly
+        # The page will handle the webhook call and redirect based on webhook response
+        if path in ['/pages/configuration', '/pages/configuration/']:
+            # Serve the index.html file directly with query parameters preserved
+            config_path = '/pages/configuration/index.html'
+            if query:
+                config_path += '?' + query
+            # Use 200 status to serve the file (not redirect)
+            # The SimpleHTTPRequestHandler will serve the file automatically
+            self.path = config_path
+            return super().do_GET()
+        
         # Handle Google Places API proxy (to avoid CORS)
         if path == '/api/google-place-details':
             import urllib.request

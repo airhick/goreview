@@ -16,9 +16,11 @@
 /company /company.html 200
 /company/* /company.html 200
 
-# Pages/Configuration redirect to /create with id parameter
-/pages/configuration /create?id=:id 301
-/pages/configuration/ /create?id=:id 301
+# Pages/Configuration - serve the configuration page directly (no redirect)
+# The page will handle the webhook call and redirect based on webhook response
+/pages/configuration /pages/configuration/index.html 200
+/pages/configuration/ /pages/configuration/index.html 200
+/pages/configuration/* /pages/configuration/index.html 200
 
 # Cart page
 /cart /cart.html 200

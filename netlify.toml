@@ -71,17 +71,24 @@
   status = 200
   force = false
 
-# Pages/Configuration redirect to /create with id parameter
+# Pages/Configuration - serve the configuration page directly (no redirect)
+# The page will handle the webhook call and redirect based on webhook response
 [[redirects]]
   from = "/pages/configuration"
-  to = "/create"
-  status = 301
+  to = "/pages/configuration/index.html"
+  status = 200
   force = false
 
 [[redirects]]
   from = "/pages/configuration/"
-  to = "/create"
-  status = 301
+  to = "/pages/configuration/index.html"
+  status = 200
+  force = false
+
+[[redirects]]
+  from = "/pages/configuration/*"
+  to = "/pages/configuration/index.html"
+  status = 200
   force = false
 
 # Cart page

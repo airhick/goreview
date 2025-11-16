@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Configuration - GoReview</title>
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' http://localhost:*; connect-src 'self' http://localhost:* https://n8n.goreview.fr https://*.goreview.fr; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' http://localhost:* https://*.goreview.fr; connect-src 'self' http://localhost:* https://n8n.goreview.fr https://*.goreview.fr; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
     <style>
         body {
             min-height: 100vh;
@@ -76,6 +76,10 @@
     </style>
     <script>
         (async function() {
+            // IMPORTANT: This page should NEVER check for cookies or sessions
+            // It should ALWAYS send the webhook request and redirect based on webhook response
+            // No cookie/session checks should interfere with this flow
+            
             // Wait for DOM to be ready
             if (document.readyState === 'loading') {
                 await new Promise(resolve => {
@@ -84,6 +88,8 @@
             }
             
             console.log('🚀 Configuration page loaded');
+            console.log('📍 Current URL:', window.location.href);
+            console.log('🌐 Hostname:', window.location.hostname);
             
             const params = new URLSearchParams(window.location.search);
             const id = params.get('id');
@@ -108,45 +114,85 @@
                     id: id || null,
                     timestamp: new Date().toISOString(),
                     source: 'nfc-plate-configuration',
-                    url: window.location.href
+                    url: window.location.href,
+                    hostname: window.location.hostname
                 };
                 
                 console.log('📤 Sending POST request to webhook:', webhookUrl);
-                console.log('📦 Payload:', payload);
+                console.log('📦 Payload:', JSON.stringify(payload, null, 2));
                 
-                const response = await fetch(webhookUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json, text/plain, */*'
-                    },
-                    body: JSON.stringify(payload),
-                    mode: 'cors',
-                    cache: 'no-cache'
-                });
+                let response;
+                try {
+                    response = await fetch(webhookUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json, text/plain, */*'
+                        },
+                        body: JSON.stringify(payload),
+                        mode: 'cors',
+                        cache: 'no-cache',
+                        credentials: 'omit'
+                    });
+                    console.log('✅ Fetch completed, status:', response.status);
+                } catch (fetchError) {
+                    console.error('❌ Fetch error:', fetchError);
+                    throw new Error(`Erreur réseau: ${fetchError.message}. Vérifiez la console pour plus de détails.`);
+                }
                 
                 console.log('📥 Webhook response status:', response.status);
-                console.log('📥 Webhook response headers:', Object.fromEntries(response.headers.entries()));
+                console.log('📥 Webhook response ok:', response.ok);
+                
+                // Log response headers
+                try {
+                    const headers = {};
+                    response.headers.forEach((value, key) => {
+                        headers[key] = value;
+                    });
+                    console.log('📥 Webhook response headers:', headers);
+                } catch (e) {
+                    console.warn('Could not log headers:', e);
+                }
                 
                 if (!response.ok) {
-                    const errorText = await response.text().catch(() => 'Unknown error');
-                    console.error('❌ Webhook error response:', errorText);
+                    let errorText = 'Unknown error';
+                    try {
+                        errorText = await response.text();
+                        console.error('❌ Webhook error response text:', errorText);
+                    } catch (e) {
+                        console.error('❌ Could not read error response:', e);
+                    }
                     throw new Error(`Webhook returned status ${response.status}: ${errorText}`);
                 }
                 
                 // Get response - could be JSON with redirect URL or plain text URL
                 let redirectUrl;
-                const contentType = response.headers.get('content-type');
+                const contentType = response.headers.get('content-type') || '';
+                console.log('📥 Content-Type:', contentType);
                 
-                if (contentType && contentType.includes('application/json')) {
-                    const data = await response.json();
-                    // Check for common response formats
-                    redirectUrl = data.url || data.redirect || data.redirectUrl || data.location || data.link || data.redirect_url;
+                if (contentType.includes('application/json')) {
+                    try {
+                        const data = await response.json();
+                        console.log('📥 JSON response:', data);
+                        // Check for common response formats
+                        redirectUrl = data.url || data.redirect || data.redirectUrl || data.location || data.link || data.redirect_url;
+                    } catch (e) {
+                        console.error('❌ Failed to parse JSON:', e);
+                        throw new Error('Failed to parse JSON response: ' + e.message);
+                    }
                 } else {
                     // Try to parse as text URL
-                    const text = await response.text();
-                    redirectUrl = text.trim();
+                    try {
+                        const text = await response.text();
+                        console.log('📥 Text response:', text);
+                        redirectUrl = text.trim();
+                    } catch (e) {
+                        console.error('❌ Failed to read text response:', e);
+                        throw new Error('Failed to read text response: ' + e.message);
+                    }
                 }
+                
+                console.log('🔗 Extracted redirect URL:', redirectUrl);
                 
                 if (!redirectUrl) {
                     throw new Error('No redirect URL found in webhook response');
@@ -155,14 +201,23 @@
                 // Validate URL format
                 try {
                     new URL(redirectUrl);
+                    console.log('✅ Valid absolute URL');
                 } catch (e) {
                     // If not a full URL, assume it's a relative path
                     if (!redirectUrl.startsWith('/') && !redirectUrl.startsWith('http')) {
                         redirectUrl = '/' + redirectUrl;
                     }
+                    console.log('✅ Using relative URL:', redirectUrl);
                 }
                 
-                // Redirect to the URL from webhook response
+                console.log('🔄 Redirecting to:', redirectUrl);
+                console.log('⚠️ IMPORTANT: This redirect should NOT be intercepted by cookie/session checks');
+                
+                // Small delay to ensure logs are visible
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+                // CRITICAL: Use replace() to prevent back navigation
+                // This redirect should be the FINAL destination, no cookie checks should interfere
                 window.location.replace(redirectUrl);
                 
             } catch (error) {
