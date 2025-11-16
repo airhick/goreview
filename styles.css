@@ -894,7 +894,7 @@ body {
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
     padding: var(--spacing-lg);
-    margin-bottom: var(--spacing-md);
+    margin-bottom: var(--spacing-sm);
 }
 
 .checkout-section:last-of-type {
@@ -1141,7 +1141,10 @@ body {
 /* Ensure form fields in checkout are on white background */
 .checkout-card .form-group input,
 .checkout-card .form-group select,
-.checkout-card .form-group textarea {
+.checkout-card .form-group textarea,
+.checkout-section .form-group input,
+.checkout-section .form-group select,
+.checkout-section .form-group textarea {
     background: #ffffff;
     color: var(--text-primary);
 }

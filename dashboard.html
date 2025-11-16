@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - GoReview</title>
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' http://localhost:*; connect-src 'self' http://localhost:* https://*.googleapis.com https://*.google.com https://maps.googleapis.com https://maps.gstatic.com https://vigutqmfosxbpncussie.supabase.co https://*.netlify.app https://*.netlify.com; img-src 'self' data: https: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://www.google.com https://*.google.com https://maps.googleapis.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; frame-src 'self' http://localhost:* https://www.google.com https://*.google.com https://maps.google.com;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' http://localhost:*; connect-src 'self' http://localhost:* https://*.googleapis.com https://*.google.com https://maps.googleapis.com https://maps.gstatic.com https://vigutqmfosxbpncussie.supabase.co https://*.netlify.app https://*.netlify.com https://n8n.goreview.fr; img-src 'self' data: https: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://www.google.com https://*.google.com https://maps.googleapis.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; frame-src 'self' http://localhost:* https://www.google.com https://*.google.com https://maps.google.com;">
     <script>
       // Suppress ONLY MCP/BrowserAutomation errors, keep all other errors visible
       (function(){
@@ -48,7 +48,64 @@
       })();
     </script>
     <link rel="stylesheet" href="styles.css">
-    <script src="db-proxy.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Force reload of db-proxy.js to avoid cache issues
+        (function() {
+            const script = document.createElement('script');
+            script.src = `db-proxy.js?v=${Date.now()}`;
+            script.async = false; // Load synchronously to ensure it's available
+            document.head.appendChild(script);
+        })();
+    </script>
+    <script>
+        // Session management functions - Global scope
+        window.getCookie = function(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) {
+                return decodeURIComponent(parts.pop().split(';').shift());
+            }
+            return null;
+        };
+
+        window.getSession = function() {
+            const sessionCookie = window.getCookie('goreview_session');
+            if (!sessionCookie) {
+                return null;
+            }
+            try {
+                return JSON.parse(sessionCookie);
+            } catch (e) {
+                console.error('Error parsing session cookie:', e);
+                return null;
+            }
+        };
+
+        // Check session on page load - MUST be done before any other code
+        (function() {
+            const params = new URLSearchParams(window.location.search);
+            const idFromUrl = params.get('id');
+            
+            // Check if session exists
+            const session = window.getSession();
+            if (!session || !session.id) {
+                // No session, redirect immediately to login
+                window.location.replace('/dashboardlogin.html');
+                return;
+            }
+            
+            // Verify that session ID matches URL ID (if ID is provided in URL)
+            if (idFromUrl && session.id !== idFromUrl) {
+                // Session exists but for different account, redirect to login
+                window.location.replace('/dashboardlogin.html');
+                return;
+            }
+            
+            // Session is valid, store it globally for use in other scripts
+            window.currentSession = session;
+        })();
+    </script>
     <style>
         .centered-card {
             min-height: 100vh;
@@ -213,6 +270,50 @@
             color: #6b7280;
             font-size: 0.875rem;
         }
+        /* Account Info Grid */
+        .account-info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            padding: 0.75rem;
+            background: #f9fafb;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+        }
+        .info-item.full-width {
+            grid-column: 1 / -1;
+        }
+        .info-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .info-value {
+            font-size: 0.95rem;
+            color: #111827;
+            font-weight: 500;
+            word-break: break-word;
+        }
+        .info-value a {
+            color: #6366f1;
+            text-decoration: none;
+        }
+        .info-value a:hover {
+            text-decoration: underline;
+        }
+        @media (max-width: 640px) {
+            .account-info-grid {
+                grid-template-columns: 1fr;
+            }
+        }
         /* Status Menu */
         .status-menu {
             position: relative;
@@ -368,10 +469,31 @@
     <!-- Populated by JS -->
 </div>
 <script>
-(function() {
+(async function() {
+    // First check: verify session exists before proceeding
+    const session = window.getSession();
+    if (!session || !session.id) {
+        // No valid session, redirect to login
+        window.location.replace('/dashboardlogin.html');
+        return; // Stop execution
+    }
+    
     const mount = document.getElementById('main');
     const params = new URLSearchParams(window.location.search);
     const id = params.get('id');
+    
+    // Second check: verify session ID matches URL ID
+    if (id && session.id !== id) {
+        // Session exists but for different account
+        window.location.replace('/dashboardlogin.html');
+        return; // Stop execution
+    }
+    
+    // Use session ID if URL ID is not provided, or use URL ID if it matches session
+    const accountId = (id && session.id === id) ? id : session.id;
+    
+    // If URL has different ID than session, we already redirected above
+    // So at this point, accountId is always valid and matches the session
 
     function setCookie(name, value, days) {
         const d = new Date();
@@ -390,19 +512,8 @@
         return null;
     }
 
-    // If no id in URL, try cookie. If cookie exists, redirect to its dashboard. Otherwise go to login page.
-    if (!id) {
-        const savedId = getCookie('goreview_user_id');
-        if (savedId) {
-            window.location.replace(`/dashboard.html?id=${encodeURIComponent(savedId)}`);
-        } else {
-            window.location.replace('/dashboardlogin.html');
-        }
-        return;
-    }
-
-    // Persist id for future visits (6 months)
-    setCookie('goreview_user_id', id, 180);
+    // Session is already verified above, accountId is always valid at this point
+    // No need for additional cookie checks - session cookie handles authentication
 
     // Status menu toggle
     function initStatusMenu() {
@@ -428,8 +539,11 @@
         if (!tbody) return;
 
         try {
+            // Wait for db-proxy to be available
+            const dbProxy = await window.waitForDbProxy();
+            
             // First, get the account data to retrieve contact_table
-            const { data: accountData, error: fetchError } = await window.dbProxy.select('accounts', { id: id }, { select: ['contact_table'], single: true });
+            const { data: accountData, error: fetchError } = await dbProxy.select('accounts', { id: accountId }, { select: ['contact_table'], single: true });
 
             if (fetchError) {
                 tbody.innerHTML = `<tr><td colspan='4' class='contacts-preview-empty'>Erreur: ${fetchError.message}</td></tr>`;
@@ -464,7 +578,8 @@
                 
                 // Save the example contact to contact_table
                 try {
-                    await window.dbProxy.update('accounts', { contact_table: JSON.stringify(contacts) }, { id: id });
+                    const dbProxy = await window.waitForDbProxy();
+                    await dbProxy.update('accounts', { contact_table: JSON.stringify(contacts) }, { id: accountId });
                 } catch (updateError) {
                     console.warn('Failed to initialize contact_table', updateError);
                 }
@@ -480,7 +595,8 @@
                 
                 // Save normalized contacts back to database
                     try {
-                        await window.dbProxy.update('accounts', { contact_table: JSON.stringify(contacts) }, { id: id });
+                        const dbProxy = await window.waitForDbProxy();
+                    await dbProxy.update('accounts', { contact_table: JSON.stringify(contacts) }, { id: accountId });
                     } catch (updateError) {
                         console.warn('Failed to save normalized contacts', updateError);
                     }
@@ -502,7 +618,8 @@
                     
                     // Save updated contacts
                     try {
-                        await window.dbProxy.update('accounts', { contact_table: JSON.stringify(contacts) }, { id: id });
+                        const dbProxy = await window.waitForDbProxy();
+                        await dbProxy.update('accounts', { contact_table: JSON.stringify(contacts) }, { id: accountId });
                     } catch (updateError) {
                         console.warn('Failed to update contact_table with example', updateError);
                     }
@@ -591,17 +708,19 @@
                 
                 // Optionally update database with fresh data via webhook
                 try {
-                    await window.dbProxy.update('accounts', {
+                    const dbProxy = await window.waitForDbProxy();
+                    await dbProxy.update('accounts', {
                         current_rating: rating,
                         tot_review: totalReviews
-                    }, { id: id });
+                    }, { id: accountId });
                 } catch (e) {
                     console.warn('Failed to update database with Google data', e);
                 }
             } else {
                 console.warn('Google Places API error:', data.status, data.error_message);
                 // Fallback to database data via webhook
-                const { data: accountData } = await window.dbProxy.select('accounts', { id: id }, { select: ['current_rating', 'tot_review'], single: true });
+                const dbProxy = await window.waitForDbProxy();
+                const { data: accountData } = await dbProxy.select('accounts', { id: accountId }, { select: ['current_rating', 'tot_review'], single: true });
                 if (accountData) {
                     updateRatingDisplay(parseFloat(accountData.current_rating) || null);
                     updateTotalReviewsDisplay(parseInt(accountData.tot_review || '0', 10) || null);
@@ -610,10 +729,8 @@
         } catch (error) {
             console.error('Failed to fetch Google Place details', error);
             // Fallback to Supabase data on error
-            const SUPABASE_URL = 'https://vigutqmfosxbpncussie.supabase.co';
-            const SUPABASE_SERVICE_ROLE = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ3V0cW1mb3N4YnBuY3Vzc2llIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTU4NDc1MiwiZXhwIjoyMDc3MTYwNzUyfQ.WPhspJ5LQ7E6k9sUFJsaISU6eVcJnIPGYv0GPGQfd98';
-            const client = supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
-            const { data: accountData } = await client.from('accounts').select('current_rating,tot_review').eq('id', id).maybeSingle();
+            const dbProxy = await window.waitForDbProxy();
+            const { data: accountData } = await dbProxy.select('accounts', { id: accountId }, { select: ['current_rating', 'tot_review'], single: true });
             if (accountData) {
                 updateRatingDisplay(parseFloat(accountData.current_rating) || null);
                 updateTotalReviewsDisplay(parseInt(accountData.tot_review || '0', 10) || null);
@@ -661,54 +778,26 @@
     }
 
     // Update status indicators
-    function updateStatusMenu(data, clientInstance) {
+    function updateStatusMenu(data) {
         if (!data) return;
         
-        // Game toggle
+        // Game toggle - Disabled, show "Bientôt"
         const gameToggle = document.getElementById('statusGameToggle');
         const gameIcon = document.getElementById('statusGameIcon');
-        const gameActive = data.games === true;
         if (gameToggle) {
-            gameToggle.classList.toggle('active', gameActive);
-            if (gameIcon) {
-                gameIcon.className = gameActive ? 'status-icon healthy' : 'status-icon';
-            }
+            // Disable toggle
+            gameToggle.style.opacity = '0.5';
+            gameToggle.style.pointerEvents = 'none';
+            gameToggle.classList.remove('active');
             // Remove any existing listeners by cloning
             const oldToggle = gameToggle;
             const newToggle = oldToggle.cloneNode(true);
+            newToggle.style.opacity = '0.5';
+            newToggle.style.pointerEvents = 'none';
             oldToggle.parentNode.replaceChild(newToggle, oldToggle);
-            
-            document.getElementById('statusGameToggle').addEventListener('click', async function() {
-                const currentState = this.classList.contains('active');
-                const newState = !currentState;
-                try {
-                    // Get current game or default to 'roulette' if activating
-                    const currentGame = data.wich_game || 'roulette';
-                    await clientInstance.from('accounts').update({ games: newState, wich_game: newState ? currentGame : null }).eq('id', id);
-                    this.classList.toggle('active', newState);
-                    if (gameIcon) {
-                        gameIcon.className = newState ? 'status-icon healthy' : 'status-icon';
-                    }
-                    // Sync card toggle
-                    const cardToggle = document.getElementById('cardGameToggle');
-                    if (cardToggle) cardToggle.classList.toggle('active', newState);
-                    // Update card text
-                    const currentGameText = document.getElementById('currentGameText');
-                    const changeGameBtn = document.getElementById('changeGameBtn');
-                    if (currentGameText) {
-                        if (newState && currentGame) {
-                            const gameNames = { roulette: 'Roue de la chance', dice: 'Dé', coin: 'Pile ou face', balldrop: 'Ball Drop' };
-                            currentGameText.textContent = gameNames[currentGame] || currentGame;
-                            if (changeGameBtn) changeGameBtn.style.display = 'inline-block';
-                        } else {
-                            currentGameText.textContent = 'Désactivé';
-                            if (changeGameBtn) changeGameBtn.style.display = 'none';
-                        }
-                    }
-                } catch(e) {
-                    console.error('Failed to update game status', e);
-                }
-            });
+        }
+        if (gameIcon) {
+            gameIcon.className = 'status-icon';
         }
 
         // Health check
@@ -760,7 +849,7 @@
             <div class='dashboard-header'>
                 <div class='dash-brand'>
                     <img src='logo.png' alt='GoReview' class='dash-logo'>
-                    <h1 class='dashboard-title'>Dashboard GoReview <span id='bizName' style='color:#6366f1'>#${id}</span></h1>
+                    <h1 class='dashboard-title'>Dashboard GoReview <span id='bizName' style='color:#6366f1'>#${accountId}</span></h1>
                 </div>
                 <div class='status-menu'>
                     <button class='status-menu-btn' id='statusMenuBtn' title='Statut système'>⚙️</button>
@@ -816,6 +905,17 @@
                                 </div>
                             </div>
                         </div>
+                        <div class='status-item' style='border-top:1px solid #e5e7eb; padding-top:12px; margin-top:8px;'>
+                            <div class='status-icon' style='background:#fee2e2;'>🔄</div>
+                            <div class='status-content' style='flex:1;'>
+                                <div class='status-label'>Réinitialisation</div>
+                                <div class='status-value'>
+                                    <button id='resetBtn' style='padding:6px 12px; background:#ef4444; color:white; border:none; border-radius:6px; font-size:12px; font-weight:500; cursor:pointer; width:100%;'>
+                                        Réinitialiser la plaque
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -843,11 +943,11 @@
                     <h3>Jeux</h3>
                     <p>Ajoutez un jeu pour encourager les clients à laisser un avis.</p>
                     <div style='display:flex; align-items:center; gap:12px; margin:12px 0;'>
-                        <div class='toggle-visual' id='cardGameToggle'></div>
-                        <span id='currentGameText' style='font-size:14px; color:#4b5563; flex:1;'>Désactivé</span>
+                        <div class='toggle-visual' id='cardGameToggle' style='opacity:0.5; pointer-events:none;'></div>
+                        <span id='currentGameText' style='font-size:14px; color:#4b5563; flex:1; font-weight:600;'>Bientôt</span>
                     </div>
                     <div class='btn-row'>
-                        <a class='btn-primary btn' id='changeGameBtn' href='/games.html?id=${encodeURIComponent(id)}' style='display:none;'>Changer</a>
+                        <span style='color:#6b7280; font-size:0.875rem;'>Cette fonctionnalité sera disponible prochainement</span>
                     </div>
                 </div>
                 <div class='card'>
@@ -876,17 +976,38 @@
                     </table>
                 </div>
                 <div class='btn-row'>
-                    <a id='contactsLink' class='btn-primary btn' href='/contact.html?id=${encodeURIComponent(id)}'>Consulter les contacts</a>
+                    <a id='contactsLink' class='btn-primary btn' href='/contacts.html?id=${encodeURIComponent(accountId)}'>Consulter les contacts</a>
                 </div>
             </div>
         </div>
     `;
 
+    // Wait for db-proxy.js to load before using it
+    // Make it available globally for all functions
+    window.waitForDbProxy = async function() {
+        if (window.dbProxy) {
+            return window.dbProxy;
+        }
+        let retries = 0;
+        while (!window.dbProxy && retries < 50) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            retries++;
+        }
+        if (!window.dbProxy) {
+            throw new Error('db-proxy.js failed to load after 5 seconds');
+        }
+        return window.dbProxy;
+    };
+
     // Supabase: fetch account row to populate the cards
     try {
         // Init menu after DOM is ready
         setTimeout(() => initStatusMenu(), 0);
-        window.dbProxy.select('accounts', { id: id }, { limit: 1, single: true })
+        
+        // Wait for db-proxy to be available
+        const dbProxy = await window.waitForDbProxy();
+        
+        dbProxy.select('accounts', { id: accountId }, { limit: 1, single: true })
             .then(({ data, error }) => {
                 if (error) {
                     console.error('Database error', error);
@@ -895,7 +1016,7 @@
                 if (!data) return;
                 updateStatusMenu(data);
                 // Business name in title
-                const name = data.business_name || data.company_name || data.company_nam || ('#' + id);
+                const name = data.business_name || data.company_name || data.company_nam || ('#' + accountId);
                 const titleEl = document.getElementById('bizName');
                 if (titleEl) titleEl.textContent = name;
                 
@@ -916,62 +1037,86 @@
                 const statsEl = document.getElementById('statsCount');
                 if (statsEl) statsEl.textContent = data.review_number || '0';
                 // Load contacts preview
-                loadContactsPreview(client);
-                // Games card - Update toggle and game name
+                loadContactsPreview();
+                // Games card - Show "Bientôt" and disable toggle
                 const cardGameToggle = document.getElementById('cardGameToggle');
                 const currentGameText = document.getElementById('currentGameText');
-                const changeGameBtn = document.getElementById('changeGameBtn');
-                const gameActive = data.games === true;
-                const gameName = data.wich_game || null;
                 
+                // Disable toggle and show "Bientôt"
                 if (cardGameToggle) {
-                    cardGameToggle.classList.toggle('active', gameActive);
-                    // Toggle functionality
-                    const oldToggle = cardGameToggle;
-                    const newToggle = oldToggle.cloneNode(true);
-                    oldToggle.parentNode.replaceChild(newToggle, oldToggle);
-                    
-                    document.getElementById('cardGameToggle').addEventListener('click', async function() {
-                        const currentState = this.classList.contains('active');
-                        const newState = !currentState;
-                        try {
-                            // Get current game or default to 'roulette' if activating
-                            const currentGame = gameName || 'roulette';
-                            await client.from('accounts').update({ games: newState, wich_game: newState ? currentGame : null }).eq('id', id);
-                            this.classList.toggle('active', newState);
-                            updateGameCardText(newState, newState ? currentGame : null);
-                            // Also update status menu toggle and icon
-                            const statusToggle = document.getElementById('statusGameToggle');
-                            const statusGameIcon = document.getElementById('statusGameIcon');
-                            if (statusToggle) statusToggle.classList.toggle('active', newState);
-                            if (statusGameIcon) {
-                                statusGameIcon.className = newState ? 'status-icon healthy' : 'status-icon';
-                            }
-                        } catch(e) {
-                            console.error('Failed to update game status', e);
-                        }
-                    });
+                    cardGameToggle.style.opacity = '0.5';
+                    cardGameToggle.style.pointerEvents = 'none';
+                    cardGameToggle.classList.remove('active');
                 }
                 
-                function updateGameCardText(isActive, game) {
-                    if (currentGameText) {
-                        if (isActive && game) {
-                            const gameNames = { roulette: 'Roue de la chance', dice: 'Dé', coin: 'Pile ou face', balldrop: 'Ball Drop' };
-                            currentGameText.textContent = gameNames[game] || game;
-                            if (changeGameBtn) changeGameBtn.style.display = 'inline-block';
-                        } else {
-                            currentGameText.textContent = 'Désactivé';
-                            if (changeGameBtn) changeGameBtn.style.display = 'none';
-                        }
-                    }
+                if (currentGameText) {
+                    currentGameText.textContent = 'Bientôt';
+                    currentGameText.style.fontWeight = '600';
                 }
-                
-                updateGameCardText(gameActive, gameName);
                 // Google Maps card (reuse placeId variable declared above)
                 const mapFrame = document.getElementById('miniMap');
                 if (placeId && mapFrame) {
                     // Use the Google Maps embed format to avoid X-Frame-Options issues
                     mapFrame.src = `https://www.google.com/maps?q=place_id:${encodeURIComponent(placeId)}&output=embed`;
+                }
+                
+                // Setup reset button
+                const resetBtn = document.getElementById('resetBtn');
+                if (resetBtn) {
+                    resetBtn.addEventListener('click', async function() {
+                        if (!confirm('Êtes-vous sûr de vouloir réinitialiser la plaque NFC aux valeurs d\'usine ? Cette action est irréversible et supprimera toutes les données configurées.')) {
+                            return;
+                        }
+                        
+                        if (!confirm('Confirmez-vous la réinitialisation ? Toutes les données seront perdues.')) {
+                            return;
+                        }
+                        
+                        resetBtn.disabled = true;
+                        resetBtn.textContent = 'Réinitialisation...';
+                        
+                        try {
+                            const dbProxy = await window.waitForDbProxy();
+                            
+                            // Factory reset values
+                            const factoryResetData = {
+                                email: null,
+                                first_name: null,
+                                last_name: null,
+                                company_name: null,
+                                source_id: null,
+                                redirection_url: null,
+                                games: null,
+                                wich_game: null,
+                                review_number: null,
+                                contact_table: JSON.stringify([{
+                                    nom: 'go',
+                                    prenom: 'Review',
+                                    email: 'goreview.fr@gmail.com',
+                                    time: '2025-11-02T15:28:44.088Z'
+                                }]),
+                                games_details: null,
+                                business_id: null,
+                                tot_review: null,
+                                current_rating: null,
+                                updated_at: new Date().toISOString()
+                            };
+                            
+                            const { error } = await dbProxy.update('accounts', factoryResetData, { id: accountId });
+                            
+                            if (error) {
+                                throw new Error(error.message || 'Erreur lors de la réinitialisation');
+                            }
+                            
+                            alert('Plaque NFC réinitialisée avec succès ! La page va être rechargée.');
+                            window.location.reload();
+                        } catch (err) {
+                            console.error('Reset failed:', err);
+                            alert('Erreur lors de la réinitialisation : ' + (err.message || err));
+                            resetBtn.disabled = false;
+                            resetBtn.textContent = '🔄 Réinitialiser';
+                        }
+                    });
                 }
             });
     } catch (e) {

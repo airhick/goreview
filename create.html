@@ -403,8 +403,9 @@
     <!-- Google Places API -->
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC1zqymSXocGXuCEVvpzXERWYwIzimV0Oo&libraries=places&callback=initAutocomplete" async defer></script>
 
-    <!-- Supabase -->
+    <!-- Supabase for reads, Database Proxy for writes -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="db-proxy.js"></script>
 
     <script>
         // Early check: redirect to dashboard if account already exists
@@ -414,28 +415,20 @@
             
             if (!id) return; // Will be handled by the existing check
             
-            // Wait for Supabase to be available
+            // Wait for dbProxy to be available
             let retries = 0;
-            while (typeof supabase === 'undefined' && retries < 10) {
+            while (typeof window.dbProxy === 'undefined' && retries < 10) {
                 await new Promise(resolve => setTimeout(resolve, 100));
                 retries++;
             }
             
-            if (typeof supabase === 'undefined') {
-                console.warn('Supabase not loaded, continuing with form');
+            if (typeof window.dbProxy === 'undefined') {
+                console.warn('Database proxy not loaded, continuing with form');
                 return;
             }
             
             try {
-                const SUPABASE_URL = 'https://vigutqmfosxbpncussie.supabase.co';
-                const SUPABASE_SERVICE_ROLE = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ3V0cW1mb3N4YnBuY3Vzc2llIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTU4NDc1MiwiZXhwIjoyMDc3MTYwNzUyfQ.WPhspJ5LQ7E6k9sUFJsaISU6eVcJnIPGYv0GPGQfd98';
-                const client = supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
-                
-                const { data, error } = await client
-                    .from('accounts')
-                    .select('id, business_id')
-                    .eq('id', id)
-                    .maybeSingle();
+                const { data, error } = await window.dbProxy.select('accounts', { id: id }, { select: ['id', 'business_id'], single: true });
                 
                 if (error) {
                     console.warn('Error checking account:', error);

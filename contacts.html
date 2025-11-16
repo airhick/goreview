@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contacts - Dashboard GoReview</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' http://localhost:*; connect-src 'self' http://localhost:* https://*.googleapis.com https://*.google.com https://maps.googleapis.com https://maps.gstatic.com https://vigutqmfosxbpncussie.supabase.co https://*.netlify.app https://*.netlify.com https://n8n.goreview.fr; img-src 'self' data: https: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://www.google.com https://*.google.com https://maps.googleapis.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; frame-src 'self' http://localhost:* https://www.google.com https://*.google.com https://maps.google.com;">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Force reload of db-proxy.js to avoid cache issues
+        (function() {
+            const script = document.createElement('script');
+            script.src = `db-proxy.js?v=${Date.now()}`;
+            script.async = false;
+            document.head.appendChild(script);
+        })();
+    </script>
+    <script>
+        // Session management functions - Global scope
+        window.getCookie = function(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) {
+                return decodeURIComponent(parts.pop().split(';').shift());
+            }
+            return null;
+        };
+
+        window.getSession = function() {
+            const sessionCookie = window.getCookie('goreview_session');
+            if (!sessionCookie) {
+                return null;
+            }
+            try {
+                return JSON.parse(sessionCookie);
+            } catch (e) {
+                console.error('Error parsing session cookie:', e);
+                return null;
+            }
+        };
+
+        // Check session on page load
+        (function() {
+            const params = new URLSearchParams(window.location.search);
+            const idFromUrl = params.get('id');
+            
+            const session = window.getSession();
+            if (!session || !session.id) {
+                window.location.replace('/dashboardlogin.html');
+                return;
+            }
+            
+            if (idFromUrl && session.id !== idFromUrl) {
+                window.location.replace('/dashboardlogin.html');
+                return;
+            }
+            
+            window.currentSession = session;
+        })();
+    </script>
+    <style>
+        .centered-card {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+        }
+        .dashboard-wrap {
+            background: #fff;
+            border-radius: 18px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.08);
+            max-width: 1200px;
+            width: 100%;
+            padding: 2rem;
+        }
+        .dashboard-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1.25rem;
+        }
+        .dash-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .dash-logo {
+            height: 32px;
+            width: auto;
+        }
+        .dashboard-title {
+            font-size: 1.5rem;
+            margin: 0;
+        }
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #6366f1;
+            text-decoration: none;
+            font-weight: 500;
+            margin-bottom: 1rem;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        .contacts-table-container {
+            overflow-x: auto;
+            margin: 1rem 0;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+        }
+        .contacts-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+            min-width: 600px;
+        }
+        .contacts-table thead {
+            background: #f9fafb;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        .contacts-table th {
+            padding: 0.75rem;
+            text-align: left;
+            font-weight: 600;
+            color: #111827;
+            border-bottom: 2px solid #e5e7eb;
+            font-size: 0.875rem;
+        }
+        .contacts-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #f3f4f6;
+            color: #4b5563;
+        }
+        .contacts-table tbody tr:hover {
+            background: #f9fafb;
+        }
+        .contacts-empty {
+            padding: 3rem;
+            text-align: center;
+            color: #6b7280;
+            font-size: 0.875rem;
+        }
+        .contacts-loading {
+            padding: 3rem;
+            text-align: center;
+            color: #6b7280;
+            font-size: 0.875rem;
+        }
+        .contacts-stats {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        .stat-badge {
+            padding: 0.5rem 1rem;
+            background: #f3f4f6;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            color: #4b5563;
+        }
+        .stat-badge strong {
+            color: #111827;
+            font-weight: 600;
+        }
+        .download-csv-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0.5rem 1rem;
+            background: #6366f1;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            border: none;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .download-csv-btn:hover {
+            background: #4f46e5;
+        }
+        .download-csv-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        @media (max-width: 640px) {
+            .dashboard-title {
+                font-size: 1.25rem;
+            }
+            .dashboard-wrap {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="centered-card" id="main">
+    <!-- Populated by JS -->
+</div>
+<script>
+(async function() {
+    // First check: verify session exists before proceeding
+    const session = window.getSession();
+    if (!session || !session.id) {
+        window.location.replace('/dashboardlogin.html');
+        return;
+    }
+    
+    const mount = document.getElementById('main');
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id');
+    
+    // Verify session ID matches URL ID
+    if (id && session.id !== id) {
+        window.location.replace('/dashboardlogin.html');
+        return;
+    }
+    
+    const accountId = (id && session.id === id) ? id : session.id;
+    
+    // Store contacts globally for CSV export
+    let allContacts = [];
+
+    // Wait for db-proxy.js to load
+    window.waitForDbProxy = window.waitForDbProxy || async function() {
+        if (window.dbProxy) {
+            return window.dbProxy;
+        }
+        let retries = 0;
+        while (!window.dbProxy && retries < 50) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            retries++;
+        }
+        if (!window.dbProxy) {
+            throw new Error('db-proxy.js failed to load after 5 seconds');
+        }
+        return window.dbProxy;
+    };
+
+    // Format date for display
+    function formatDate(dateString) {
+        if (!dateString) return '–';
+        try {
+            const date = new Date(dateString);
+            return date.toLocaleString('fr-FR', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        } catch (e) {
+            return dateString;
+        }
+    }
+    
+    // Format date for CSV (ISO format)
+    function formatDateForCSV(dateString) {
+        if (!dateString) return '';
+        try {
+            const date = new Date(dateString);
+            return date.toISOString();
+        } catch (e) {
+            return dateString || '';
+        }
+    }
+    
+    // Download contacts as CSV
+    function downloadCSV() {
+        if (allContacts.length === 0) {
+            alert('Aucun contact à exporter');
+            return;
+        }
+        
+        // CSV header
+        const headers = ['Nom', 'Prénom', 'Email', 'Date'];
+        const csvRows = [headers.join(',')];
+        
+        // Add contact rows
+        allContacts.forEach(contact => {
+            const nom = (contact.nom || '').replace(/"/g, '""');
+            const prenom = (contact.prenom || '').replace(/"/g, '""');
+            const email = (contact.email || '').replace(/"/g, '""');
+            const date = formatDateForCSV(contact.time || contact.timestamp);
+            
+            // Escape fields that contain commas or quotes
+            const row = [
+                `"${nom}"`,
+                `"${prenom}"`,
+                `"${email}"`,
+                `"${date}"`
+            ];
+            csvRows.push(row.join(','));
+        });
+        
+        // Create CSV content
+        const csvContent = csvRows.join('\n');
+        
+        // Add BOM for Excel compatibility (UTF-8)
+        const BOM = '\uFEFF';
+        const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+        
+        // Create download link
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `contacts_${accountId}_${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
+
+    // Render the page
+    mount.innerHTML = `
+        <div class='dashboard-wrap'>
+            <div class='dashboard-header'>
+                <div class='dash-brand'>
+                    <img src='logo.png' alt='GoReview' class='dash-logo'>
+                    <h1 class='dashboard-title'>Contacts collectés</h1>
+                </div>
+            </div>
+            <a href='/dashboard.html?id=${encodeURIComponent(accountId)}' class='back-link'>
+                ← Retour au dashboard
+            </a>
+            <div id='contactsStats' class='contacts-stats'>
+                <div class='stat-badge'>Chargement...</div>
+            </div>
+            <div class='contacts-table-container'>
+                <table class='contacts-table'>
+                    <thead>
+                        <tr>
+                            <th>Nom</th>
+                            <th>Prénom</th>
+                            <th>Email</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id='contactsTableBody'>
+                        <tr>
+                            <td colspan='4' class='contacts-loading'>Chargement des contacts...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+
+    // Load contacts from database
+    async function loadContacts() {
+        const tbody = document.getElementById('contactsTableBody');
+        const statsEl = document.getElementById('contactsStats');
+        
+        if (!tbody) return;
+
+        try {
+            const dbProxy = await window.waitForDbProxy();
+            const { data: accountData, error: fetchError } = await dbProxy.select('accounts', { id: accountId }, { select: ['contact_table'], single: true });
+
+            if (fetchError) {
+                tbody.innerHTML = `<tr><td colspan='4' class='contacts-empty'>Erreur: ${fetchError.message}</td></tr>`;
+                if (statsEl) statsEl.innerHTML = `<div class='stat-badge'>Erreur de chargement</div>`;
+                return;
+            }
+
+            // Parse contact_table
+            let contacts = [];
+            if (accountData && accountData.contact_table) {
+                try {
+                    contacts = typeof accountData.contact_table === 'string' 
+                        ? JSON.parse(accountData.contact_table) 
+                        : accountData.contact_table;
+                    if (!Array.isArray(contacts)) {
+                        contacts = [];
+                    }
+                } catch (parseError) {
+                    console.warn('Failed to parse contact_table', parseError);
+                    contacts = [];
+                }
+            }
+
+            // Normalize date fields
+            contacts = contacts.map(c => {
+                if (c.timestamp && !c.time) {
+                    c.time = c.timestamp;
+                    delete c.timestamp;
+                }
+                return c;
+            });
+
+            // Sort by time (most recent first)
+            contacts.sort((a, b) => {
+                const timeA = (a.time || a.timestamp) ? new Date(a.time || a.timestamp).getTime() : 0;
+                const timeB = (b.time || b.timestamp) ? new Date(b.time || b.timestamp).getTime() : 0;
+                return timeB - timeA;
+            });
+            
+            // Store contacts globally for CSV export
+            allContacts = contacts;
+
+            // Update stats and enable download button
+            const downloadBtn = document.getElementById('downloadCsvBtn');
+            if (statsEl) {
+                statsEl.innerHTML = `
+                    <div class='stat-badge'>Total: <strong>${contacts.length}</strong> contact${contacts.length > 1 ? 's' : ''}</div>
+                    ${contacts.length > 0 ? '<button id="downloadCsvBtn" class="download-csv-btn">📥 Télécharger CSV</button>' : ''}
+                `;
+            }
+            
+            // Re-attach download button event listener
+            if (contacts.length > 0) {
+                setTimeout(() => {
+                    const newDownloadBtn = document.getElementById('downloadCsvBtn');
+                    if (newDownloadBtn) {
+                        newDownloadBtn.addEventListener('click', downloadCSV);
+                    }
+                }, 100);
+            }
+
+            // Display contacts
+            if (contacts.length === 0) {
+                tbody.innerHTML = `<tr><td colspan='4' class='contacts-empty'>Aucun contact enregistré</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = contacts.map(contact => {
+                const nom = contact.nom || '–';
+                const prenom = contact.prenom || '–';
+                const email = contact.email || '–';
+                const time = contact.time || contact.timestamp || null;
+                const dateFormatted = formatDate(time);
+
+                return `
+                    <tr>
+                        <td>${nom}</td>
+                        <td>${prenom}</td>
+                        <td><a href="mailto:${email}" style="color: #6366f1; text-decoration: none;">${email}</a></td>
+                        <td>${dateFormatted}</td>
+                    </tr>
+                `;
+            }).join('');
+        } catch (err) {
+            tbody.innerHTML = `<tr><td colspan='4' class='contacts-empty'>Erreur de chargement</td></tr>`;
+            console.error('Failed to load contacts', err);
+            if (statsEl) statsEl.innerHTML = `<div class='stat-badge'>Erreur de chargement</div>`;
+        }
+    }
+
+    // Load contacts on page load
+    try {
+        await loadContacts();
+    } catch (e) {
+        console.error('Failed to initialize contacts page', e);
+    }
+})();
+</script>
+</body>
+</html>
+

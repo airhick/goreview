@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Jeux - GoReview</title>
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' http://localhost:*; connect-src 'self' http://localhost:* https://vigutqmfosxbpncussie.supabase.co; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' http://localhost:*; connect-src 'self' http://localhost:* https://vigutqmfosxbpncussie.supabase.co https://n8n.goreview.fr; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline';">
     <script>
       // Suppress ONLY MCP/BrowserAutomation console messages, keep all other messages visible
       (function(){
@@ -74,6 +74,7 @@
     </script>
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="db-proxy.js"></script>
     <style>
         .centered-card { min-height: 100vh; display:flex; align-items:center; justify-content:center; background: #ffffff; }
         .wrap { background:#ffffff; border:1px solid #e5e7eb; border-radius:20px; box-shadow:0 10px 25px -5px rgba(0,0,0,0.08); width:100%; max-width:980px; padding:2.1rem; position:relative; overflow:hidden; }
@@ -289,18 +290,15 @@
   const get = (k, d=null) => JSON.parse(localStorage.getItem(keyPrefix+k) ?? 'null') ?? d;
   const set = (k, v) => localStorage.setItem(keyPrefix+k, JSON.stringify(v));
 
-  // Supabase client
-  const SUPABASE_URL = 'https://vigutqmfosxbpncussie.supabase.co';
-  const SUPABASE_SERVICE_ROLE = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ3V0cW1mb3N4YnBuY3Vzc2llIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTU4NDc1MiwiZXhwIjoyMDc3MTYwNzUyfQ.WPhspJ5LQ7E6k9sUFJsaISU6eVcJnIPGYv0GPGQfd98';
-  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
+  // Database proxy (webhook)
   const updateAccount = async (fields) => {
     try {
-      await sb.from('accounts').update(fields).eq('id', id);
+      await window.dbProxy.update('accounts', fields, { id: id });
     } catch (e) { console.warn('Supabase update failed', e); }
   };
   const fetchAccount = async () => {
     try {
-      const { data } = await sb.from('accounts').select('*').eq('id', id).limit(1).maybeSingle();
+      const { data } = await window.dbProxy.select('accounts', { id: id }, { limit: 1, single: true });
       return data || null;
     } catch (e) { console.warn('Supabase fetch failed', e); return null; }
   };
@@ -558,12 +556,12 @@
           const paramsStr = new URLSearchParams({ id, game:'roulette', rewards: rewardNames.join('|') }).toString();
           const redir = `${location.origin}/company.html?${paramsStr}`;
           
-          await sb.from('accounts').update({ 
+          await window.dbProxy.update('accounts', { 
             games: true, 
             wich_game: 'roulette', 
             redirection_url: redir, 
             games_details: JSON.stringify(gameSettings) 
-          }).eq('id', id);
+          }, { id: id });
           
           cachedGameSettings = gameSettings;
         } catch (e) {

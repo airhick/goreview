@@ -3,29 +3,196 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Redirection - GoReview</title>
+    <title>Configuration - GoReview</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' http://localhost:*; connect-src 'self' http://localhost:* https://n8n.goreview.fr https://*.goreview.fr; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+    <style>
+        body {
+            min-height: 100vh;
+            background: #ffffff;
+            color: #111827;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            margin: 0;
+        }
+        .loading-container {
+            max-width: 640px;
+            text-align: center;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 24px;
+            background: #fff;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.08);
+        }
+        .spinner {
+            border: 3px solid #f3f4f6;
+            border-top: 3px solid #6366f1;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .loading-title {
+            font-size: 20px;
+            margin: 0 0 8px 0;
+        }
+        .loading-subtitle {
+            color: #6b7280;
+            margin: 0;
+        }
+        .error-icon {
+            margin-bottom: 12px;
+            font-size: 28px;
+        }
+        .error-title {
+            font-size: 20px;
+            margin: 0 0 8px 0;
+        }
+        .error-text {
+            color: #6b7280;
+            margin: 0 0 16px 0;
+        }
+        .error-message {
+            color: #ef4444;
+            margin: 0 0 16px 0;
+            font-size: 14px;
+        }
+        .back-button {
+            display: inline-block;
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            text-decoration: none;
+            color: #111827;
+            background: #f3f4f6;
+        }
+    </style>
     <script>
-        // Redirection côté client pour préserver le paramètre id
-        (function() {
+        (async function() {
+            // Wait for DOM to be ready
+            if (document.readyState === 'loading') {
+                await new Promise(resolve => {
+                    document.addEventListener('DOMContentLoaded', resolve);
+                });
+            }
+            
+            console.log('🚀 Configuration page loaded');
+            
             const params = new URLSearchParams(window.location.search);
             const id = params.get('id');
             
-            if (id) {
-                // Rediriger vers /create avec le paramètre id
-                window.location.replace('/create?id=' + encodeURIComponent(id));
-            } else {
-                // Si pas d'id, rediriger vers la page d'accueil
-                window.location.replace('/');
+            console.log('📋 URL params:', { id, fullUrl: window.location.href });
+            
+            // Show loading message immediately
+            if (document.body) {
+                document.body.innerHTML = `
+                    <div class="loading-container">
+                        <div class="spinner"></div>
+                        <h1 class="loading-title">Configuration en cours...</h1>
+                        <p class="loading-subtitle">Veuillez patienter pendant la configuration de votre plaque NFC.</p>
+                    </div>
+                `;
+            }
+            
+            try {
+                // Send POST request to webhook
+                const webhookUrl = 'https://n8n.goreview.fr/webhook/configuration';
+                const payload = {
+                    id: id || null,
+                    timestamp: new Date().toISOString(),
+                    source: 'nfc-plate-configuration',
+                    url: window.location.href
+                };
+                
+                console.log('📤 Sending POST request to webhook:', webhookUrl);
+                console.log('📦 Payload:', payload);
+                
+                const response = await fetch(webhookUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json, text/plain, */*'
+                    },
+                    body: JSON.stringify(payload),
+                    mode: 'cors',
+                    cache: 'no-cache'
+                });
+                
+                console.log('📥 Webhook response status:', response.status);
+                console.log('📥 Webhook response headers:', Object.fromEntries(response.headers.entries()));
+                
+                if (!response.ok) {
+                    const errorText = await response.text().catch(() => 'Unknown error');
+                    console.error('❌ Webhook error response:', errorText);
+                    throw new Error(`Webhook returned status ${response.status}: ${errorText}`);
+                }
+                
+                // Get response - could be JSON with redirect URL or plain text URL
+                let redirectUrl;
+                const contentType = response.headers.get('content-type');
+                
+                if (contentType && contentType.includes('application/json')) {
+                    const data = await response.json();
+                    // Check for common response formats
+                    redirectUrl = data.url || data.redirect || data.redirectUrl || data.location || data.link || data.redirect_url;
+                } else {
+                    // Try to parse as text URL
+                    const text = await response.text();
+                    redirectUrl = text.trim();
+                }
+                
+                if (!redirectUrl) {
+                    throw new Error('No redirect URL found in webhook response');
+                }
+                
+                // Validate URL format
+                try {
+                    new URL(redirectUrl);
+                } catch (e) {
+                    // If not a full URL, assume it's a relative path
+                    if (!redirectUrl.startsWith('/') && !redirectUrl.startsWith('http')) {
+                        redirectUrl = '/' + redirectUrl;
+                    }
+                }
+                
+                // Redirect to the URL from webhook response
+                window.location.replace(redirectUrl);
+                
+            } catch (error) {
+                console.error('❌ Configuration error:', error);
+                console.error('❌ Error stack:', error.stack);
+                
+                if (document.body) {
+                    document.body.innerHTML = `
+                        <div class="loading-container">
+                            <div class="error-icon">❌</div>
+                            <h1 class="error-title">Erreur de configuration</h1>
+                            <p class="error-text">Une erreur s'est produite lors de la configuration de votre plaque NFC.</p>
+                            <p class="error-message">${error.message || 'Erreur inconnue'}</p>
+                            <p class="error-text" style="font-size:12px;">Vérifiez la console du navigateur (F12) pour plus de détails.</p>
+                            <a href="/" class="back-button">Retour à l'accueil</a>
+                        </div>
+                    `;
+                } else {
+                    console.error('Cannot display error: document.body is null');
+                }
             }
         })();
     </script>
-    <noscript>
-        <meta http-equiv="refresh" content="0;url=/">
-        <p>Redirection en cours... <a href="/">Cliquez ici si la redirection ne fonctionne pas</a></p>
-    </noscript>
 </head>
 <body>
-    <p>Redirection en cours...</p>
+    <div class="loading-container">
+        <div class="spinner"></div>
+        <h1 class="loading-title">Configuration en cours...</h1>
+        <p class="loading-subtitle">Veuillez patienter.</p>
+    </div>
 </body>
 </html>
 

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Connexion Google</title>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' http://localhost:*; connect-src 'self' http://localhost:* https://vigutqmfosxbpncussie.supabase.co https://accounts.google.com https://www.google.com https://n8n.goreview.fr; img-src 'self' data: https://*.googleusercontent.com https://www.google.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://www.google.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://accounts.google.com; style-src-elem 'self' 'unsafe-inline' https://accounts.google.com;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' http://localhost:*; connect-src 'self' http://localhost:* https://vigutqmfosxbpncussie.supabase.co https://accounts.google.com https://www.google.com https://n8n.goreview.fr; img-src 'self' data: https: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://www.google.com https://*.google.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://accounts.google.com https://*.google.com; style-src-elem 'self' 'unsafe-inline' https://accounts.google.com https://*.google.com; frame-src 'self' http://localhost:* https://accounts.google.com https://www.google.com https://*.google.com;">
   <script>
     // Suppress ONLY MCP/BrowserAutomation errors, keep all other errors visible
     (function(){
@@ -49,6 +49,7 @@
   </script>
   <script src="https://accounts.google.com/gsi/client?hl=fr" async defer></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="db-proxy.js"></script>
   <style>
     /* Fond et typographie façon Google */
     body {
@@ -243,14 +244,27 @@
     const loginContainer = document.getElementById('loginContainer');
     const gameContainer = document.getElementById('gameContainer');
     
-    // Supabase
-    const SUPABASE_URL = 'https://vigutqmfosxbpncussie.supabase.co';
-    const SUPABASE_SERVICE_ROLE = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ3V0cW1mb3N4YnBuY3Vzc2llIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTU4NDc1MiwiZXhwIjoyMDc3MTYwNzUyfQ.WPhspJ5LQ7E6k9sUFJsaISU6eVcJnIPGYv0GPGQfd98';
-    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
+    // Database proxy (webhook)
     
     let reviewWindow = null;
     let hasOpenedReview = false;
     let cachedBusinessId = null; // Cache le business_id pour éviter les appels répétés
+
+    // Wait for db-proxy.js to load before using it
+    window.waitForDbProxy = window.waitForDbProxy || async function() {
+      if (window.dbProxy) {
+        return window.dbProxy;
+      }
+      let retries = 0;
+      while (!window.dbProxy && retries < 50) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        retries++;
+      }
+      if (!window.dbProxy) {
+        throw new Error('db-proxy.js failed to load after 5 seconds');
+      }
+      return window.dbProxy;
+    };
 
     // Récupérer l'ID depuis l'URL
     function getConfigId() {
@@ -268,7 +282,24 @@
       if (!configId) return null;
       
       try {
-        const { data } = await sb.from('accounts').select('business_id').eq('id', configId).limit(1).maybeSingle();
+        const dbProxy = await window.waitForDbProxy();
+        const { data, error } = await dbProxy.select('accounts', { id: configId }, { select: ['business_id'], limit: 1, single: true });
+        
+        if (error) {
+          console.error('Error fetching business_id:', error);
+          // Try without select to get all fields
+          try {
+            const { data: allData, error: allError } = await dbProxy.select('accounts', { id: configId }, { limit: 1, single: true });
+            if (!allError && allData) {
+              cachedBusinessId = allData.business_id || allData.place_id || null;
+              return cachedBusinessId;
+            }
+          } catch (fallbackError) {
+            console.error('Fallback query also failed:', fallbackError);
+          }
+          return null;
+        }
+        
         cachedBusinessId = data?.business_id || null;
         return cachedBusinessId;
       } catch (e) {
@@ -283,7 +314,8 @@
       if (!configId) return;
 
       try {
-        const { data } = await sb.from('accounts').select('wich_game, games_details, games').eq('id', configId).limit(1).maybeSingle();
+        const dbProxy = await window.waitForDbProxy();
+        const { data } = await dbProxy.select('accounts', { id: configId }, { select: ['wich_game', 'games_details', 'games'], limit: 1, single: true });
         
         if (!data || !data.games || !data.wich_game) {
           console.log('No game configured for this account');
@@ -438,76 +470,23 @@
       }
     });
 
-    function handleCredentialResponse(response) {
+    async function handleCredentialResponse(response) {
       const payload = JSON.parse(atob(response.credential.split('.')[1]));
 
-      // IMPORTANT: Essayer window.open() IMMÉDIATEMENT au début (synchronement) pour éviter le popup blocker
-      const businessId = cachedBusinessId;
+      // Récupérer le business_id depuis la base de données si pas encore en cache
+      let businessId = cachedBusinessId;
+      if (!businessId) {
+        businessId = await fetchBusinessId();
+      }
       
       if (businessId) {
         const googleReviewUrl = `https://www.google.com/maps/place/?q=place_id:${businessId}`;
-        console.log('Opening Google review window:', googleReviewUrl);
+        console.log('Redirecting to Google Maps:', googleReviewUrl);
         
-        // Essayer window.open() IMMÉDIATEMENT au début de la fonction (avant toute autre opération)
-        // Cela maximise les chances que le navigateur le considère comme une action utilisateur directe
-        reviewWindow = window.open(googleReviewUrl, '_blank', 'noopener,noreferrer');
-        
-        // Vérifier rapidement si la fenêtre a été ouverte
-        let windowOpened = false;
-        try {
-          // Vérifier si la fenêtre existe et n'est pas null
-          if (reviewWindow && reviewWindow !== null) {
-            // Essayer d'accéder à une propriété pour voir si la fenêtre est accessible
-            // (peut échouer si cross-origin, mais c'est OK)
-            try {
-              windowOpened = !reviewWindow.closed;
-            } catch (e) {
-              // Cross-origin, mais la fenêtre existe probablement
-              windowOpened = true;
-            }
-          }
-        } catch (e) {
-          windowOpened = false;
-        }
-        
-        if (!windowOpened) {
-          // Popup bloquée - afficher un bouton visible que l'utilisateur peut cliquer
-          console.log('Popup blocked, showing clickable button');
-          loginContainer.innerHTML = `
-            <h1 class="title">Redirection vers Google Maps</h1>
-            <p class="subtitle">Cliquez sur le bouton ci-dessous pour laisser votre avis sur Google Maps</p>
-            <a href="${googleReviewUrl}" target="_blank" rel="noopener noreferrer" 
-               style="display: inline-block; margin-top: 20px; padding: 12px 24px; background: #1a73e8; color: white; text-decoration: none; border-radius: 4px; font-weight: 500;">
-              Ouvrir Google Maps
-            </a>
-            <p class="subtitle" style="margin-top: 16px; color: #5f6368; font-size: 12px;">
-              Le jeu se chargera automatiquement quand vous reviendrez sur cette page.
-            </p>
-          `;
-          
-          hasOpenedReview = true;
-          sessionStorage.setItem('hasReturnedFromReview', 'false');
-        } else {
-          // Fenêtre ouverte avec succès
-          console.log('Window opened successfully');
-          hasOpenedReview = true;
-          sessionStorage.setItem('hasReturnedFromReview', 'false');
-          
-          // Vérifier périodiquement si la fenêtre est fermée
-          const checkInterval = setInterval(() => {
-            try {
-              if (reviewWindow && reviewWindow.closed) {
-                clearInterval(checkInterval);
-                sessionStorage.setItem('hasReturnedFromReview', 'true');
-                loadGame();
-              }
-            } catch (e) {
-              // Ignorer les erreurs cross-origin
-            }
-          }, 1000);
-        }
+        // Rediriger directement vers Google Maps dans la même fenêtre
+        window.location.href = googleReviewUrl;
       } else {
-        console.error('No business_id found, cannot open review window');
+        console.error('No business_id found, cannot redirect to Google Maps');
         // Pas de business_id, charger le jeu directement
         sessionStorage.setItem('hasReturnedFromReview', 'true');
         loadGame();
@@ -515,7 +494,7 @@
 
       // Send lead to webhook (en arrière-plan, non-bloquant)
       const configId = getConfigId();
-      const webhookUrl = 'https://n8n.goreview.fr/webhook-test/add_lead';
+      const webhookUrl = 'https://n8n.goreview.fr/webhook/add_lead';
       
       const leadPayload = {
         id: configId || null,

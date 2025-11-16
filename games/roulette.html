@@ -6,6 +6,7 @@
   <title>Configurer - Roue de la chance</title>
   <link rel="stylesheet" href="../styles.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../db-proxy.js"></script>
   <style>
     .page { min-height:100vh; display:flex; align-items:center; justify-content:center; background:#ffffff; }
     .card { width:100%; max-width:880px; background:#ffffff; border-radius:18px; box-shadow:0 10px 25px -5px rgba(0,0,0,0.08); padding:1.9rem; position:relative; overflow:hidden; border:1px solid #e5e7eb; }
@@ -96,9 +97,7 @@
       const params = new URLSearchParams(window.location.search);
       const id = params.get('id');
       if (!id) { window.location.replace('/dashboardlogin.html'); return; }
-      const SUPABASE_URL = 'https://vigutqmfosxbpncussie.supabase.co';
-      const SUPABASE_SERVICE_ROLE = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ3V0cW1mb3N4YnBuY3Vzc2llIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTU4NDc1MiwiZXhwIjoyMDc3MTYwNzUyfQ.WPhspJ5LQ7E6k9sUFJsaISU6eVcJnIPGYv0GPGQfd98';
-      const sb = supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
+      // Database proxy (webhook)
       const key = (k) => `goreview_gamecfg_${id}_roulette_${k}`;
       const get = (k,d=null)=> JSON.parse(localStorage.getItem(key(k)) ?? 'null') ?? d;
       const set = (k,v)=> localStorage.setItem(key(k), JSON.stringify(v));
@@ -274,7 +273,7 @@
         const paramsStr = new URLSearchParams({ id, game:'roulette', reward, wr: winRate, rewards: rewards.join('|') }).toString();
         const redir = `${location.origin}/company.html?${paramsStr}`;
         try {
-          await sb.from('accounts').update({ games: true, wich_game: 'roulette', redirection_url: redir, games_details: JSON.stringify({ rewards, winRate: Number(winRate), reward }) }).eq('id', id);
+          await window.dbProxy.update('accounts', { games: true, wich_game: 'roulette', redirection_url: redir, games_details: JSON.stringify({ rewards, winRate: Number(winRate), reward }) }, { id: id });
         } catch(_){ }
         alert('Configuration enregistrée.');
       });
