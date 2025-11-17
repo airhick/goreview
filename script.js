@@ -1104,6 +1104,7 @@ const setupCheckoutAddressAutocomplete = () => {
 
     let predictionTimer;
     let latestInputValue = '';
+    let suppressProgrammaticAddressInput = false;
 
     const hideSuggestions = () => {
         suggestionsContainer.hidden = true;
@@ -1125,6 +1126,7 @@ const setupCheckoutAddressAutocomplete = () => {
                 return;
             }
 
+            suppressProgrammaticAddressInput = true;
             const { street } = hydrateCheckoutAddressFields(place, { addressInput, postalInput, cityInput, countrySelect }) || {};
             if (street) {
                 addressInput.value = street;
@@ -1132,6 +1134,7 @@ const setupCheckoutAddressAutocomplete = () => {
                 addressInput.value = place.formatted_address;
             }
             addressInput.dataset.placeSelected = 'true';
+            suppressProgrammaticAddressInput = false;
         });
     };
 
@@ -1189,6 +1192,10 @@ const setupCheckoutAddressAutocomplete = () => {
     };
 
     addressInput.addEventListener('input', (event) => {
+        if (suppressProgrammaticAddressInput) {
+            suppressProgrammaticAddressInput = false;
+            return;
+        }
         addressInput.dataset.placeSelected = 'false';
         addressInput.removeAttribute('readonly');
         latestInputValue = event.target.value.trim();
