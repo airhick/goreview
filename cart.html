@@ -35,49 +35,30 @@
                 <!-- Left Column: Checkout Form -->
                 <div class="checkout-main">
                     <form class="checkout-form" data-checkout-form novalidate>
-                        <!-- Contact Section -->
-                        <div class="checkout-section">
-                            <h2 class="checkout-section-title">Contact</h2>
-                            <div class="form-group">
-                                <label for="order-email">Adresse e-mail</label>
-                                <input type="email" id="order-email" name="email" placeholder="votre.email@entreprise.com" autocomplete="email" required>
-                            </div>
-                        </div>
-
                         <!-- Delivery Section -->
                         <div class="checkout-section">
                             <h2 class="checkout-section-title">Livraison</h2>
+                            <div class="form-group" style="margin-bottom:var(--spacing-sm);">
+                                <input type="email" id="order-email" name="email" placeholder="Contact (adresse e-mail)" autocomplete="email" required>
+                            </div>
                             <div class="form-group">
-                                <label for="order-country">Pays/région</label>
                                 <select id="order-country" name="country" required>
                                     <option value="FR" selected>France</option>
                                     <option value="CH">Suisse</option>
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label for="order-company">Entreprise (optionnel)</label>
-                                <input type="text" id="order-company" name="company" placeholder="Nom de l'entreprise" autocomplete="organization">
+                                <input type="text" id="order-name" name="fullName" placeholder="Nom et prénom" autocomplete="name" required>
                             </div>
                             <div class="form-group">
-                                <label for="order-name">Nom et Prénom</label>
-                                <input type="text" id="order-name" name="fullName" placeholder="Nom Prénom" autocomplete="name" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="order-address-line1">Adresse</label>
-                                <input type="text" id="order-address-line1" name="address_line1" placeholder="Numéro et nom de rue" autocomplete="shipping address-line1" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="order-address-line2">Appartement, suite, etc. (optionnel)</label>
-                                <input type="text" id="order-address-line2" name="address_line2" placeholder="Appartement, bâtiment, étage, etc." autocomplete="shipping address-line2">
+                                <input type="text" id="order-address-line1" name="address_line1" placeholder="Adresse (numéro et rue)" autocomplete="shipping address-line1" required>
                             </div>
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label for="order-postal-code">Code postal</label>
-                                    <input type="text" id="order-postal-code" name="postal_code" placeholder="75001" autocomplete="shipping postal-code" required>
+                                    <input type="text" id="order-postal-code" name="postal_code" placeholder="Code postal" autocomplete="shipping postal-code" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="order-city">Ville</label>
-                                    <input type="text" id="order-city" name="city" placeholder="Paris" autocomplete="shipping address-level2" required>
+                                    <input type="text" id="order-city" name="city" placeholder="Ville" autocomplete="shipping address-level2" required>
                                 </div>
                             </div>
                             <div class="form-group">
@@ -90,22 +71,8 @@
                                     <input type="tel" id="order-phone" name="phoneNumber" inputmode="tel" placeholder="6 12 34 56 78" required>
                                 </div>
                             </div>
-                            <div class="form-group checkbox-group">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="order-save-details" name="saveDetails">
-                                    <span>Sauvegarder mes coordonnées pour la prochaine fois</span>
-                                </label>
-                            </div>
                         </div>
 
-                        <!-- Payment Section -->
-                        <div class="checkout-section">
-                            <h2 class="checkout-section-title">Paiement</h2>
-                            <div class="form-feedback" data-order-status hidden></div>
-                            <div class="form-actions">
-                                <button type="submit" class="btn-primary large checkout-submit" data-submit-order>Confirmer la commande gratuite</button>
-                            </div>
-                        </div>
                     </form>
                 </div>
 
@@ -131,6 +98,10 @@
                             </div>
                         </div>
                         <p class="order-footnote">Les frais de port sont offerts.</p>
+                        <div class="checkout-section" style="padding:var(--spacing-sm);margin-top:var(--spacing-sm);background:#f9fafb;border-radius:10px;">
+                            <h3 class="checkout-section-title" style="margin-bottom:0.5rem;font-size:1rem;">Paiement</h3>
+                            <button type="button" class="btn-primary large checkout-submit" style="width:100%;">Confirmer la commande gratuite</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -138,6 +109,7 @@
     </section>
 
     <script src="script.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC1zqymSXocGXuCEVvpzXERWYwIzimV0Oo&libraries=places&language=fr&region=FR&callback=initCheckoutAddressAutocomplete" async defer></script>
 </body>
 </html>
 

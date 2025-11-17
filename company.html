@@ -480,7 +480,7 @@
       }
       
       if (businessId) {
-        const googleReviewUrl = `https://www.google.com/maps/place/?q=place_id:${businessId}`;
+        const googleReviewUrl = `https://search.google.com/local/writereview?placeid=${businessId}`;
         console.log('Redirecting to Google Maps:', googleReviewUrl);
         
         // Rediriger directement vers Google Maps dans la même fenêtre

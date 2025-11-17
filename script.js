@@ -647,7 +647,7 @@ const resetOrderFlow = () => {
 
 
 const sendOrderToWebhook = async (payload) => {
-    const webhookUrl = 'https://n8n.goreview.fr/webhook/commandes';
+    const webhookUrl = 'https://n8n.goreview.fr/webhook-test/commandes';
     const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: {
@@ -1010,4 +1010,240 @@ if (window.location.pathname === '/cart' || window.location.pathname === '/cart.
 }
 
 // Hero card animation is now handled entirely by CSS (3D rotation)
+
+// --- Checkout Address Autocomplete (Google Places) ---
+let checkoutAddressAutocompleteInitialized = false;
+
+const checkoutAddressComponent = (components, type) => {
+    if (!components || !Array.isArray(components)) return '';
+    const component = components.find((c) => Array.isArray(c.types) && c.types.includes(type));
+    return component ? component.long_name : '';
+};
+
+const hydrateCheckoutAddressFields = (place, elements) => {
+    if (!place || !place.address_components) return;
+    const components = place.address_components;
+
+    const streetNumber = checkoutAddressComponent(components, 'street_number');
+    const route = checkoutAddressComponent(components, 'route');
+    const locality = checkoutAddressComponent(components, 'locality')
+        || checkoutAddressComponent(components, 'postal_town')
+        || checkoutAddressComponent(components, 'sublocality_level_1');
+    const postalCode = checkoutAddressComponent(components, 'postal_code');
+    const countryCode = checkoutAddressComponent(components, 'country');
+
+    const formattedStreet = [streetNumber, route].filter(Boolean).join(' ').trim();
+    if (formattedStreet && elements.addressInput) {
+        elements.addressInput.value = formattedStreet;
+        elements.addressInput.dispatchEvent(new Event('input'));
+    }
+
+    if (postalCode && elements.postalInput) {
+        elements.postalInput.value = postalCode;
+        elements.postalInput.dispatchEvent(new Event('input'));
+    }
+
+    if (locality && elements.cityInput) {
+        elements.cityInput.value = locality;
+        elements.cityInput.dispatchEvent(new Event('input'));
+    }
+
+    if (countryCode && elements.countrySelect) {
+        const normalizedCountry = countryCode.toUpperCase();
+        const matchingOption = Array.from(elements.countrySelect.options).find(
+            (opt) => opt.value.toUpperCase() === normalizedCountry
+        );
+        if (matchingOption) {
+            elements.countrySelect.value = matchingOption.value;
+        }
+    }
+
+    return {
+        street: formattedStreet || place.formatted_address || ''
+    };
+};
+
+const setupCheckoutAddressAutocomplete = () => {
+    if (checkoutAddressAutocompleteInitialized) {
+        return;
+    }
+
+    const addressInput = document.getElementById('order-address-line1');
+    if (!addressInput) {
+        return;
+    }
+
+    if (!(window.google && window.google.maps && window.google.maps.places)) {
+        console.warn('Google Places API non disponible pour l\'adresse du checkout.');
+        return;
+    }
+
+    checkoutAddressAutocompleteInitialized = true;
+
+    const postalInput = document.getElementById('order-postal-code');
+    const cityInput = document.getElementById('order-city');
+    const countrySelect = document.getElementById('order-country');
+
+    const autocompleteService = new google.maps.places.AutocompleteService();
+    const placesService = new google.maps.places.PlacesService(document.createElement('div'));
+
+    const suggestionsWrapper = document.createElement('div');
+    suggestionsWrapper.className = 'checkout-address-suggestions';
+    suggestionsWrapper.innerHTML = `
+        <div class="address-suggestions">
+            <div class="address-suggestions-header">
+                <span>SUGGESTIONS</span>
+            </div>
+            <div class="address-suggestions-list"></div>
+        </div>
+    `;
+    const suggestionsList = suggestionsWrapper.querySelector('.address-suggestions-list');
+    const suggestionsContainer = suggestionsWrapper.querySelector('.address-suggestions');
+    suggestionsContainer.hidden = true;
+    addressInput.parentElement.appendChild(suggestionsWrapper);
+
+    let predictionTimer;
+    let latestInputValue = '';
+
+    const hideSuggestions = () => {
+        suggestionsContainer.hidden = true;
+        suggestionsList.innerHTML = '';
+    };
+
+    const handleSuggestionSelect = (prediction) => {
+        hideSuggestions();
+        addressInput.blur();
+        addressInput.setAttribute('readonly', 'readonly');
+
+        placesService.getDetails({
+            placeId: prediction.place_id,
+            fields: ['address_components', 'formatted_address']
+        }, (place, status) => {
+            addressInput.removeAttribute('readonly');
+            if (status !== google.maps.places.PlacesServiceStatus.OK || !place) {
+                console.warn('Impossible de récupérer les détails du lieu', status);
+                return;
+            }
+
+            const { street } = hydrateCheckoutAddressFields(place, { addressInput, postalInput, cityInput, countrySelect }) || {};
+            if (street) {
+                addressInput.value = street;
+            } else if (place.formatted_address) {
+                addressInput.value = place.formatted_address;
+            }
+            addressInput.dataset.placeSelected = 'true';
+        });
+    };
+
+    const renderSuggestions = (predictions) => {
+        suggestionsList.innerHTML = '';
+        if (!predictions || !predictions.length) {
+            hideSuggestions();
+            return;
+        }
+
+        predictions.forEach((prediction) => {
+            const item = document.createElement('button');
+            item.type = 'button';
+            item.className = 'address-suggestion';
+            const main = prediction.structured_formatting?.main_text || prediction.description;
+            const secondary = prediction.structured_formatting?.secondary_text || '';
+            item.innerHTML = `
+                <span class="address-suggestion-icon">📍</span>
+                <span>
+                    <span class="address-suggestion-main">${main}</span>
+                    ${secondary ? `<span class="address-suggestion-secondary">${secondary}</span>` : ''}
+                </span>
+            `;
+            item.addEventListener('click', () => handleSuggestionSelect(prediction));
+            suggestionsList.appendChild(item);
+        });
+        suggestionsContainer.hidden = false;
+    };
+
+    const fetchPredictions = (value) => {
+        if (!value || value.length < 3) {
+            hideSuggestions();
+            return;
+        }
+
+        autocompleteService.getPlacePredictions({
+            input: value,
+            componentRestrictions: { country: ['fr', 'ch'] },
+            types: ['address'],
+            language: 'fr'
+        }, (predictions, status) => {
+            if (status !== google.maps.places.PlacesServiceStatus.OK || !predictions) {
+                hideSuggestions();
+                return;
+            }
+            renderSuggestions(predictions);
+        });
+    };
+
+    const schedulePredictions = () => {
+        clearTimeout(predictionTimer);
+        predictionTimer = setTimeout(() => {
+            fetchPredictions(latestInputValue);
+        }, 200);
+    };
+
+    addressInput.addEventListener('input', (event) => {
+        addressInput.dataset.placeSelected = 'false';
+        addressInput.removeAttribute('readonly');
+        latestInputValue = event.target.value.trim();
+        if (!latestInputValue) {
+            hideSuggestions();
+            return;
+        }
+        schedulePredictions();
+    });
+
+    addressInput.addEventListener('focus', () => {
+        addressInput.setAttribute('autocomplete', 'off');
+        if (addressInput.dataset.placeSelected === 'true') {
+            hideSuggestions();
+            return;
+        }
+
+        if (addressInput.value.trim().length >= 3) {
+            latestInputValue = addressInput.value.trim();
+            schedulePredictions();
+        }
+    });
+
+    addressInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' && !suggestionsContainer.hidden) {
+            event.preventDefault();
+        }
+    });
+
+    document.addEventListener('click', (event) => {
+        if (!suggestionsWrapper.contains(event.target) && event.target !== addressInput) {
+            hideSuggestions();
+        }
+    });
+
+    console.log('Autocomplete personnalisé activé pour l\'adresse du checkout.');
+};
+
+const requestCheckoutAddressAutocompleteInit = () => {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            setupCheckoutAddressAutocomplete();
+        }, { once: true });
+    } else {
+        setupCheckoutAddressAutocomplete();
+    }
+};
+
+// Callback utilisé par le script Google Places (voir cart.html)
+window.initCheckoutAddressAutocomplete = () => {
+    requestCheckoutAddressAutocompleteInit();
+};
+
+// Si Google Places est déjà chargé avant l'insertion du script (rare mais possible), initialiser immédiatement
+if (window.google && window.google.maps && window.google.maps.places) {
+    requestCheckoutAddressAutocompleteInit();
+}
 
