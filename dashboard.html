@@ -462,11 +462,154 @@
                 height: 40px;
             }
         }
+        /* Factory Reset Popup */
+        .reset-popup-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        .reset-popup-overlay.show {
+            display: flex;
+        }
+        .reset-popup {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            max-width: 480px;
+            width: 100%;
+            padding: 0;
+            overflow: hidden;
+        }
+        .reset-popup-header {
+            background: #fee2e2;
+            padding: 1.25rem;
+            border-bottom: 1px solid #fecaca;
+        }
+        .reset-popup-header h3 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #991b1b;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .reset-popup-body {
+            padding: 1.5rem;
+        }
+        .reset-popup-disclaimer {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .reset-popup-disclaimer h4 {
+            margin: 0 0 0.75rem 0;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #991b1b;
+        }
+        .reset-popup-disclaimer ul {
+            margin: 0;
+            padding-left: 1.25rem;
+            color: #7f1d1d;
+            font-size: 0.875rem;
+            line-height: 1.6;
+        }
+        .reset-popup-disclaimer li {
+            margin-bottom: 0.5rem;
+        }
+        .reset-popup-disclaimer li:last-child {
+            margin-bottom: 0;
+        }
+        .reset-popup-warning {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 0.75rem 1rem;
+            margin-bottom: 1.5rem;
+            border-radius: 4px;
+        }
+        .reset-popup-warning p {
+            margin: 0;
+            color: #92400e;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        .reset-popup-actions {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: flex-end;
+        }
+        .reset-popup-btn {
+            padding: 0.625rem 1.25rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+        .reset-popup-btn-cancel {
+            background: #f3f4f6;
+            color: #374151;
+        }
+        .reset-popup-btn-cancel:hover {
+            background: #e5e7eb;
+        }
+        .reset-popup-btn-continue {
+            background: #ef4444;
+            color: white;
+        }
+        .reset-popup-btn-continue:hover {
+            background: #dc2626;
+        }
+        .reset-popup-btn-continue:disabled {
+            background: #fca5a5;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
 <div class="centered-card" id="main">
     <!-- Populated by JS -->
+</div>
+
+<!-- Factory Reset Popup -->
+<div class="reset-popup-overlay" id="resetPopupOverlay">
+    <div class="reset-popup">
+        <div class="reset-popup-header">
+            <h3>⚠️ Réinitialisation de la plaque NFC</h3>
+        </div>
+        <div class="reset-popup-body">
+            <div class="reset-popup-disclaimer">
+                <h4>Cette action est irréversible et supprimera :</h4>
+                <ul>
+                    <li>Toutes les données de configuration</li>
+                    <li>Les informations de l'établissement</li>
+                    <li>L'identifiant Google Maps (Place ID)</li>
+                    <li>L'URL de redirection</li>
+                    <li>Les statistiques et avis récoltés</li>
+                    <li>Votre session de connexion</li>
+                </ul>
+            </div>
+            <div class="reset-popup-warning">
+                <p><strong>Attention :</strong> La plaque sera remise aux valeurs d'usine. Vous devrez reconfigurer tous les paramètres.</p>
+            </div>
+            <div class="reset-popup-actions">
+                <button class="reset-popup-btn reset-popup-btn-cancel" id="resetPopupCancel">Annuler</button>
+                <button class="reset-popup-btn reset-popup-btn-continue" id="resetPopupContinue">Continuer</button>
+            </div>
+        </div>
+    </div>
 </div>
 <script>
 (async function() {
@@ -1014,6 +1157,21 @@
                     return;
                 }
                 if (!data) return;
+                
+                // Check if account is factory reset (all essential fields are null/empty)
+                const isFactoryReset = !data.business_id && 
+                                      !data.company_name && 
+                                      !data.first_name && 
+                                      !data.last_name && 
+                                      !data.redirection_url;
+                
+                if (isFactoryReset) {
+                    console.log('⚠️ Account appears to be factory reset, redirecting to /create?id=' + accountId);
+                    // Redirect to create page to reconfigure
+                    window.location.replace(`/create.html?id=${encodeURIComponent(accountId)}`);
+                    return;
+                }
+                
                 updateStatusMenu(data);
                 // Business name in title
                 const name = data.business_name || data.company_name || data.company_nam || ('#' + accountId);
@@ -1062,20 +1220,37 @@
                 
                 // Setup reset button
                 const resetBtn = document.getElementById('resetBtn');
-                if (resetBtn) {
-                    resetBtn.addEventListener('click', async function() {
-                        if (!confirm('Êtes-vous sûr de vouloir réinitialiser la plaque NFC aux valeurs d\'usine ? Cette action est irréversible et supprimera toutes les données configurées.')) {
-                            return;
-                        }
-                        
-                        if (!confirm('Confirmez-vous la réinitialisation ? Toutes les données seront perdues.')) {
-                            return;
-                        }
-                        
+                const resetPopupOverlay = document.getElementById('resetPopupOverlay');
+                const resetPopupCancel = document.getElementById('resetPopupCancel');
+                const resetPopupContinue = document.getElementById('resetPopupContinue');
+                
+                // Function to show reset popup
+                function showResetPopup() {
+                    if (resetPopupOverlay) {
+                        resetPopupOverlay.classList.add('show');
+                    }
+                }
+                
+                // Function to hide reset popup
+                function hideResetPopup() {
+                    if (resetPopupOverlay) {
+                        resetPopupOverlay.classList.remove('show');
+                    }
+                }
+                
+                // Function to perform factory reset
+                async function performFactoryReset() {
+                    if (resetBtn) {
                         resetBtn.disabled = true;
                         resetBtn.textContent = 'Réinitialisation...';
-                        
-                        try {
+                    }
+                    
+                    if (resetPopupContinue) {
+                        resetPopupContinue.disabled = true;
+                        resetPopupContinue.textContent = 'Réinitialisation en cours...';
+                    }
+                    
+                    try {
                             const dbProxy = await window.waitForDbProxy();
                             
                             // Factory reset values
@@ -1108,16 +1283,118 @@
                                 throw new Error(error.message || 'Erreur lors de la réinitialisation');
                             }
                             
-                            alert('Plaque NFC réinitialisée avec succès ! La page va être rechargée.');
-                            window.location.reload();
+                            // Delete ALL cookies
+                            function deleteAllCookies() {
+                                const cookies = document.cookie.split(';');
+                                const hostname = window.location.hostname;
+                                const hostnameParts = hostname.split('.');
+                                
+                                for (let cookie of cookies) {
+                                    const eqPos = cookie.indexOf('=');
+                                    const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
+                                    
+                                    if (!name) continue;
+                                    
+                                    // Delete cookie for current path
+                                    document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
+                                    document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;SameSite=Lax';
+                                    document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;SameSite=None';
+                                    
+                                    // Delete cookie for current domain
+                                    document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=' + hostname;
+                                    
+                                    // Delete cookie for parent domain (if applicable, e.g., .goreview.fr)
+                                    if (hostnameParts.length > 1) {
+                                        const parentDomain = '.' + hostnameParts.slice(-2).join('.');
+                                        document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=' + parentDomain;
+                                    }
+                                    
+                                    // Also try without leading dot
+                                    if (hostnameParts.length > 1) {
+                                        const parentDomainNoDot = hostnameParts.slice(-2).join('.');
+                                        document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=' + parentDomainNoDot;
+                                    }
+                                }
+                                
+                                // Explicitly delete the session cookie
+                                document.cookie = 'goreview_session=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
+                                document.cookie = 'goreview_session=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;SameSite=Lax';
+                                if (hostnameParts.length > 1) {
+                                    const parentDomain = '.' + hostnameParts.slice(-2).join('.');
+                                    document.cookie = 'goreview_session=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=' + parentDomain;
+                                }
+                                
+                                console.log('✅ All cookies deleted (including session cookie)');
+                            }
+                            
+                            // Delete all cookies
+                            deleteAllCookies();
+                            
+                            // Hide popup and redirect
+                            hideResetPopup();
+                            
+                            // Small delay to show success state
+                            await new Promise(resolve => setTimeout(resolve, 500));
+                            
+                            // Redirect to create page instead of reloading dashboard
+                            window.location.replace(`/create.html?id=${encodeURIComponent(accountId)}`);
                         } catch (err) {
                             console.error('Reset failed:', err);
-                            alert('Erreur lors de la réinitialisation : ' + (err.message || err));
-                            resetBtn.disabled = false;
-                            resetBtn.textContent = '🔄 Réinitialiser';
+                            
+                            // Re-enable buttons
+                            if (resetBtn) {
+                                resetBtn.disabled = false;
+                                resetBtn.textContent = 'Réinitialiser la plaque';
+                            }
+                            if (resetPopupContinue) {
+                                resetPopupContinue.disabled = false;
+                                resetPopupContinue.textContent = 'Continuer';
+                            }
+                            
+                            // Show error in popup
+                            const warningEl = document.querySelector('.reset-popup-warning');
+                            if (warningEl) {
+                                warningEl.style.background = '#fee2e2';
+                                warningEl.style.borderLeftColor = '#ef4444';
+                                warningEl.innerHTML = `<p style="color:#991b1b;"><strong>Erreur :</strong> ${err.message || 'Une erreur est survenue lors de la réinitialisation.'}</p>`;
+                            }
+                        }
+                    }
+                
+                // Event listeners
+                if (resetBtn) {
+                    resetBtn.addEventListener('click', function() {
+                        showResetPopup();
+                    });
+                }
+                
+                if (resetPopupCancel) {
+                    resetPopupCancel.addEventListener('click', function() {
+                        hideResetPopup();
+                    });
+                }
+                
+                if (resetPopupContinue) {
+                    resetPopupContinue.addEventListener('click', function() {
+                        performFactoryReset();
+                    });
+                }
+                
+                // Close popup when clicking outside
+                if (resetPopupOverlay) {
+                    resetPopupOverlay.addEventListener('click', function(e) {
+                        if (e.target === resetPopupOverlay) {
+                            hideResetPopup();
                         }
                     });
                 }
+                
+                // Close popup with Escape key
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape' && resetPopupOverlay && resetPopupOverlay.classList.contains('show')) {
+                        hideResetPopup();
+                    }
+                });
             });
     } catch (e) {
         console.error('Supabase init failed', e);
