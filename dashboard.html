@@ -261,6 +261,24 @@
             border-bottom: 1px solid #f3f4f6;
             color: #4b5563;
         }
+        .contacts-preview-table td.contact-actions {
+            text-align: center;
+            width: 60px;
+        }
+        .delete-contact-btn {
+            background: none;
+            border: none;
+            color: #ef4444;
+            font-size: 0.95rem;
+            cursor: pointer;
+            padding: 0.25rem;
+            border-radius: 6px;
+            transition: background 0.2s, color 0.2s;
+        }
+        .delete-contact-btn:hover {
+            background: rgba(239, 68, 68, 0.1);
+            color: #b91c1c;
+        }
         .contacts-preview-table tbody tr:hover {
             background: #f9fafb;
         }
@@ -676,6 +694,36 @@
         });
     }
 
+    function updateReviewStatsFromContacts(count) {
+        const safeCount = Math.max(Number(count) || 0, 0);
+        const statsEl = document.getElementById('statsCount');
+        const countMini = document.getElementById('statCountMini');
+        const barFill = document.getElementById('statBarFill');
+        
+        if (statsEl) statsEl.textContent = safeCount.toString();
+        if (countMini) countMini.textContent = safeCount.toString();
+        if (barFill) {
+            const maxScale = 50;
+            const percentage = Math.min((safeCount / maxScale) * 100, 100);
+            barFill.style.width = percentage + '%';
+        }
+    }
+    let previewContacts = [];
+    const DEFAULT_CONTACT_EMAIL = 'goreview.fr@gmail.com';
+    function escapeHtml(value) {
+        if (typeof value !== 'string') return value || '';
+        return value
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+    function isDefaultPreviewContact(contact) {
+        if (!contact || !contact.email) return false;
+        return contact.email.toLowerCase() === DEFAULT_CONTACT_EMAIL;
+    }
+
     // Load contacts preview from contact_table column
     async function loadContactsPreview() {
         const tbody = document.getElementById('contactsPreviewBody');
@@ -689,7 +737,7 @@
             const { data: accountData, error: fetchError } = await dbProxy.select('accounts', { id: accountId }, { select: ['contact_table'], single: true });
 
             if (fetchError) {
-                tbody.innerHTML = `<tr><td colspan='4' class='contacts-preview-empty'>Erreur: ${fetchError.message}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan='5' class='contacts-preview-empty'>Erreur: ${fetchError.message}</td></tr>`;
                 return;
             }
 
@@ -776,49 +824,85 @@
                 return timeB - timeA;
             });
 
-            // Display up to 10 contacts
-            const displayContacts = contacts.slice(0, 10);
-
-            if (displayContacts.length === 0) {
-                tbody.innerHTML = `<tr><td colspan='4' class='contacts-preview-empty'>Aucun contact enregistré</td></tr>`;
-                return;
-            }
-
-            tbody.innerHTML = displayContacts.map(contact => {
-                // Handle both 'time' and 'timestamp' fields
-                const dateValue = contact.time || contact.timestamp;
-                let date = '-';
-                
-                if (dateValue) {
-                    try {
-                        const dateObj = new Date(dateValue);
-                        if (!isNaN(dateObj.getTime())) {
-                            date = dateObj.toLocaleDateString('fr-FR', {
-                                year: 'numeric',
-                                month: '2-digit',
-                                day: '2-digit',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                            });
-                        }
-                    } catch (e) {
-                        console.warn('Failed to parse date:', dateValue, e);
-                        date = '-';
-                    }
-                }
-                
-                return `
-                    <tr>
-                        <td>${contact.nom || '-'}</td>
-                        <td>${contact.prenom || '-'}</td>
-                        <td>${contact.email || '-'}</td>
-                        <td>${date}</td>
-                    </tr>
-                `;
-            }).join('');
+            previewContacts = contacts;
+            const effectiveContactCount = Math.max(previewContacts.length - 1, 0);
+            updateReviewStatsFromContacts(effectiveContactCount);
+            renderContactsPreviewTable();
         } catch (err) {
-            tbody.innerHTML = `<tr><td colspan='4' class='contacts-preview-empty'>Erreur de chargement</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan='5' class='contacts-preview-empty'>Erreur de chargement</td></tr>`;
             console.error('Failed to load contacts', err);
+        }
+    }
+
+    function renderContactsPreviewTable() {
+        const tbody = document.getElementById('contactsPreviewBody');
+        if (!tbody) return;
+        if (!previewContacts.length) {
+            tbody.innerHTML = `<tr><td colspan='5' class='contacts-preview-empty'>Aucun contact enregistré</td></tr>`;
+            return;
+        }
+        const displayContacts = previewContacts.map((contact, index) => ({ contact, index })).slice(0, 10);
+        tbody.innerHTML = displayContacts.map(({ contact, index }) => {
+            const nom = escapeHtml(contact.nom || '–');
+            const prenom = escapeHtml(contact.prenom || '–');
+            const email = escapeHtml(contact.email || '–');
+            const dateValue = contact.time || contact.timestamp;
+            let date = '-';
+            if (dateValue) {
+                try {
+                    const dateObj = new Date(dateValue);
+                    if (!isNaN(dateObj.getTime())) {
+                        date = dateObj.toLocaleDateString('fr-FR', {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+                    }
+                } catch (e) {
+                    console.warn('Failed to parse date:', dateValue, e);
+                    date = '-';
+                }
+            }
+            const isDefault = isDefaultPreviewContact(contact);
+            const actionButton = isDefault
+                ? `<button class="delete-contact-btn" title="Contact système" disabled>🔒</button>`
+                : `<button class="delete-contact-btn" data-index="${index}" title="Supprimer ce contact">🗑️</button>`;
+            return `
+                <tr>
+                    <td>${nom}</td>
+                    <td>${prenom}</td>
+                    <td><a href="mailto:${email}" style="color: #6366f1; text-decoration: none;">${email}</a></td>
+                    <td>${date}</td>
+                    <td class="contact-actions">
+                        ${actionButton}
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    async function handleDeletePreviewContact(index) {
+        if (index < 0 || index >= previewContacts.length) return;
+        const contact = previewContacts[index];
+        if (isDefaultPreviewContact(contact)) {
+            alert('Ce contact système ne peut pas être supprimé.');
+            return;
+        }
+        const label = `${contact?.prenom || ''} ${contact?.nom || ''}`.trim() || contact?.email || 'ce contact';
+        const confirmed = window.confirm(`Supprimer ${label} ? Cette action est définitive.`);
+        if (!confirmed) return;
+        try {
+            previewContacts.splice(index, 1);
+            const dbProxy = await window.waitForDbProxy();
+            await dbProxy.update('accounts', { contact_table: JSON.stringify(previewContacts) }, { id: accountId });
+            const effectiveContactCount = Math.max(previewContacts.length - 1, 0);
+            updateReviewStatsFromContacts(effectiveContactCount);
+            renderContactsPreviewTable();
+        } catch (error) {
+            console.error('Failed to delete contact', error);
+            alert('Impossible de supprimer ce contact. Veuillez réessayer.');
         }
     }
 
@@ -1109,11 +1193,12 @@
                                 <th>Prénom</th>
                                 <th>Email</th>
                                 <th>Date</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody id='contactsPreviewBody'>
                             <tr>
-                                <td colspan='4' class='contacts-preview-empty'>Chargement...</td>
+                                <td colspan='5' class='contacts-preview-empty'>Chargement...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -1124,6 +1209,16 @@
             </div>
         </div>
     `;
+    const contactsPreviewBodyEl = document.getElementById('contactsPreviewBody');
+    if (contactsPreviewBodyEl) {
+        contactsPreviewBodyEl.addEventListener('click', (event) => {
+            const btn = event.target.closest('.delete-contact-btn');
+            if (!btn) return;
+            const index = parseInt(btn.dataset.index, 10);
+            if (Number.isNaN(index)) return;
+            handleDeletePreviewContact(index);
+        });
+    }
 
     // Wait for db-proxy.js to load before using it
     // Make it available globally for all functions

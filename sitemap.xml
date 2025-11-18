@@ -51,6 +51,25 @@
         <changefreq>weekly</changefreq>
         <priority>0.8</priority>
     </url>
+
+    <url>
+        <loc>https://goreview.fr/politique-confidentialite.html</loc>
+        <lastmod>2025-11-17</lastmod>
+        <changefreq>yearly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://goreview.fr/conditions-generales.html</loc>
+        <lastmod>2025-11-17</lastmod>
+        <changefreq>yearly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://goreview.fr/politique-cookies.html</loc>
+        <lastmod>2025-11-17</lastmod>
+        <changefreq>yearly</changefreq>
+        <priority>0.5</priority>
+    </url>
     
 </urlset>
 

@@ -39,7 +39,8 @@
                         <div class="checkout-section">
                             <h2 class="checkout-section-title">Livraison</h2>
                             <div class="form-group" style="margin-bottom:var(--spacing-sm);">
-                                <input type="email" id="order-email" name="email" placeholder="Contact (adresse e-mail)" autocomplete="email" required>
+                                <input type="email" id="order-email" name="email" placeholder="Contact (adresse e-mail)" autocomplete="email" pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}" maxlength="254" required>
+                                <span class="field-error-message" id="email-error" hidden></span>
                             </div>
                             <div class="form-group">
                                 <select id="order-country" name="country" required>
@@ -48,17 +49,21 @@
                                 </select>
                             </div>
                             <div class="form-group">
-                                <input type="text" id="order-name" name="fullName" placeholder="Nom et prénom" autocomplete="name" required>
+                                <input type="text" id="order-name" name="fullName" placeholder="Nom et prénom" autocomplete="name" pattern="[a-zA-ZÀ-ÿ\s'-]{2,50}" minlength="2" maxlength="50" required>
+                                <span class="field-error-message" id="name-error" hidden></span>
                             </div>
                             <div class="form-group">
-                                <input type="text" id="order-address-line1" name="address_line1" placeholder="Adresse (numéro et rue)" autocomplete="shipping address-line1" required>
+                                <input type="text" id="order-address-line1" name="address_line1" placeholder="Adresse (numéro et rue)" autocomplete="shipping address-line1" pattern="[a-zA-Z0-9À-ÿ\s,.-]{5,100}" minlength="5" maxlength="100" required>
+                                <span class="field-error-message" id="address-error" hidden></span>
                             </div>
                             <div class="form-row">
                                 <div class="form-group">
-                                    <input type="text" id="order-postal-code" name="postal_code" placeholder="Code postal" autocomplete="shipping postal-code" required>
+                                    <input type="text" id="order-postal-code" name="postal_code" placeholder="Code postal" autocomplete="shipping postal-code" pattern="[0-9]{4,5}" minlength="4" maxlength="5" required>
+                                    <span class="field-error-message" id="postal-error" hidden></span>
                                 </div>
                                 <div class="form-group">
-                                    <input type="text" id="order-city" name="city" placeholder="Ville" autocomplete="shipping address-level2" required>
+                                    <input type="text" id="order-city" name="city" placeholder="Ville" autocomplete="shipping address-level2" pattern="[a-zA-ZÀ-ÿ\s'-]{2,50}" minlength="2" maxlength="50" required>
+                                    <span class="field-error-message" id="city-error" hidden></span>
                                 </div>
                             </div>
                             <div class="form-group">
@@ -68,8 +73,9 @@
                                         <option value="+33">+33</option>
                                         <option value="+41">+41</option>
                                     </select>
-                                    <input type="tel" id="order-phone" name="phoneNumber" inputmode="tel" placeholder="6 12 34 56 78" required>
+                                    <input type="tel" id="order-phone" name="phoneNumber" inputmode="tel" placeholder="6 12 34 56 78" pattern="[0-9\s.-]{9,14}" minlength="9" maxlength="14" required>
                                 </div>
+                                <span class="field-error-message" id="phone-error" hidden></span>
                             </div>
                         </div>
 
@@ -100,6 +106,7 @@
                         <p class="order-footnote">Les frais de port sont offerts.</p>
                         <div class="checkout-section" style="padding:var(--spacing-sm);margin-top:var(--spacing-sm);background:#f9fafb;border-radius:10px;">
                             <h3 class="checkout-section-title" style="margin-bottom:0.5rem;font-size:1rem;">Paiement</h3>
+                            <div class="form-feedback" data-order-status hidden></div>
                             <button type="button" class="btn-primary large checkout-submit" style="width:100%;">Confirmer la commande gratuite</button>
                         </div>
                     </div>

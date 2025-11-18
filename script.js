@@ -647,18 +647,30 @@ const resetOrderFlow = () => {
 
 
 const sendOrderToWebhook = async (payload) => {
-    const webhookUrl = 'https://n8n.goreview.fr/webhook-test/commandes';
-    const response = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-    });
+    const webhookUrl = 'https://n8n.goreview.fr/webhook/commandes';
+    console.log('🌐 Appel du webhook:', webhookUrl);
+    console.log('📦 Payload:', JSON.stringify(payload, null, 2));
+    
+    let response;
+    try {
+        response = await fetch(webhookUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
 
-    if (!response.ok) {
-        const errorText = await response.text().catch(() => null);
-        throw new Error(errorText || `Erreur ${response.status}`);
+        console.log('📡 Réponse HTTP:', response.status, response.statusText);
+
+        if (!response.ok) {
+            const errorText = await response.text().catch(() => null);
+            console.error('❌ Erreur HTTP:', response.status, errorText);
+            throw new Error(errorText || `Erreur ${response.status}`);
+        }
+    } catch (error) {
+        console.error('❌ Erreur réseau lors de l\'appel au webhook:', error);
+        throw error;
     }
 
     // Vérifier que la réponse correspond au format attendu
@@ -666,6 +678,7 @@ const sendOrderToWebhook = async (payload) => {
     try {
         responseData = await response.json();
     } catch (e) {
+        console.error('❌ Erreur lors du parsing JSON:', e);
         throw new Error('Réponse invalide du serveur : format JSON attendu');
     }
 
@@ -706,9 +719,11 @@ const sendOrderToWebhook = async (payload) => {
 if (checkoutForm) {
     checkoutForm.addEventListener('submit', async (event) => {
         event.preventDefault();
+        console.log('📋 Formulaire soumis - début du traitement');
 
         // Vérifier que le panier contient au moins un article
         if (!cartState.items.length) {
+            console.warn('⚠️ Panier vide');
             setOrderStatus('Ajoutez la plaque gratuite à votre panier avant de confirmer la commande.', 'error');
             return;
         }
@@ -745,16 +760,62 @@ if (checkoutForm) {
         }
 
         const formData = new FormData(checkoutForm);
-        const fullName = (formData.get('fullName') || '').toString().trim();
+        const country = formData.get('country') || 'FR';
         const phonePrefix = formData.get('phonePrefix');
-        const phoneNumber = (formData.get('phoneNumber') || '').toString().trim();
-        const email = (formData.get('email') || '').toString().trim();
-        const addressLine1 = (formData.get('address_line1') || '').toString().trim();
-        const addressLine2 = (formData.get('address_line2') || '').toString().trim();
-        const postalCode = (formData.get('postal_code') || '').toString().trim();
-        const city = (formData.get('city') || '').toString().trim();
-        const company = (formData.get('company') || '').toString().trim();
         
+        // Sanitize and validate all inputs
+        const fullName = sanitizeInput((formData.get('fullName') || '').toString());
+        const email = sanitizeInput((formData.get('email') || '').toString());
+        const phoneNumber = sanitizeInput((formData.get('phoneNumber') || '').toString());
+        const addressLine1 = sanitizeInput((formData.get('address_line1') || '').toString());
+        const addressLine2 = sanitizeInput((formData.get('address_line2') || '').toString());
+        const postalCode = sanitizeInput((formData.get('postal_code') || '').toString());
+        const city = sanitizeInput((formData.get('city') || '').toString());
+        const company = sanitizeInput((formData.get('company') || '').toString());
+        
+        // Validate all fields using validation functions
+        const nameValidation = validateName(fullName);
+        if (!nameValidation.valid) {
+            setOrderStatus(nameValidation.message, 'error');
+            showFieldError('order-name', nameValidation.message);
+            return;
+        }
+
+        const emailValidation = validateEmail(email);
+        if (!emailValidation.valid) {
+            setOrderStatus(emailValidation.message, 'error');
+            showFieldError('order-email', emailValidation.message);
+            return;
+        }
+
+        const phoneValidation = validatePhone(phoneNumber, phonePrefix);
+        if (!phoneValidation.valid) {
+            setOrderStatus(phoneValidation.message, 'error');
+            showFieldError('order-phone', phoneValidation.message);
+            return;
+        }
+
+        const addressValidation = validateAddress(addressLine1);
+        if (!addressValidation.valid) {
+            setOrderStatus(addressValidation.message, 'error');
+            showFieldError('order-address-line1', addressValidation.message);
+            return;
+        }
+
+        const postalValidation = validatePostalCode(postalCode, country);
+        if (!postalValidation.valid) {
+            setOrderStatus(postalValidation.message, 'error');
+            showFieldError('order-postal-code', postalValidation.message);
+            return;
+        }
+
+        const cityValidation = validateCity(city);
+        if (!cityValidation.valid) {
+            setOrderStatus(cityValidation.message, 'error');
+            showFieldError('order-city', cityValidation.message);
+            return;
+        }
+
         // Build full address string from individual fields
         const addressParts = [addressLine1];
         if (addressLine2) {
@@ -763,93 +824,16 @@ if (checkoutForm) {
         addressParts.push(postalCode, city);
         const address = addressParts.filter(part => part).join(', ');
 
-        // Validation du nom complet : doit contenir au moins 2 mots
-        if (!fullName) {
-            setOrderStatus('Veuillez indiquer votre nom complet.', 'error');
-            highlightFieldError('order-name');
-            return;
-        }
-
-        const nameWords = fullName.split(/\s+/).filter(word => word.length > 0);
-        if (nameWords.length < 2) {
-            setOrderStatus('Le nom complet doit contenir au moins 2 mots (ex: "Jean Dupont").', 'error');
-            highlightFieldError('order-name');
-            return;
-        }
-
-        // Validation de l'email : format strict
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!email || !emailRegex.test(email)) {
-            setOrderStatus('Veuillez entrer une adresse email valide (ex: nom@exemple.com).', 'error');
-            highlightFieldError('order-email');
-            return;
-        }
-
-        // Validation du numéro de téléphone selon le préfixe
-        if (!phoneNumber) {
-            setOrderStatus('Veuillez entrer votre numéro de téléphone.', 'error');
-            highlightFieldError('order-phone');
-            return;
-        }
-
-        // Nettoyer le numéro de téléphone (enlever espaces, tirets, points)
+        // Clean phone number for storage
         let cleanPhoneNumber = phoneNumber.replace(/[\s.\-()]/g, '');
-        
-        // Supprimer le 0 initial si présent (car le préfixe +33 ou +41 le remplace)
         if (cleanPhoneNumber.startsWith('0') && cleanPhoneNumber.length === 10) {
             cleanPhoneNumber = cleanPhoneNumber.substring(1);
-        }
-        
-        let phoneValid = false;
-        let phoneError = '';
-
-        if (phonePrefix === '+33') {
-            // Format français : 9 chiffres (sans le 0 initial)
-            // Exemples valides : 612345678, 0612345678 (le 0 sera supprimé), 123456789
-            if (/^\d{9}$/.test(cleanPhoneNumber)) {
-                phoneValid = true;
-            } else {
-                phoneError = 'Le numéro de téléphone français doit contenir 9 chiffres (ex: 6 12 34 56 78 ou 06 12 34 56 78).';
-            }
-        } else if (phonePrefix === '+41') {
-            // Format suisse : 9 chiffres (sans le 0 initial)
-            // Exemples valides : 791234567, 0791234567 (le 0 sera supprimé), 123456789
-            if (/^\d{9}$/.test(cleanPhoneNumber)) {
-                phoneValid = true;
-            } else {
-                phoneError = 'Le numéro de téléphone suisse doit contenir 9 chiffres (ex: 79 123 45 67 ou 079 123 45 67).';
-            }
-        }
-
-        if (!phoneValid) {
-            setOrderStatus(phoneError || 'Format de numéro de téléphone invalide.', 'error');
-            highlightFieldError('order-phone');
-            return;
-        }
-
-        // Validation des champs d'adresse
-        if (!addressLine1) {
-            setOrderStatus('Veuillez entrer votre adresse (numéro et nom de rue).', 'error');
-            highlightFieldError('order-address-line1');
-            return;
-        }
-
-        if (!postalCode) {
-            setOrderStatus('Veuillez entrer votre code postal.', 'error');
-            highlightFieldError('order-postal-code');
-            return;
-        }
-
-        if (!city) {
-            setOrderStatus('Veuillez entrer votre ville.', 'error');
-            highlightFieldError('order-city');
-            return;
         }
 
         // Réinitialiser les erreurs de champ
         clearFieldErrors();
 
-        const fullPhone = `${phonePrefix} ${phoneNumber}`.trim();
+        const fullPhone = `${phonePrefix} ${cleanPhoneNumber}`.trim();
 
         const payload = {
             cart: cartState.items.map((item) => ({
@@ -870,14 +854,14 @@ if (checkoutForm) {
                 email,
                 phone: fullPhone,
                 phonePrefix,
-                phoneNumber,
+                phoneNumber: cleanPhoneNumber,
                 address,
                 addressLine1,
                 addressLine2,
                 postalCode,
                 city,
                 company,
-                country: countrySelect ? countrySelect.value : 'FR'
+                country
             },
             metadata: {
                 source: 'landing-page',
@@ -886,9 +870,11 @@ if (checkoutForm) {
         };
 
         try {
+            console.log('📤 Envoi de la commande au webhook...', payload);
             setOrderStatus('Envoi de votre commande...', 'info');
             toggleFormLoading(true);
-            await sendOrderToWebhook(payload);
+            const result = await sendOrderToWebhook(payload);
+            console.log('✅ Réponse du webhook reçue:', result);
             // Show success state on the submit button and status
             setOrderStatus('Commande envoyée avec succès.', 'success');
             if (submitOrderButton) {
@@ -929,7 +915,145 @@ if (checkoutForm) {
     });
 }
 
-// Effacer les erreurs de champ quand l'utilisateur commence à taper
+// Security: Sanitize input to prevent XSS
+const sanitizeInput = (value) => {
+    if (typeof value !== 'string') return '';
+    // Remove potentially dangerous characters but keep valid form data
+    return value.trim().replace(/[<>]/g, '');
+};
+
+// Validation functions
+const validateEmail = (email) => {
+    if (!email) return { valid: false, message: 'L\'email est requis.' };
+    const sanitized = sanitizeInput(email);
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(sanitized)) {
+        return { valid: false, message: 'Format d\'email invalide (ex: nom@exemple.com).' };
+    }
+    if (sanitized.length > 254) {
+        return { valid: false, message: 'L\'email est trop long (maximum 254 caractères).' };
+    }
+    return { valid: true, message: '' };
+};
+
+const validatePhone = (phoneNumber, phonePrefix) => {
+    if (!phoneNumber) return { valid: false, message: 'Le numéro de téléphone est requis.' };
+    const sanitized = sanitizeInput(phoneNumber);
+    // Remove spaces, dots, dashes, parentheses
+    let cleanPhone = sanitized.replace(/[\s.\-()]/g, '');
+    // Remove leading 0 if present (for FR/CH format)
+    if (cleanPhone.startsWith('0') && cleanPhone.length === 10) {
+        cleanPhone = cleanPhone.substring(1);
+    }
+    // Must be exactly 9 digits
+    if (!/^\d{9}$/.test(cleanPhone)) {
+        const prefix = phonePrefix === '+33' ? 'français' : 'suisse';
+        return { valid: false, message: `Le numéro de téléphone ${prefix} doit contenir exactement 9 chiffres (ex: 6 12 34 56 78).` };
+    }
+    return { valid: true, message: '', cleaned: cleanPhone };
+};
+
+const validateName = (name) => {
+    if (!name) return { valid: false, message: 'Le nom est requis.' };
+    const sanitized = sanitizeInput(name);
+    if (sanitized.length < 2) {
+        return { valid: false, message: 'Le nom doit contenir au moins 2 caractères.' };
+    }
+    if (sanitized.length > 50) {
+        return { valid: false, message: 'Le nom est trop long (maximum 50 caractères).' };
+    }
+    const nameWords = sanitized.split(/\s+/).filter(word => word.length > 0);
+    if (nameWords.length < 2) {
+        return { valid: false, message: 'Le nom complet doit contenir au moins 2 mots (ex: "Jean Dupont").' };
+    }
+    return { valid: true, message: '' };
+};
+
+const validatePostalCode = (postalCode, country) => {
+    if (!postalCode) return { valid: false, message: 'Le code postal est requis.' };
+    const sanitized = sanitizeInput(postalCode).replace(/\s/g, '');
+    if (country === 'FR') {
+        if (!/^\d{5}$/.test(sanitized)) {
+            return { valid: false, message: 'Le code postal français doit contenir 5 chiffres (ex: 75001).' };
+        }
+    } else if (country === 'CH') {
+        if (!/^\d{4}$/.test(sanitized)) {
+            return { valid: false, message: 'Le code postal suisse doit contenir 4 chiffres (ex: 1200).' };
+        }
+    }
+    return { valid: true, message: '' };
+};
+
+const validateAddress = (address) => {
+    if (!address) return { valid: false, message: 'L\'adresse est requise.' };
+    const sanitized = sanitizeInput(address);
+    if (sanitized.length < 5) {
+        return { valid: false, message: 'L\'adresse doit contenir au moins 5 caractères.' };
+    }
+    if (sanitized.length > 100) {
+        return { valid: false, message: 'L\'adresse est trop longue (maximum 100 caractères).' };
+    }
+    return { valid: true, message: '' };
+};
+
+const validateCity = (city) => {
+    if (!city) return { valid: false, message: 'La ville est requise.' };
+    const sanitized = sanitizeInput(city);
+    if (sanitized.length < 2) {
+        return { valid: false, message: 'La ville doit contenir au moins 2 caractères.' };
+    }
+    if (sanitized.length > 50) {
+        return { valid: false, message: 'La ville est trop longue (maximum 50 caractères).' };
+    }
+    return { valid: true, message: '' };
+};
+
+// Show/hide field error message
+const showFieldError = (fieldId, message) => {
+    const field = document.getElementById(fieldId);
+    // Map field IDs to error element IDs
+    const errorIdMap = {
+        'order-email': 'email-error',
+        'order-name': 'name-error',
+        'order-phone': 'phone-error',
+        'order-address-line1': 'address-error',
+        'order-postal-code': 'postal-error',
+        'order-city': 'city-error'
+    };
+    const errorId = errorIdMap[fieldId] || fieldId.replace('order-', '') + '-error';
+    const errorEl = document.getElementById(errorId);
+    if (field) {
+        field.classList.add('field-error');
+    }
+    if (errorEl) {
+        errorEl.textContent = message;
+        errorEl.hidden = false;
+    }
+};
+
+const hideFieldError = (fieldId) => {
+    const field = document.getElementById(fieldId);
+    // Map field IDs to error element IDs
+    const errorIdMap = {
+        'order-email': 'email-error',
+        'order-name': 'name-error',
+        'order-phone': 'phone-error',
+        'order-address-line1': 'address-error',
+        'order-postal-code': 'postal-error',
+        'order-city': 'city-error'
+    };
+    const errorId = errorIdMap[fieldId] || fieldId.replace('order-', '') + '-error';
+    const errorEl = document.getElementById(errorId);
+    if (field) {
+        field.classList.remove('field-error');
+    }
+    if (errorEl) {
+        errorEl.hidden = true;
+        errorEl.textContent = '';
+    }
+};
+
+// Real-time validation on input
 if (checkoutForm) {
     const nameInput = document.getElementById('order-name');
     const emailInput = document.getElementById('order-email');
@@ -938,59 +1062,101 @@ if (checkoutForm) {
     const addressLine1Input = document.getElementById('order-address-line1');
     const postalCodeInput = document.getElementById('order-postal-code');
     const cityInput = document.getElementById('order-city');
+    const countrySelect = document.getElementById('order-country');
 
-    if (nameInput) {
-        nameInput.addEventListener('input', () => {
-            if (nameInput.classList.contains('field-error')) {
-                nameInput.classList.remove('field-error');
-            }
-        });
-    }
-
+    // Email validation
     if (emailInput) {
         emailInput.addEventListener('input', () => {
-            if (emailInput.classList.contains('field-error')) {
-                emailInput.classList.remove('field-error');
+            const result = validateEmail(emailInput.value);
+            if (result.valid) {
+                hideFieldError('order-email');
+            } else {
+                showFieldError('order-email', result.message);
+            }
+        });
+        emailInput.addEventListener('blur', () => {
+            const result = validateEmail(emailInput.value);
+            if (!result.valid && emailInput.value) {
+                showFieldError('order-email', result.message);
             }
         });
     }
 
+    // Phone validation
+    const validatePhoneField = () => {
+        if (phoneInput && phonePrefixSelect) {
+            const result = validatePhone(phoneInput.value, phonePrefixSelect.value);
+            if (result.valid) {
+                hideFieldError('order-phone');
+            } else {
+                showFieldError('order-phone', result.message);
+            }
+        }
+    };
     if (phoneInput) {
-        phoneInput.addEventListener('input', () => {
-            if (phoneInput.classList.contains('field-error')) {
-                phoneInput.classList.remove('field-error');
-            }
-        });
+        phoneInput.addEventListener('input', validatePhoneField);
+        phoneInput.addEventListener('blur', validatePhoneField);
     }
-
     if (phonePrefixSelect) {
-        phonePrefixSelect.addEventListener('change', () => {
-            if (phoneInput && phoneInput.classList.contains('field-error')) {
-                phoneInput.classList.remove('field-error');
+        phonePrefixSelect.addEventListener('change', validatePhoneField);
+    }
+
+    // Name validation
+    if (nameInput) {
+        nameInput.addEventListener('input', () => {
+            const result = validateName(nameInput.value);
+            if (result.valid) {
+                hideFieldError('order-name');
+            } else {
+                showFieldError('order-name', result.message);
+            }
+        });
+        nameInput.addEventListener('blur', () => {
+            const result = validateName(nameInput.value);
+            if (!result.valid && nameInput.value) {
+                showFieldError('order-name', result.message);
             }
         });
     }
 
+    // Address validation
     if (addressLine1Input) {
         addressLine1Input.addEventListener('input', () => {
-            if (addressLine1Input.classList.contains('field-error')) {
-                addressLine1Input.classList.remove('field-error');
+            const result = validateAddress(addressLine1Input.value);
+            if (result.valid) {
+                hideFieldError('order-address-line1');
+            } else {
+                showFieldError('order-address-line1', result.message);
             }
         });
     }
 
+    // Postal code validation
+    const validatePostalField = () => {
+        if (postalCodeInput && countrySelect) {
+            const result = validatePostalCode(postalCodeInput.value, countrySelect.value);
+            if (result.valid) {
+                hideFieldError('order-postal-code');
+            } else {
+                showFieldError('order-postal-code', result.message);
+            }
+        }
+    };
     if (postalCodeInput) {
-        postalCodeInput.addEventListener('input', () => {
-            if (postalCodeInput.classList.contains('field-error')) {
-                postalCodeInput.classList.remove('field-error');
-            }
-        });
+        postalCodeInput.addEventListener('input', validatePostalField);
+    }
+    if (countrySelect) {
+        countrySelect.addEventListener('change', validatePostalField);
     }
 
+    // City validation
     if (cityInput) {
         cityInput.addEventListener('input', () => {
-            if (cityInput.classList.contains('field-error')) {
-                cityInput.classList.remove('field-error');
+            const result = validateCity(cityInput.value);
+            if (result.valid) {
+                hideFieldError('order-city');
+            } else {
+                showFieldError('order-city', result.message);
             }
         });
     }
@@ -1252,5 +1418,87 @@ window.initCheckoutAddressAutocomplete = () => {
 // Si Google Places est déjà chargé avant l'insertion du script (rare mais possible), initialiser immédiatement
 if (window.google && window.google.maps && window.google.maps.places) {
     requestCheckoutAddressAutocompleteInit();
+}
+
+// Handle checkout submit button click (button is outside the form)
+function setupCheckoutSubmitButton() {
+    const checkoutSubmitButton = document.querySelector('.checkout-submit');
+    const form = document.querySelector('[data-checkout-form]');
+    
+    if (!checkoutSubmitButton) {
+        console.warn('⚠️ Bouton checkout-submit non trouvé');
+        return;
+    }
+    
+    if (!form) {
+        console.warn('⚠️ Formulaire checkout non trouvé');
+        return;
+    }
+    
+    // Remove existing listeners by cloning the button
+    const newButton = checkoutSubmitButton.cloneNode(true);
+    checkoutSubmitButton.parentNode.replaceChild(newButton, checkoutSubmitButton);
+    
+    // Add click handler
+    newButton.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        
+        console.log('🔵 Bouton "Confirmer la commande" cliqué');
+        
+        // Check if form exists and is valid
+        const currentForm = document.querySelector('[data-checkout-form]');
+        if (!currentForm) {
+            console.error('❌ Formulaire non trouvé lors du clic');
+            setOrderStatus('Erreur: formulaire non trouvé. Veuillez recharger la page.', 'error');
+            return;
+        }
+        
+        // Trigger form submission
+        try {
+            const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
+            const submitted = currentForm.dispatchEvent(submitEvent);
+            if (!submitted) {
+                console.warn('⚠️ Soumission du formulaire annulée');
+            } else {
+                console.log('✅ Événement submit déclenché');
+            }
+        } catch (error) {
+            console.error('❌ Erreur lors de la soumission:', error);
+            setOrderStatus('Erreur lors de la soumission. Veuillez réessayer.', 'error');
+        }
+    });
+    
+    console.log('✅ Handler du bouton checkout configuré');
+}
+
+// Setup on DOM ready and also retry after a delay for dynamic content
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        setupCheckoutSubmitButton();
+        // Retry after a short delay in case checkout card is shown dynamically
+        setTimeout(setupCheckoutSubmitButton, 500);
+        setTimeout(setupCheckoutSubmitButton, 1000);
+    });
+} else {
+    setupCheckoutSubmitButton();
+    // Retry after a short delay in case checkout card is shown dynamically
+    setTimeout(setupCheckoutSubmitButton, 500);
+    setTimeout(setupCheckoutSubmitButton, 1000);
+}
+
+// Watch for checkout card visibility changes
+if (checkoutCard) {
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'hidden') {
+                if (!checkoutCard.hidden) {
+                    console.log('👁️ Checkout card visible, setup du bouton...');
+                    setTimeout(setupCheckoutSubmitButton, 100);
+                }
+            }
+        });
+    });
+    observer.observe(checkoutCard, { attributes: true, attributeFilter: ['hidden'] });
 }
 

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
+  <defs>
+    <pattern id="tile" width="200" height="200" patternUnits="userSpaceOnUse">
+      <rect width="200" height="200" fill="#fefbf4" />
+      <g font-family="Helvetica, Arial, sans-serif" font-weight="700" fill="#006edc" fill-opacity="0.5" font-size="30" transform="rotate(-32 100 100)">
+        <text x="-30" y="40">3M</text>
+        <text x="-30" y="74">9448A</text>
+        <text x="-30" y="108">Double</text>
+        <text x="-30" y="142">Coated</text>
+        <text x="-30" y="176">Tissue</text>
+        <text x="-30" y="210">Tape</text>
+      </g>
+      <g font-family="Helvetica, Arial, sans-serif" font-weight="700" fill="#006edc" fill-opacity="0.5" font-size="30" transform="rotate(-32 100 100)">
+        <text x="90" y="140">3M</text>
+        <text x="90" y="174">9448A</text>
+        <text x="90" y="208">Double</text>
+        <text x="90" y="242">Coated</text>
+        <text x="90" y="276">Tissue</text>
+        <text x="90" y="310">Tape</text>
+      </g>
+    </pattern>
+  </defs>
+  <rect width="400" height="400" fill="#fefbf4" />
+  <rect width="400" height="400" fill="url(#tile)" />
+</svg>

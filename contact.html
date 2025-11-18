@@ -30,57 +30,14 @@
     <section class="section-padding" style="padding-top: calc(var(--spacing-xl) + 80px);">
         <div class="container">
             <div class="section-header">
-                <span class="section-label">Contact</span>
-                <h1>Contactez-nous</h1>
+                <h1 class="section-title-large">Contactez-nous</h1>
                 <p class="section-description">Une question sur nos plaques NFC ? Un besoin spécifique ? Notre équipe vous répond dans les plus brefs délais.</p>
             </div>
             
             <div style="max-width: 700px; margin: 0 auto;">
-                <!-- Contact Info Cards -->
-                <div class="contact-info-grid">
-                    <div class="contact-info-card">
-                        <div class="contact-info-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-                                <polyline points="22,6 12,13 2,6"></polyline>
-                            </svg>
-                        </div>
-                        <h3>Email</h3>
-                        <p><a href="mailto:goreview.fr@gmail.com">goreview.fr@gmail.com</a></p>
-                    </div>
-
-                    <div class="contact-info-card">
-                        <div class="contact-info-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                                <circle cx="12" cy="10" r="3"></circle>
-                            </svg>
-                        </div>
-                        <h3>Service</h3>
-                        <p>France & Suisse</p>
-                    </div>
-
-                    <div class="contact-info-card">
-                        <div class="contact-info-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <polyline points="12 6 12 12 16 14"></polyline>
-                            </svg>
-                        </div>
-                        <h3>Réponse</h3>
-                        <p>Sous 24-48h</p>
-                    </div>
-                </div>
-
                 <!-- Contact Form -->
                 <div class="checkout-card">
-                    <h3>Envoyez-nous un message</h3>
                     <form class="checkout-form" id="contact-form" novalidate>
-                        <div class="form-group">
-                            <label for="contact-name">Nom complet <span class="required">*</span></label>
-                            <input type="text" id="contact-name" name="fullName" placeholder="Jean Dupont" autocomplete="name" required>
-                        </div>
-
                         <div class="form-group">
                             <label for="contact-email">Adresse e-mail <span class="required">*</span></label>
                             <input type="email" id="contact-email" name="email" placeholder="votre.email@exemple.com" autocomplete="email" required>
@@ -99,11 +56,6 @@
                         <p class="form-hint"><span class="required">*</span> Champs obligatoires</p>
                     </form>
 
-                    <!-- Success Message (hidden by default) -->
-                    <div class="order-confirmation" id="contact-confirmation" hidden>
-                        <h4>Message envoyé 🎉</h4>
-                        <p>Merci ! Votre message a bien été envoyé. Nous vous répondrons très rapidement.</p>
-                    </div>
                 </div>
             </div>
         </div>
@@ -121,13 +73,13 @@
                 </div>
                 <div class="footer-column">
                     <h4>Informations</h4>
-                    <a href="https://goreview.fr/pages/politique-de-confidentialite" target="_blank" rel="noopener noreferrer">Politique de confidentialité</a>
-                    <a href="/mentions-legales.html">Mentions Légales</a>
-                    <a href="https://goreview.fr" target="_blank" rel="noopener noreferrer">Site principal</a>
+                    <a href="/politique-confidentialite.html">Politique de confidentialité</a>
+                    <a href="/conditions-generales.html">Conditions générales</a>
+                    <a href="/politique-cookies.html">Politique de cookies</a>
                 </div>
                 <div class="footer-column">
                     <h4>Contact</h4>
-                    <a href="mailto:goreview.fr@gmail.com">Email: goreview.fr@gmail.com</a>
+                    <a href="mailto:goreview.fr@gmail.com">Email : goreview.fr@gmail.com</a>
                     <a href="/contact.html">Formulaire de contact</a>
                 </div>
             </div>
@@ -140,7 +92,6 @@
     <script>
         const contactForm = document.getElementById('contact-form');
         const contactStatus = document.getElementById('contact-status');
-        const contactConfirmation = document.getElementById('contact-confirmation');
         const submitButton = document.getElementById('submit-contact');
 
         const setContactStatus = (message, type = 'info') => {
@@ -231,16 +182,8 @@
                 }
 
                 const formData = new FormData(contactForm);
-                const fullName = (formData.get('fullName') || '').toString().trim();
                 const email = (formData.get('email') || '').toString().trim();
                 const message = (formData.get('message') || '').toString().trim();
-
-                // Validate full name
-                if (!fullName) {
-                    setContactStatus('Veuillez indiquer votre nom complet.', 'error');
-                    highlightFieldError('contact-name');
-                    return;
-                }
 
                 // Validate email
                 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -258,7 +201,6 @@
                 }
 
                 const payload = {
-                    fullName,
                     email,
                     message,
                     timestamp: new Date().toISOString(),
@@ -270,12 +212,9 @@
                     toggleFormLoading(true);
                     await sendContactToWebhook(payload);
                     
-                    // Hide form and show success message
-                    setContactStatus('', 'info');
-                    contactForm.hidden = true;
-                    if (contactConfirmation) {
-                        contactConfirmation.hidden = false;
-                    }
+                    // Show success state
+                    setContactStatus('Message envoyé avec succès.', 'success');
+                    contactForm.reset();
                 } catch (error) {
                     console.error('Erreur lors de l\'envoi du message', error);
                     setContactStatus('Impossible d\'envoyer le message. Merci de réessayer ou de nous contacter directement par email.', 'error');

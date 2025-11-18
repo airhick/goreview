@@ -139,8 +139,35 @@
             border-bottom: 1px solid #f3f4f6;
             color: #4b5563;
         }
+        .contacts-table td.contact-actions {
+            text-align: center;
+            width: 70px;
+        }
         .contacts-table tbody tr:hover {
             background: #f9fafb;
+        }
+        .delete-contact-btn {
+            background: none;
+            border: none;
+            color: #ef4444;
+            font-size: 1rem;
+            cursor: pointer;
+            padding: 0.25rem;
+            border-radius: 6px;
+            transition: background 0.2s, color 0.2s;
+        }
+        .delete-contact-btn:hover {
+            background: rgba(239, 68, 68, 0.1);
+            color: #b91c1c;
+        }
+        .delete-contact-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            color: #9ca3af;
+        }
+        .delete-contact-btn:disabled:hover {
+            background: transparent;
+            color: #9ca3af;
         }
         .contacts-empty {
             padding: 3rem;
@@ -275,6 +302,21 @@
         }
     }
     
+    function escapeHtml(value) {
+        if (typeof value !== 'string') return value || '';
+        return value
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+    const DEFAULT_CONTACT_EMAIL = 'goreview.fr@gmail.com';
+    function isDefaultContact(contact) {
+        if (!contact || !contact.email) return false;
+        return contact.email.toLowerCase() === DEFAULT_CONTACT_EMAIL;
+    }
+    
     // Download contacts as CSV
     function downloadCSV() {
         if (allContacts.length === 0) {
@@ -344,17 +386,101 @@
                             <th>Prénom</th>
                             <th>Email</th>
                             <th>Date</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id='contactsTableBody'>
                         <tr>
-                            <td colspan='4' class='contacts-loading'>Chargement des contacts...</td>
+                            <td colspan='5' class='contacts-loading'>Chargement des contacts...</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
         </div>
     `;
+
+    const contactsTableBodyEl = document.getElementById('contactsTableBody');
+    if (contactsTableBodyEl) {
+        contactsTableBodyEl.addEventListener('click', (event) => {
+            const button = event.target.closest('.delete-contact-btn');
+            if (!button) return;
+            const index = parseInt(button.dataset.index, 10);
+            if (Number.isNaN(index)) return;
+            handleDeleteContact(index);
+        });
+    }
+
+    function updateContactsStats() {
+        const statsEl = document.getElementById('contactsStats');
+        if (!statsEl) return;
+        const total = allContacts.length;
+        statsEl.innerHTML = `
+            <div class='stat-badge'>Total: <strong>${total}</strong> contact${total > 1 ? 's' : ''}</div>
+            ${total > 0 ? '<button id="downloadCsvBtn" class="download-csv-btn">📥 Télécharger CSV</button>' : ''}
+        `;
+        if (total > 0) {
+            const downloadBtn = document.getElementById('downloadCsvBtn');
+            if (downloadBtn) {
+                downloadBtn.addEventListener('click', downloadCSV);
+            }
+        }
+    }
+
+    function renderContactsTable() {
+        const tbody = document.getElementById('contactsTableBody');
+        if (!tbody) return;
+        if (!allContacts.length) {
+            tbody.innerHTML = `<tr><td colspan='5' class='contacts-empty'>Aucun contact enregistré</td></tr>`;
+            return;
+        }
+        tbody.innerHTML = allContacts.map((contact, index) => {
+            const nom = escapeHtml(contact.nom || '–');
+            const prenom = escapeHtml(contact.prenom || '–');
+            const email = escapeHtml(contact.email || '–');
+            const time = contact.time || contact.timestamp || null;
+            const dateFormatted = formatDate(time);
+            const isDefault = isDefaultContact(contact);
+            const actionButton = isDefault
+                ? `<button class="delete-contact-btn" title="Contact système" disabled>🔒</button>`
+                : `<button class="delete-contact-btn" data-index="${index}" title="Supprimer ce contact">🗑️</button>`;
+            return `
+                <tr>
+                    <td>${nom}</td>
+                    <td>${prenom}</td>
+                    <td><a href="mailto:${email}" style="color: #6366f1; text-decoration: none;">${email}</a></td>
+                    <td>${dateFormatted}</td>
+                    <td class="contact-actions">
+                        ${actionButton}
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    async function handleDeleteContact(index) {
+        if (index < 0 || index >= allContacts.length) {
+            return;
+        }
+        const contact = allContacts[index];
+        if (isDefaultContact(contact)) {
+            alert('Ce contact système ne peut pas être supprimé.');
+            return;
+        }
+        const contactLabel = `${contact.prenom || ''} ${contact.nom || ''}`.trim() || contact.email || 'ce contact';
+        const confirmed = window.confirm(`Supprimer ${contactLabel} ? Cette action est définitive.`);
+        if (!confirmed) return;
+
+        try {
+            allContacts.splice(index, 1);
+            const dbProxy = await window.waitForDbProxy();
+            await dbProxy.update('accounts', { contact_table: JSON.stringify(allContacts) }, { id: accountId });
+            updateContactsStats();
+            renderContactsTable();
+        } catch (error) {
+            console.error('Failed to delete contact', error);
+            alert('Impossible de supprimer ce contact. Veuillez réessayer.');
+        }
+    }
 
     // Load contacts from database
     async function loadContacts() {
@@ -408,49 +534,10 @@
             // Store contacts globally for CSV export
             allContacts = contacts;
 
-            // Update stats and enable download button
-            const downloadBtn = document.getElementById('downloadCsvBtn');
-            if (statsEl) {
-                statsEl.innerHTML = `
-                    <div class='stat-badge'>Total: <strong>${contacts.length}</strong> contact${contacts.length > 1 ? 's' : ''}</div>
-                    ${contacts.length > 0 ? '<button id="downloadCsvBtn" class="download-csv-btn">📥 Télécharger CSV</button>' : ''}
-                `;
-            }
-            
-            // Re-attach download button event listener
-            if (contacts.length > 0) {
-                setTimeout(() => {
-                    const newDownloadBtn = document.getElementById('downloadCsvBtn');
-                    if (newDownloadBtn) {
-                        newDownloadBtn.addEventListener('click', downloadCSV);
-                    }
-                }, 100);
-            }
-
-            // Display contacts
-            if (contacts.length === 0) {
-                tbody.innerHTML = `<tr><td colspan='4' class='contacts-empty'>Aucun contact enregistré</td></tr>`;
-                return;
-            }
-
-            tbody.innerHTML = contacts.map(contact => {
-                const nom = contact.nom || '–';
-                const prenom = contact.prenom || '–';
-                const email = contact.email || '–';
-                const time = contact.time || contact.timestamp || null;
-                const dateFormatted = formatDate(time);
-
-                return `
-                    <tr>
-                        <td>${nom}</td>
-                        <td>${prenom}</td>
-                        <td><a href="mailto:${email}" style="color: #6366f1; text-decoration: none;">${email}</a></td>
-                        <td>${dateFormatted}</td>
-                    </tr>
-                `;
-            }).join('');
+            updateContactsStats();
+            renderContactsTable();
         } catch (err) {
-            tbody.innerHTML = `<tr><td colspan='4' class='contacts-empty'>Erreur de chargement</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan='5' class='contacts-empty'>Erreur de chargement</td></tr>`;
             console.error('Failed to load contacts', err);
             if (statsEl) statsEl.innerHTML = `<div class='stat-badge'>Erreur de chargement</div>`;
         }
