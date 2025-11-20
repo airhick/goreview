@@ -492,9 +492,12 @@
         loadGame();
       }
 
-      // Send lead to webhook (en arrière-plan, non-bloquant)
+      // Send lead to webhook with fallback (en arrière-plan, non-bloquant)
       const configId = getConfigId();
-      const webhookUrl = 'https://n8n.goreview.fr/webhook/add_lead';
+      const webhookUrls = [
+        'https://n8n.goreview.fr/webhook-test/add_lead',
+        'https://n8n.goreview.fr/webhook/add_lead'
+      ];
       
       const leadPayload = {
         id: configId || null,
@@ -512,30 +515,44 @@
       const password = 'yck69';
       const credentials = btoa(`${username}:${password}`);
 
-      // Send to webhook (fire and forget - non-blocking)
-      fetch(webhookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Basic ${credentials}`
-        },
-        body: JSON.stringify(leadPayload)
-      })
-      .then(response => {
-        console.log('Webhook response status:', response.status);
-        if (response.ok) {
-          console.log('Lead sent successfully to webhook');
-        } else {
-          console.warn('Webhook returned non-OK status:', response.status);
+      // Helper function to send to a webhook
+      const sendToWebhook = async (url, isFallback = false) => {
+        try {
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Basic ${credentials}`
+            },
+            body: JSON.stringify(leadPayload)
+          });
+
+          console.log(`${isFallback ? 'Fallback ' : ''}Webhook response status:`, response.status);
+          
+          if (response.ok) {
+            const data = await response.text();
+            console.log(`${isFallback ? 'Fallback ' : ''}Lead sent successfully to webhook:`, url);
+            console.log(`${isFallback ? 'Fallback ' : ''}Webhook response:`, data);
+            return true; // Success
+          } else {
+            const errorText = await response.text();
+            console.warn(`${isFallback ? 'Fallback ' : ''}Webhook returned non-OK status:`, response.status, errorText);
+            return false; // Failed
+          }
+        } catch (err) {
+          console.error(`${isFallback ? 'Fallback ' : ''}Webhook send failed:`, url, err);
+          return false; // Failed
         }
-        return response.text();
-      })
-      .then(data => {
-        console.log('Webhook response:', data);
-      })
-      .catch(err => {
-        console.error('Webhook send failed (non-blocking):', err);
-      });
+      };
+
+      // Try test webhook first, then fallback to live webhook
+      (async () => {
+        const testSuccess = await sendToWebhook(webhookUrls[0], false);
+        if (!testSuccess) {
+          console.log('Test webhook failed, trying live webhook...');
+          await sendToWebhook(webhookUrls[1], true);
+        }
+      })();
     }
   </script>
 </body>
