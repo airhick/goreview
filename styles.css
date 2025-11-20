@@ -835,8 +835,14 @@ body {
     flex-wrap: wrap;
 }
 
-#viewCartButton {
-    margin-left: auto;
+.btn-primary.btn-to-cart {
+    background: #111827;
+    border-color: #111827;
+}
+
+.btn-primary.btn-to-cart:hover {
+    background: #0f172a;
+    border-color: #0f172a;
 }
 
 .product-note {

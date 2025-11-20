@@ -38,7 +38,7 @@ document.querySelectorAll('.concept-card, .feature-card, .benefit-item, .challen
 // Button click handlers
 document.querySelectorAll('.btn-primary, .btn-secondary').forEach(button => {
     // Ignorer le bouton "Ajouter au panier" qui a son propre handler
-    if (button.id === 'addPlaqueToCart' || button.id === 'viewCartButton') {
+    if (button.id === 'addPlaqueToCart') {
         return;
     }
     
@@ -184,6 +184,25 @@ const productCatalog = {
     }
 };
 
+const setAddButtonToAddState = () => {
+    const button = document.getElementById('addPlaqueToCart');
+    if (!button) return;
+    button.dataset.viewCart = 'false';
+    button.classList.remove('btn-to-cart');
+    button.classList.remove('btn-added');
+    button.disabled = false;
+    button.textContent = 'Ajouter au panier';
+};
+
+const setAddButtonToViewCart = () => {
+    const button = document.getElementById('addPlaqueToCart');
+    if (!button) return;
+    button.dataset.viewCart = 'true';
+    button.classList.add('btn-to-cart');
+    button.disabled = false;
+    button.textContent = 'Voir le panier';
+};
+
 const cartCountEl = document.querySelector('[data-cart-count]');
 const cartItemsContainer = document.querySelector('[data-cart-items]');
 const cartEmptyState = document.querySelector('[data-cart-empty]');
@@ -323,6 +342,12 @@ const renderCart = () => {
         const totalQuantity = cartState.items.reduce((sum, item) => sum + item.quantity, 0);
         submitOrderButton.disabled = totalQuantity === 0;
     }
+
+    if (cartState.items.length > 0) {
+        setAddButtonToViewCart();
+    } else {
+        setAddButtonToAddState();
+    }
 };
 
 const addItemToCart = (productId) => {
@@ -424,9 +449,14 @@ function handleAddToCartClick(event) {
         return;
     }
     
-    // Vérifier si le bouton est déjà en état "Ajouté" ou désactivé
-    if (button.disabled || button.textContent.trim() === 'Ajouté') {
-        console.log('⚠️ Bouton déjà ajouté ou désactivé');
+    // Si déjà en mode "Voir le panier", rediriger directement
+    if (button.dataset.viewCart === 'true') {
+        window.location.href = '/cart.html';
+        return;
+    }
+    
+    if (button.disabled) {
+        console.log('⚠️ Bouton déjà désactivé');
         return;
     }
     
@@ -443,16 +473,7 @@ function handleAddToCartClick(event) {
     try {
         addItemToCart(productId);
         
-        // Changer le bouton en "Ajouté"
-        button.textContent = 'Ajouté';
-        button.classList.add('btn-added');
-        button.disabled = true;
-        
-        // Afficher le bouton "Voir le panier"
-        const viewCartButton = document.getElementById('viewCartButton');
-        if (viewCartButton) {
-            viewCartButton.style.display = 'inline-block';
-        }
+        setAddButtonToViewCart();
         
         // Animation de l'icône du panier
         animateCartIcon();
@@ -488,31 +509,16 @@ function initAddToCartButton() {
         const productId = button.getAttribute('data-product-id');
         const isInCart = cartState.items.some(item => item.id === productId);
         
+        // Supprimer les anciens listeners en clonant le bouton
+        const newButton = button.cloneNode(true);
+        button.parentNode.replaceChild(newButton, button);
         if (isInCart) {
-            // Si déjà dans le panier, afficher "Ajouté"
-            button.textContent = 'Ajouté';
-            button.classList.add('btn-added');
-            button.disabled = true;
-            
-            // Afficher le bouton "Voir le panier"
-            const viewCartButton = document.getElementById('viewCartButton');
-            if (viewCartButton) {
-                viewCartButton.style.display = 'inline-block';
-            }
+            setAddButtonToViewCart();
         } else {
-            // S'assurer que le bouton n'est pas désactivé
-            button.disabled = false;
-            button.style.opacity = '1';
-            button.style.cursor = 'pointer';
-            
-            // Supprimer les anciens listeners en clonant le bouton
-            const newButton = button.cloneNode(true);
-            button.parentNode.replaceChild(newButton, button);
-            
-            // Attacher le nouveau listener
-            newButton.addEventListener('click', handleAddToCartClick);
-            console.log('✅ Listener attaché au bouton addPlaqueToCart');
+            setAddButtonToAddState();
         }
+        newButton.addEventListener('click', handleAddToCartClick);
+        console.log('✅ Listener attaché au bouton addPlaqueToCart');
     } else {
         console.log('⚠️ Bouton addPlaqueToCart non trouvé lors de l\'initialisation');
     }
@@ -521,13 +527,13 @@ function initAddToCartButton() {
 // Délégation d'événements globale en backup (capture phase pour intercepter tôt)
 document.addEventListener('click', function(event) {
     const button = event.target.closest('#addPlaqueToCart');
-    if (button && !button.disabled && button.textContent.trim() !== 'Ajouté') {
-        // Vérifier si l'événement n'a pas déjà été traité
-        if (!event.defaultPrevented && !button.hasAttribute('data-processing')) {
-            button.setAttribute('data-processing', 'true');
-            handleAddToCartClick(event);
-            setTimeout(() => button.removeAttribute('data-processing'), 100);
-        }
+    if (!button || button.disabled) {
+        return;
+    }
+    if (!event.defaultPrevented && !button.hasAttribute('data-processing')) {
+        button.setAttribute('data-processing', 'true');
+        handleAddToCartClick(event);
+        setTimeout(() => button.removeAttribute('data-processing'), 100);
     }
 }, true);
 
