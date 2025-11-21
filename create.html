@@ -498,6 +498,7 @@
         let companyInput;
         let autocompleteResults;
         let selectedPlaceId = null; // Store the selected place_id
+        let selectedPlaceAddress = null; // Store the selected place address
 
         // Initialize Google Places Autocomplete and Places Service
         function initAutocomplete() {
@@ -524,8 +525,9 @@
             companyInput.addEventListener('input', function(e) {
                 const query = e.target.value.trim();
 
-                // Reset place_id when user types manually (forces re-selection)
+                // Reset place_id and address when user types manually (forces re-selection)
                 selectedPlaceId = null;
+                selectedPlaceAddress = null;
                 companyInput.classList.remove('valid-place-selected');
                 companyInput.classList.add('invalid-place');
 
@@ -592,26 +594,29 @@
             }
         }
 
-        // Get place details including place_id
+        // Get place details including place_id and address
         function getPlaceDetails(placeId) {
             if (!placesService || !placeId) {
                 selectedPlaceId = null;
+                selectedPlaceAddress = null;
                 return;
             }
 
             placesService.getDetails(
                 {
                     placeId: placeId,
-                    fields: ['place_id', 'name', 'formatted_address']
+                    fields: ['place_id', 'name', 'formatted_address', 'address_components', 'geometry']
                 },
                 (place, status) => {
                     if (status === google.maps.places.PlacesServiceStatus.OK && place) {
                         selectedPlaceId = place.place_id || placeId;
-                        console.log('Place selected:', place.name, 'Place ID:', selectedPlaceId);
+                        selectedPlaceAddress = place.formatted_address || null;
+                        console.log('Place selected:', place.name, 'Place ID:', selectedPlaceId, 'Address:', selectedPlaceAddress);
                     } else {
-                        // Fallback: use the prediction place_id directly
+                        // Fallback: use the prediction place_id directly, but no address
                         selectedPlaceId = placeId;
-                        console.log('Using prediction place_id:', selectedPlaceId);
+                        selectedPlaceAddress = null;
+                        console.log('Using prediction place_id:', selectedPlaceId, '(no address available)');
                     }
                 }
             );
@@ -681,7 +686,7 @@
 
             try {
                 // Send data to webhook
-                const webhookUrl = 'https://n8n.goreview.fr/webhook/create';
+                const webhookUrl = 'https://n8n.goreview.fr/webhook-test/create';
                 
                 const payload = {
                     firstName: formData.firstName,
@@ -689,6 +694,7 @@
                     email: formData.email,
                     companyName: formData.companyName,
                     placeId: selectedPlaceId || null, // Include place_id from Google Places
+                    companyAddress: selectedPlaceAddress || null, // Include company address from Google Places
                     id: id || null,
                     timestamp: new Date().toISOString()
                 };
