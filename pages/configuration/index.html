@@ -76,10 +76,10 @@
     </style>
     <script>
         (async function() {
-            // This page now redirects to /pages/bienvenue before configuration
-            // The welcome page will then redirect to /create for actual setup
+            // Send POST request to webhook to get redirection URL
+            // Wait for response and redirect user to the returned URL
             
-            console.log('🚀 Configuration page - redirecting to welcome page');
+            console.log('🚀 Configuration page - sending webhook request');
             console.log('📍 Current URL:', window.location.href);
             
             const params = new URLSearchParams(window.location.search);
@@ -92,25 +92,139 @@
                 document.body.innerHTML = `
                     <div class="loading-container">
                         <div class="spinner"></div>
-                        <h1 class="loading-title">Redirection en cours...</h1>
-                        <p class="loading-subtitle">Vous allez être redirigé vers la page de bienvenue.</p>
+                        <h1 class="loading-title">Configuration en cours...</h1>
+                        <p class="loading-subtitle">Veuillez patienter pendant la configuration de votre plaque NFC.</p>
                     </div>
                 `;
             }
             
-            // Build welcome page URL with ID
-            let welcomeUrl = '/pages/bienvenue';
+            // Send POST request to webhook to get redirection URL
             if (id) {
-                welcomeUrl += '?id=' + encodeURIComponent(id);
+                try {
+                    console.log('📤 Sending POST request to webhook...');
+                    
+                    const webhookUrl = 'https://n8n.goreview.fr/webhook/configuration';
+                    const payload = {
+                        id: id,
+                        timestamp: new Date().toISOString(),
+                        source: 'nfc-plate-configuration',
+                        url: window.location.href,
+                        hostname: window.location.hostname
+                    };
+                    
+                    console.log('📦 Payload:', JSON.stringify(payload, null, 2));
+                    
+                    const response = await fetch(webhookUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json, text/plain, */*'
+                        },
+                        body: JSON.stringify(payload),
+                        mode: 'cors',
+                        cache: 'no-cache',
+                        credentials: 'omit'
+                    });
+                    
+                    console.log('📥 Webhook response status:', response.status);
+                    console.log('📥 Webhook response ok:', response.ok);
+                    
+                    if (!response.ok) {
+                        let errorText = 'Unknown error';
+                        try {
+                            errorText = await response.text();
+                            console.error('❌ Webhook error response text:', errorText);
+                        } catch (e) {
+                            console.error('❌ Could not read error response:', e);
+                        }
+                        throw new Error(`Webhook returned status ${response.status}: ${errorText}`);
+                    }
+                    
+                    // Get response - could be JSON with redirect URL or plain text URL
+                    let redirectUrl;
+                    const contentType = response.headers.get('content-type') || '';
+                    console.log('📥 Content-Type:', contentType);
+                    
+                    if (contentType.includes('application/json')) {
+                        try {
+                            const data = await response.json();
+                            console.log('📥 JSON response:', data);
+                            // Check for common response formats
+                            redirectUrl = data.url || data.redirect || data.redirectUrl || data.location || data.link || data.redirect_url;
+                        } catch (e) {
+                            console.error('❌ Failed to parse JSON:', e);
+                            throw new Error('Failed to parse JSON response: ' + e.message);
+                        }
+                    } else {
+                        // Try to parse as text URL
+                        try {
+                            const text = await response.text();
+                            console.log('📥 Text response:', text);
+                            redirectUrl = text.trim();
+                        } catch (e) {
+                            console.error('❌ Failed to read text response:', e);
+                            throw new Error('Failed to read text response: ' + e.message);
+                        }
+                    }
+                    
+                    console.log('🔗 Extracted redirect URL:', redirectUrl);
+                    
+                    if (!redirectUrl) {
+                        throw new Error('No redirect URL found in webhook response');
+                    }
+                    
+                    // Validate URL format
+                    try {
+                        new URL(redirectUrl);
+                        console.log('✅ Valid absolute URL');
+                    } catch (e) {
+                        // If not a full URL, assume it's a relative path
+                        if (!redirectUrl.startsWith('/') && !redirectUrl.startsWith('http')) {
+                            redirectUrl = '/' + redirectUrl;
+                        }
+                        console.log('✅ Using relative URL:', redirectUrl);
+                    }
+                    
+                    console.log('🔄 Redirecting to:', redirectUrl);
+                    
+                    // Small delay to ensure logs are visible
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                    
+                    // Redirect to the URL returned by webhook
+                    window.location.replace(redirectUrl);
+                    
+                } catch (error) {
+                    console.error('❌ Configuration error:', error);
+                    console.error('❌ Error stack:', error.stack);
+                    
+                    if (document.body) {
+                        document.body.innerHTML = `
+                            <div class="loading-container">
+                                <div class="error-icon">❌</div>
+                                <h1 class="error-title">Erreur de configuration</h1>
+                                <p class="error-text">Une erreur s'est produite lors de la configuration de votre plaque NFC.</p>
+                                <p class="error-message">${error.message || 'Erreur inconnue'}</p>
+                                <p class="error-text" style="font-size:12px;">Vérifiez la console du navigateur (F12) pour plus de détails.</p>
+                                <a href="/" class="back-button">Retour à l'accueil</a>
+                            </div>
+                        `;
+                    } else {
+                        console.error('Cannot display error: document.body is null');
+                    }
+                }
+            } else {
+                // No ID provided, show error
+                if (document.body) {
+                    document.body.innerHTML = `
+                        <div class="loading-container">
+                            <div class="error-icon">❌</div>
+                            <h1 class="error-title">ID manquant</h1>
+                            <p class="error-text">Aucun identifiant n'a été fourni dans l'URL.</p>
+                            <a href="/" class="back-button">Retour à l'accueil</a>
+                        </div>
+                    `;
+                }
             }
-            
-            console.log('🔗 Redirecting to welcome page:', welcomeUrl);
-            
-            // Small delay to show the message
-            await new Promise(resolve => setTimeout(resolve, 500));
-            
-            // Redirect to welcome page
-            window.location.replace(welcomeUrl);
         })();
     </script>
 </head>
