@@ -18,8 +18,14 @@ A modern, clean landing page for GoReview (goreview.fr) inspired by the Aurora d
 ```
 ├── index.html          # Main landing page
 ├── dashboard.html      # Dashboard with authentication
+├── pages/
+│   ├── bienvenue/      # Welcome page before configuration
+│   │   └── index.html
+│   └── configuration/  # Configuration page (webhook)
+│       └── index.html
 ├── styles.css          # All styling and responsive design
 ├── script.js           # Interactive functionality
+├── server.py           # Local development server with redirects
 ├── netlify.toml        # Netlify configuration
 ├── _redirects          # Netlify redirects (backup)
 ├── .gitignore          # Git ignore rules
@@ -27,14 +33,32 @@ A modern, clean landing page for GoReview (goreview.fr) inspired by the Aurora d
 └── README.md           # This file
 ```
 
-## Sections
+## Pages principales
 
+### Landing Page (index.html)
 1. **Hero Section**: Eye-catching introduction with call-to-action buttons
 2. **Concept Section**: Explains the core concept of GoReview
 3. **Pros & Cons Section**: Detailed advantages and considerations
 4. **Features Section**: Showcases key platform features
 5. **CTA Section**: Encourages users to take action
 6. **Footer**: Navigation and links
+
+### Page de bienvenue (/pages/bienvenue)
+Page intermédiaire qui explique le processus de configuration avant d'accéder à la configuration réelle :
+- Explication des 4 étapes de configuration
+- Design accueillant avec animations
+- Préserve l'ID de la plaque dans l'URL
+- Redirige vers `/pages/configuration` après validation
+
+**Flux utilisateur :**
+```
+Scan NFC → /pages/bienvenue?id=X → Explication → /pages/configuration?id=X → Configuration
+```
+
+### Page de configuration (/pages/configuration)
+Gère la configuration automatique de la plaque via webhook n8n.
+
+**Documentation :** Voir `BIENVENUE-PAGE.md` et `IMPLEMENTATION-BIENVENUE.md` pour plus de détails.
 
 ## Customization
 
@@ -71,6 +95,8 @@ python3 server.py
 Cela démarre un serveur sur `http://localhost:8000` qui gère :
 - `/config` et `/config/?id=X` → `config.html`
 - `/dashboard` → `dashboard.html`
+- `/pages/bienvenue?id=X` → Page de bienvenue (nouvelle)
+- `/pages/configuration?id=X` → Page de configuration
 
 #### Option 2: Serveur Python standard
 

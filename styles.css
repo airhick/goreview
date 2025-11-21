@@ -780,6 +780,7 @@ body {
     font-size: 1.75rem;
     font-weight: 700;
     margin-top: var(--spacing-xs);
+    margin-bottom: 1rem;
 }
 
 .product-description {
@@ -791,35 +792,42 @@ body {
     list-style: none;
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
-    color: var(--text-secondary);
+    gap: 1.25rem;
+    color: var(--text-primary);
     padding: 0;
-    margin: var(--spacing-md) 0;
+    margin: 0 0 var(--spacing-md) 0;
 }
 
 .product-features li {
     display: flex;
-    gap: 0.75rem;
+    gap: 1rem;
     align-items: flex-start;
     line-height: 1.6;
 }
 
 .feature-icon {
-    width: 10px;
-    height: 10px;
+    width: 24px;
+    height: 24px;
     flex-shrink: 0;
-    margin-top: 0.35rem;
+    margin-top: 0.15rem;
     color: var(--primary-color);
 }
 
 .product-features .feature-icon {
-    width: 8px;
-    height: 8px;
-    margin-top: 0.4rem;
+    width: 24px;
+    height: 24px;
+    margin-top: 0.15rem;
 }
 
 .product-features li span {
     flex: 1;
+    color: #111827;
+    font-size: 1rem;
+}
+
+.product-features li span strong {
+    color: #111827;
+    font-weight: 600;
 }
 
 .product-price {
@@ -830,9 +838,9 @@ body {
 .product-cta {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: var(--spacing-sm);
-    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 1rem;
+    flex-wrap: nowrap;
 }
 
 .btn-primary.btn-to-cart {
@@ -1723,8 +1731,9 @@ body {
     }
 
     .product-cta {
-        flex-direction: column;
-        align-items: stretch;
+        flex-direction: row;
+        align-items: center;
+        gap: 0.75rem;
     }
 
     .cart-grid {
@@ -2401,6 +2410,20 @@ img, svg, video, canvas {
 /* Schema section */
 .schema-section {
     background: var(--bg-secondary);
+    width: 100%;
+    max-width: none;
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 0;
+    padding-right: 0;
+    box-sizing: border-box;
+}
+
+.schema-section .container {
+    max-width: none;
+    width: 100%;
+    padding: 0 var(--spacing-md);
+    margin: 0 auto;
 }
 
 .schema-section h2 {

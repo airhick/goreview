@@ -64,6 +64,18 @@ class RedirectHandler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             return
         
+        # Handle /pages/bienvenue - serve the welcome page directly
+        # This page explains the configuration steps before redirecting to configuration
+        if path in ['/pages/bienvenue', '/pages/bienvenue/']:
+            # Serve the index.html file directly with query parameters preserved
+            welcome_path = '/pages/bienvenue/index.html'
+            if query:
+                welcome_path += '?' + query
+            # Use 200 status to serve the file (not redirect)
+            # The SimpleHTTPRequestHandler will serve the file automatically
+            self.path = welcome_path
+            return super().do_GET()
+        
         # Handle /pages/configuration - serve the configuration page directly
         # The page will handle the webhook call and redirect based on webhook response
         if path in ['/pages/configuration', '/pages/configuration/']:
@@ -639,6 +651,8 @@ if __name__ == "__main__":
             print(f"⚙️  Config: http://localhost:{PORT}/config/?id=100")
             print(f"📝 Create: http://localhost:{PORT}/create/?id=100")
             print(f"🏢 Company: http://localhost:{PORT}/company?id=2")
+            print(f"👋 Bienvenue: http://localhost:{PORT}/pages/bienvenue?id=test123")
+            print(f"🔧 Configuration: http://localhost:{PORT}/pages/configuration?id=test123")
             print("\nAppuyez sur Ctrl+C pour arrêter le serveur\n")
             
             try:

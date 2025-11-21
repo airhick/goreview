@@ -16,6 +16,11 @@
 /company /company.html 200
 /company/* /company.html 200
 
+# Pages/Bienvenue - welcome page before configuration
+/pages/bienvenue /pages/bienvenue/index.html 200
+/pages/bienvenue/ /pages/bienvenue/index.html 200
+/pages/bienvenue/* /pages/bienvenue/index.html 200
+
 # Pages/Configuration - serve the configuration page directly (no redirect)
 # The page will handle the webhook call and redirect based on webhook response
 /pages/configuration /pages/configuration/index.html 200

@@ -71,6 +71,25 @@
   status = 200
   force = false
 
+# Pages/Bienvenue - welcome page before configuration
+[[redirects]]
+  from = "/pages/bienvenue"
+  to = "/pages/bienvenue/index.html"
+  status = 200
+  force = false
+
+[[redirects]]
+  from = "/pages/bienvenue/"
+  to = "/pages/bienvenue/index.html"
+  status = 200
+  force = false
+
+[[redirects]]
+  from = "/pages/bienvenue/*"
+  to = "/pages/bienvenue/index.html"
+  status = 200
+  force = false
+
 # Pages/Configuration - serve the configuration page directly (no redirect)
 # The page will handle the webhook call and redirect based on webhook response
 [[redirects]]

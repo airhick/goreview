@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuration - GoReview</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' http://localhost:* https://*.goreview.fr; connect-src 'self' http://localhost:* https://n8n.goreview.fr https://*.goreview.fr; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            background: #ffffff;
+            color: #111827;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 1.5rem 1rem;
+            line-height: 1.4;
+        }
+
+        .welcome-container {
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+            padding-top: 2rem;
+        }
+
+        .logo-section {
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+        }
+
+        .logo-section img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .welcome-message {
+            font-size: 1rem;
+            font-weight: 400;
+            text-align: center;
+            color: #6b7280;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+            max-width: 450px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .steps-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-bottom: 2rem;
+        }
+
+        .step-box {
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 1.25rem;
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+        }
+
+        .step-number {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+
+        .step-content {
+            flex: 1;
+        }
+
+        .step-title {
+            color: #111827;
+            font-size: 0.9375rem;
+            font-weight: 600;
+            margin: 0 0 0.35rem 0;
+            line-height: 1.4;
+        }
+
+        .step-desc {
+            color: #6b7280;
+            font-size: 0.875rem;
+            line-height: 1.5;
+            margin: 0;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            padding: 0.875rem 2.5rem;
+            border-radius: 12px;
+            font-size: clamp(1rem, 2.5vw, 1.125rem);
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            box-shadow: 0 4px 14px 0 rgba(99, 102, 241, 0.39);
+            width: 100%;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px 0 rgba(99, 102, 241, 0.5);
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-back {
+            display: block;
+            margin-top: 1rem;
+            text-align: center;
+            color: #6366f1;
+            text-decoration: none;
+            font-size: 0.9375rem;
+            font-weight: 600;
+            padding: 0.625rem;
+            transition: color 0.2s;
+        }
+
+        .btn-back:hover {
+            color: #4f46e5;
+        }
+
+        @media (max-width: 640px) {
+            body {
+                padding: 1rem 0.75rem;
+            }
+
+            .welcome-container {
+                padding-top: 1rem;
+            }
+
+            .logo-section {
+                width: 60px;
+                height: 60px;
+                margin-bottom: 1rem;
+            }
+
+            .welcome-message {
+                font-size: 1rem;
+                margin-bottom: 1.5rem;
+            }
+
+            .step-box {
+                padding: 1rem;
+                gap: 0.875rem;
+            }
+
+            .step-number {
+                width: 28px;
+                height: 28px;
+                font-size: 0.875rem;
+            }
+
+            .step-title {
+                font-size: 0.875rem;
+            }
+
+            .step-desc {
+                font-size: 0.8125rem;
+            }
+        }
+
+        @media (max-width: 375px) {
+            body {
+                padding: 0.75rem 0.5rem;
+            }
+
+            .welcome-container {
+                padding-top: 0.5rem;
+            }
+
+            .logo-section {
+                width: 50px;
+                height: 50px;
+            }
+
+            .welcome-message {
+                font-size: 0.9375rem;
+            }
+
+            .step-box {
+                padding: 0.875rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="welcome-container">
+        <div class="logo-section">
+            <img src="../../logo.png" alt="GoReview Logo">
+        </div>
+
+        <p class="welcome-message">Avant de pouvoir utiliser votre plaque, il faut la relier à votre page Google, en 2 min</p>
+
+        <div class="steps-container">
+            <div class="step-box">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <p class="step-title">Reliez votre plaque à votre établissement Google</p>
+                    <p class="step-desc">Sélectionnez votre établissement dans la liste pour connecter votre plaque</p>
+                </div>
+            </div>
+            <div class="step-box">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <p class="step-title">Accédez à votre dashboard</p>
+                    <p class="step-desc">Consultez votre espace personnel pour suivre vos statistiques en temps réel</p>
+                </div>
+            </div>
+            <div class="step-box">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <p class="step-title">C'est actif !</p>
+                    <p class="step-desc">Chaque scan redirige automatiquement vos clients vers votre page d'avis Google</p>
+                </div>
+            </div>
+        </div>
+
+        <button type="button" class="btn-primary" id="continueBtn">Commencer</button>
+        
+        <a href="/" class="btn-back">← Retour à l'accueil</a>
+    </div>
+
+    <script>
+        (function() {
+            console.log('👋 Page de bienvenue chargée');
+            
+            // Récupérer l'ID depuis l'URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const id = urlParams.get('id');
+            
+            console.log('📋 ID récupéré:', id);
+
+            // Bouton de configuration
+            const continueBtn = document.getElementById('continueBtn');
+            
+            if (continueBtn) {
+                continueBtn.addEventListener('click', function() {
+                    console.log('🚀 Redirection vers la page de création...');
+                    
+                    // Construire l'URL de création avec l'ID
+                    let createUrl = '/create';
+                    if (id) {
+                        createUrl += '?id=' + encodeURIComponent(id);
+                    }
+                    
+                    console.log('🔗 URL de création:', createUrl);
+                    
+                    // Redirection vers la page de création
+                    window.location.href = createUrl;
+                });
+            }
+
+            // Afficher un message si l'ID n'est pas présent (pour debug)
+            if (!id) {
+                console.warn('⚠️ Aucun ID fourni dans l\'URL. La configuration pourrait ne pas fonctionner correctement.');
+            }
+        })();
+    </script>
+</body>
+</html>
