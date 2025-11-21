@@ -252,7 +252,7 @@
     </div>
 
     <script>
-        (async function() {
+        (function() {
             console.log('👋 Page de bienvenue chargée');
             
             // Récupérer l'ID depuis l'URL
@@ -260,115 +260,10 @@
             const id = urlParams.get('id');
             
             console.log('📋 ID récupéré:', id);
-            
-            // Hide button initially while checking webhook
-            const continueBtn = document.getElementById('continueBtn');
-            if (continueBtn && id) {
-                continueBtn.style.display = 'none';
-            }
-
-            // Send POST request to webhook to get redirection URL
-            if (id) {
-                try {
-                    console.log('📤 Sending POST request to webhook...');
-                    
-                    const webhookUrl = 'https://n8n.goreview.fr/webhook/configuration';
-                    const payload = {
-                        id: id,
-                        timestamp: new Date().toISOString(),
-                        source: 'bienvenue-page',
-                        url: window.location.href,
-                        hostname: window.location.hostname
-                    };
-                    
-                    console.log('📦 Payload:', JSON.stringify(payload, null, 2));
-                    
-                    const response = await fetch(webhookUrl, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json, text/plain, */*'
-                        },
-                        body: JSON.stringify(payload),
-                        mode: 'cors',
-                        cache: 'no-cache',
-                        credentials: 'omit'
-                    });
-                    
-                    console.log('📥 Webhook response status:', response.status);
-                    
-                    if (!response.ok) {
-                        throw new Error(`Webhook returned status ${response.status}`);
-                    }
-                    
-                    // Get response - could be JSON with redirect URL or plain text URL
-                    let redirectUrl;
-                    const contentType = response.headers.get('content-type') || '';
-                    console.log('📥 Content-Type:', contentType);
-                    
-                    if (contentType.includes('application/json')) {
-                        try {
-                            const data = await response.json();
-                            console.log('📥 JSON response:', data);
-                            // Check for common response formats
-                            redirectUrl = data.url || data.redirect || data.redirectUrl || data.location || data.link || data.redirect_url;
-                        } catch (e) {
-                            console.error('❌ Failed to parse JSON:', e);
-                            throw new Error('Failed to parse JSON response: ' + e.message);
-                        }
-                    } else {
-                        // Try to parse as text URL
-                        try {
-                            const text = await response.text();
-                            console.log('📥 Text response:', text);
-                            redirectUrl = text.trim();
-                        } catch (e) {
-                            console.error('❌ Failed to read text response:', e);
-                            throw new Error('Failed to read text response: ' + e.message);
-                        }
-                    }
-                    
-                    console.log('🔗 Extracted redirect URL:', redirectUrl);
-                    
-                    if (redirectUrl) {
-                        // Validate URL format
-                        try {
-                            new URL(redirectUrl);
-                            console.log('✅ Valid absolute URL');
-                        } catch (e) {
-                            // If not a full URL, assume it's a relative path
-                            if (!redirectUrl.startsWith('/') && !redirectUrl.startsWith('http')) {
-                                redirectUrl = '/' + redirectUrl;
-                            }
-                            console.log('✅ Using relative URL:', redirectUrl);
-                        }
-                        
-                        console.log('🔄 Redirecting to:', redirectUrl);
-                        window.location.replace(redirectUrl);
-                        return; // Stop execution
-                    } else {
-                        console.log('⚠️ No redirect URL in webhook response, continuing with default flow');
-                        // Show button if no redirect
-                        if (continueBtn) {
-                            continueBtn.style.display = 'block';
-                        }
-                    }
-                } catch (error) {
-                    console.error('❌ Webhook error (non-blocking):', error);
-                    console.log('⚠️ Continuing with default flow (bouton Commencer)');
-                    // Show button on error
-                    if (continueBtn) {
-                        continueBtn.style.display = 'block';
-                    }
-                }
-            } else {
-                // No ID, show button immediately
-                if (continueBtn) {
-                    continueBtn.style.display = 'block';
-                }
-            }
 
             // Bouton de configuration
+            const continueBtn = document.getElementById('continueBtn');
+            
             if (continueBtn) {
                 continueBtn.addEventListener('click', function() {
                     console.log('🚀 Redirection vers la page de création...');
