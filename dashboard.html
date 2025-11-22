@@ -30,11 +30,16 @@
           }
         };
         
-        // Suppress fetch errors only for localhost:62462
+        // Suppress fetch errors for dev tools and Google tracking
         const originalFetch = window.fetch;
         window.fetch = function(...args) {
-          if (args[0] && args[0].includes && args[0].includes('localhost:62462')) {
-            return Promise.reject(new Error('Blocked by dev filter')).catch(() => {});
+          const url = args[0] || '';
+          if (url.includes && (
+            url.includes('localhost:62462') ||
+            url.includes('gen_204') ||
+            url.includes('google-analytics')
+          )) {
+            return Promise.reject(new Error('Blocked by filter')).catch(() => {});
           }
           return originalFetch.apply(this, args);
         };
@@ -1044,61 +1049,96 @@
         }
     }
 
-    // Fetch Google Place Details (rating and total reviews only)
-    // Using proxy endpoint to avoid CORS issues
+    // Fetch rating and review count from Google Maps (via scraping)
+    // No API key required - uses Netlify function to scrape Google Maps page
     async function fetchGooglePlaceDetails(placeId) {
-        // Use local proxy for development, Netlify Function for production
-        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        const proxyUrl = isLocalhost 
-            ? '/api/google-place-details'  // Local Python proxy
-            : '/.netlify/functions/google-place-details';  // Netlify Function
+        console.log('📊 Fetching rating and review count from Google Maps...');
+        console.log('   Place ID:', placeId);
         
-        const params = new URLSearchParams({ place_id: placeId });
-
+        // Use Netlify function to scrape Google Maps
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const functionUrl = isLocalhost 
+            ? 'http://localhost:8005'  // Local proxy on port 8005
+            : '/.netlify/functions/google-place-details';  // Production Netlify function
+        
         try {
-            const response = await fetch(`${proxyUrl}?${params.toString()}`);
+            const response = await fetch(`${functionUrl}?place_id=${encodeURIComponent(placeId)}`);
             
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
             
             const data = await response.json();
+            console.log('📥 Response from scraper:', data);
             
             if (data.status === 'OK' && data.result) {
-                const rating = data.result.rating || null;
-                const totalReviews = data.result.user_ratings_total || null;
+                const rating = data.result.rating ? parseFloat(data.result.rating) : null;
+                const totalReviews = data.result.user_ratings_total ? parseInt(data.result.user_ratings_total, 10) : null;
+                
+                console.log('✅ Rating data retrieved from Google Maps:');
+                console.log('   Place Name:', data.result.name);
+                console.log('   Rating:', rating);
+                console.log('   Total reviews:', totalReviews);
                 
                 updateRatingDisplay(rating);
                 updateTotalReviewsDisplay(totalReviews);
                 
-                // Optionally update database with fresh data via webhook
+                // Optionally update database with fresh data for caching
                 try {
                     const dbProxy = await window.waitForDbProxy();
                     await dbProxy.update('accounts', {
                         current_rating: rating,
-                        tot_review: totalReviews
+                        tot_review: totalReviews,
+                        updated_at: new Date().toISOString()
                     }, { id: accountId });
+                    console.log('💾 Database updated with fresh Google data');
                 } catch (e) {
-                    console.warn('Failed to update database with Google data', e);
+                    console.warn('⚠️ Could not update database cache:', e);
                 }
+                
             } else {
-                console.warn('Google Places API error:', data.status, data.error_message);
-                // Fallback to database data via webhook
+                console.warn('⚠️ Could not extract data from Google Maps:', data.error || data.status);
+                
+                // Fallback to database if scraping fails
+                console.log('📊 Falling back to database data...');
                 const dbProxy = await window.waitForDbProxy();
                 const { data: accountData } = await dbProxy.select('accounts', { id: accountId }, { select: ['current_rating', 'tot_review'], single: true });
+                
                 if (accountData) {
-                    updateRatingDisplay(parseFloat(accountData.current_rating) || null);
-                    updateTotalReviewsDisplay(parseInt(accountData.tot_review || '0', 10) || null);
+                    const rating = accountData.current_rating ? parseFloat(accountData.current_rating) : null;
+                    const totalReviews = accountData.tot_review ? parseInt(accountData.tot_review, 10) : null;
+                    console.log('✅ Using cached data from database:', { rating, totalReviews });
+                    updateRatingDisplay(rating);
+                    updateTotalReviewsDisplay(totalReviews);
+                } else {
+                    updateRatingDisplay(null);
+                    updateTotalReviewsDisplay(null);
                 }
             }
+            
         } catch (error) {
-            console.error('Failed to fetch Google Place details', error);
-            // Fallback to Supabase data on error
-            const dbProxy = await window.waitForDbProxy();
-            const { data: accountData } = await dbProxy.select('accounts', { id: accountId }, { select: ['current_rating', 'tot_review'], single: true });
-            if (accountData) {
-                updateRatingDisplay(parseFloat(accountData.current_rating) || null);
-                updateTotalReviewsDisplay(parseInt(accountData.tot_review || '0', 10) || null);
+            console.error('❌ Failed to fetch from Google Maps:', error);
+            
+            // Fallback to database on error
+            console.log('📊 Falling back to database data...');
+            try {
+                const dbProxy = await window.waitForDbProxy();
+                const { data: accountData } = await dbProxy.select('accounts', { id: accountId }, { select: ['current_rating', 'tot_review'], single: true });
+                
+                if (accountData) {
+                    const rating = accountData.current_rating ? parseFloat(accountData.current_rating) : null;
+                    const totalReviews = accountData.tot_review ? parseInt(accountData.tot_review, 10) : null;
+                    console.log('✅ Using cached data from database:', { rating, totalReviews });
+                    updateRatingDisplay(rating);
+                    updateTotalReviewsDisplay(totalReviews);
+                } else {
+                    updateRatingDisplay(null);
+                    updateTotalReviewsDisplay(null);
+                }
+            } catch (e) {
+                console.error('❌ Database fallback also failed:', e);
+                updateRatingDisplay(null);
+                updateTotalReviewsDisplay(null);
             }
         }
     }

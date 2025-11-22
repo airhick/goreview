@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fetch Google Rating</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { color: #333; margin-top: 0; }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+        button {
+            background: #6366f1;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            margin-top: 10px;
+        }
+        button:hover { background: #4f46e5; }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 6px;
+            display: none;
+        }
+        .result.show { display: block; }
+        .error {
+            background: #fee2e2;
+            border-color: #fecaca;
+            color: #991b1b;
+        }
+        .success {
+            background: #d1fae5;
+            border-color: #a7f3d0;
+            color: #065f46;
+        }
+        code {
+            background: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+        .rating-display {
+            font-size: 48px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .stars { color: #fbbf24; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🌟 Fetch Google Rating</h1>
+        <p>Enter a Google Place ID to fetch its rating and review count.</p>
+        
+        <input type="text" 
+               id="placeId" 
+               placeholder="Place ID (e.g., ChIJL7XR1aQ0-UcRZC9100qQiqk)"
+               value="ChIJL7XR1aQ0-UcRZC9100qQiqk">
+        
+        <input type="text" 
+               id="apiKey" 
+               placeholder="Google Maps API Key (optional)">
+        
+        <button onclick="fetchRating()">Fetch Rating</button>
+        
+        <div id="result" class="result"></div>
+    </div>
+
+    <script>
+        async function fetchRating() {
+            const placeId = document.getElementById('placeId').value.trim();
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const resultEl = document.getElementById('result');
+            
+            if (!placeId) {
+                resultEl.className = 'result show error';
+                resultEl.innerHTML = '❌ Please enter a Place ID';
+                return;
+            }
+            
+            resultEl.className = 'result show';
+            resultEl.innerHTML = '⏳ Fetching data from Google Places API...';
+            
+            try {
+                // Method 1: Try with API key if provided
+                if (apiKey) {
+                    const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(placeId)}&fields=name,rating,user_ratings_total&key=${apiKey}`;
+                    
+                    resultEl.innerHTML = '⏳ Fetching from Google Places API...<br><small>Note: This may fail due to CORS. Check console for details.</small>';
+                    
+                    const response = await fetch(url);
+                    const data = await response.json();
+                    
+                    if (data.status === 'OK' && data.result) {
+                        displayResult(data.result);
+                        return;
+                    } else {
+                        throw new Error(`API returned: ${data.status} - ${data.error_message || 'Unknown error'}`);
+                    }
+                }
+                
+                // Method 2: Embed and scrape (will show in iframe)
+                resultEl.className = 'result show';
+                resultEl.innerHTML = `
+                    <p>📍 <strong>Place ID:</strong> <code>${placeId}</code></p>
+                    <p>⚠️ <strong>Cannot fetch directly</strong> (CORS restriction or no API key)</p>
+                    <hr>
+                    <h3>Alternative Methods:</h3>
+                    <ol>
+                        <li><strong>Get API Key:</strong> Go to <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Google Cloud Console</a> and create a Maps API key</li>
+                        <li><strong>Use Postman/curl:</strong> Test the API from command line</li>
+                        <li><strong>Check manually:</strong> <a href="https://www.google.com/maps/search/?api=1&query=Google&query_place_id=${placeId}" target="_blank">Open in Google Maps</a></li>
+                    </ol>
+                    <hr>
+                    <h3>🎯 Quick SQL Update:</h3>
+                    <p>Once you have the rating, update Supabase:</p>
+                    <code style="display:block; padding:10px; white-space:pre;">UPDATE accounts 
+SET current_rating = [YOUR_RATING],
+    tot_review = [REVIEW_COUNT],
+    updated_at = NOW()
+WHERE id = 1;</code>
+                `;
+                
+            } catch (error) {
+                console.error('Error:', error);
+                resultEl.className = 'result show error';
+                resultEl.innerHTML = `
+                    <p>❌ <strong>Error:</strong> ${error.message}</p>
+                    <hr>
+                    <p><strong>Why this happens:</strong></p>
+                    <ul>
+                        <li>CORS policy blocks direct API calls from browser</li>
+                        <li>API key required for Google Places API</li>
+                        <li>Need to use server-side proxy (Netlify function)</li>
+                    </ul>
+                    <hr>
+                    <p><strong>Solution:</strong> Open <a href="https://www.google.com/maps/search/?api=1&query=Google&query_place_id=${placeId}" target="_blank">this place in Google Maps</a> and note the rating manually, then update your database.</p>
+                `;
+            }
+        }
+        
+        function displayResult(result) {
+            const resultEl = document.getElementById('result');
+            const rating = result.rating || 0;
+            const totalReviews = result.user_ratings_total || 0;
+            const name = result.name || 'Unknown';
+            
+            const stars = '★'.repeat(Math.floor(rating)) + '☆'.repeat(5 - Math.floor(rating));
+            
+            resultEl.className = 'result show success';
+            resultEl.innerHTML = `
+                <h3>✅ Success!</h3>
+                <p><strong>Name:</strong> ${name}</p>
+                <div class="rating-display">
+                    <span class="stars">${stars}</span><br>
+                    <span style="font-size:24px;">${rating.toFixed(1)}</span>
+                </div>
+                <p style="text-align:center;"><strong>${totalReviews.toLocaleString()}</strong> reviews</p>
+                <hr>
+                <h3>🎯 SQL Update Command:</h3>
+                <code style="display:block; padding:10px; white-space:pre;">UPDATE accounts 
+SET current_rating = ${rating},
+    tot_review = ${totalReviews},
+    updated_at = NOW()
+WHERE id = 1;</code>
+                <p><small>Run this in your Supabase SQL editor</small></p>
+            `;
+        }
+        
+        // Auto-fetch on page load with default Place ID
+        window.addEventListener('load', () => {
+            const placeIdInput = document.getElementById('placeId');
+            if (placeIdInput.value) {
+                // Don't auto-fetch, let user click button
+                console.log('Enter API key and click "Fetch Rating" to get data');
+            }
+        });
+    </script>
+</body>
+</html>
+
