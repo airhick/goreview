@@ -4,6 +4,36 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Connexion au dashboard - GoReview</title>
+    <script>
+      // Suppress third-party extension errors to keep console clean
+      (function(){
+        const isExtensionError = (msg) => {
+          if (!msg) return false;
+          const str = String(msg).toLowerCase();
+          return str.includes('solanaactionscontentscript') ||
+                 str.includes('chrome-extension://') ||
+                 str.includes('moz-extension://') ||
+                 str.includes('localhost:62462') ||
+                 str.includes('browserautomation');
+        };
+        
+        const originalError = console.error;
+        console.error = function(...args) {
+          const isExt = args.some(arg => isExtensionError(String(arg)));
+          if (!isExt) {
+            originalError.apply(console, args);
+          }
+        };
+        
+        const originalFetch = window.fetch;
+        window.fetch = function(...args) {
+          if (args[0] && args[0].includes && (args[0].includes('localhost:62462') || args[0].includes('chrome-extension://'))) {
+            return Promise.reject(new Error('Blocked by filter')).catch(() => {});
+          }
+          return originalFetch.apply(this, args);
+        };
+      })();
+    </script>
     
     <style>
         :root {
@@ -83,36 +113,110 @@
     <script src="db-proxy.js"></script>
 
     <script>
-        // Session management functions
-        function getCookie(name) {
-            const value = `; ${document.cookie}`;
-            const parts = value.split(`; ${name}=`);
-            if (parts.length === 2) {
-                return decodeURIComponent(parts.pop().split(';').shift());
-            }
-            return null;
-        }
-
-        function getSession() {
-            const sessionCookie = getCookie('goreview_session');
-            if (!sessionCookie) {
-                return null;
-            }
-            try {
-                return JSON.parse(sessionCookie);
-            } catch (e) {
-                console.error('Error parsing session cookie:', e);
-                return null;
-            }
-        }
-
-        // Check if user is already logged in
+        // Delete goreview_session cookie on page load
         (function() {
-            const session = getSession();
-            if (session && session.id) {
-                // User has valid session, redirect to dashboard
-                window.location.href = `/dashboard.html?id=${encodeURIComponent(session.id)}`;
+            const cookieName = 'goreview_session';
+            const pastDate = 'Thu, 01 Jan 1970 00:00:00 UTC';
+            const hostname = window.location.hostname;
+            const hostnameParts = hostname.split('.');
+            
+            // Delete cookie with different paths and domains
+            document.cookie = `${cookieName}=;expires=${pastDate};path=/;`;
+            document.cookie = `${cookieName}=;expires=${pastDate};path=/;SameSite=Lax;`;
+            document.cookie = `${cookieName}=;expires=${pastDate};path=/;SameSite=Strict;`;
+            document.cookie = `${cookieName}=;expires=${pastDate};path=/;domain=${hostname};`;
+            
+            // Delete for parent domain if applicable
+            if (hostnameParts.length > 1) {
+                const parentDomain = '.' + hostnameParts.slice(-2).join('.');
+                document.cookie = `${cookieName}=;expires=${pastDate};path=/;domain=${parentDomain};`;
+                const parentDomainNoDot = hostnameParts.slice(-2).join('.');
+                document.cookie = `${cookieName}=;expires=${pastDate};path=/;domain=${parentDomainNoDot};`;
             }
+            
+            console.log('✅ goreview_session cookie deleted');
+        })();
+        
+        // Check for error parameters from dashboard authentication failure
+        (function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const errorType = urlParams.get('error');
+            
+            if (errorType) {
+                console.log('⚠️ Received error from dashboard:', errorType);
+                
+                // Clear the problematic cookie
+                document.cookie = 'dashboard_sesh=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                console.log('🗑️ Cleared invalid dashboard_sesh cookie');
+                
+                // Clear session storage
+                window.sessionStorage.removeItem('dashboard_redirect_in_progress');
+                window.sessionStorage.removeItem('dashboard_load_count');
+                
+                // Show appropriate error message
+                const statusEl = document.getElementById('status');
+                if (statusEl) {
+                    let errorMessage = '';
+                    switch(errorType) {
+                        case 'session_expired':
+                            errorMessage = 'Votre session a expiré. Veuillez vous reconnecter.';
+                            break;
+                        case 'invalid_session':
+                            errorMessage = 'Session invalide. Veuillez vous reconnecter.';
+                            break;
+                        case 'auth_failed':
+                            errorMessage = 'Erreur d\'authentification. Veuillez vous reconnecter.';
+                            break;
+                        default:
+                            errorMessage = 'Veuillez vous reconnecter.';
+                    }
+                    statusEl.textContent = errorMessage;
+                    statusEl.className = 'status show error';
+                }
+                
+                // Remove error parameter from URL without reloading
+                const cleanUrl = window.location.pathname;
+                window.history.replaceState({}, document.title, cleanUrl);
+                
+                // Don't attempt auto-redirect when there's an error
+                return;
+            }
+            
+            // Check if user is already logged in (has dashboard_sesh cookie)
+            // Use setTimeout to ensure this runs after page is fully loaded
+            setTimeout(function() {
+                // Check if we're coming from a failed dashboard load (to prevent loop)
+                const fromDashboard = document.referrer.includes('/dashboard.html');
+                if (fromDashboard) {
+                    console.log('ℹ️ Coming from dashboard, allowing re-login');
+                    return;
+                }
+                
+                function getCookie(name) {
+                    const value = `; ${document.cookie}`;
+                    const parts = value.split(`; ${name}=`);
+                    if (parts.length === 2) {
+                        return decodeURIComponent(parts.pop().split(';').shift());
+                    }
+                    return null;
+                }
+                
+                try {
+                    const cookieValue = getCookie('dashboard_sesh');
+                    if (cookieValue) {
+                        const cookieData = JSON.parse(cookieValue);
+                        if (cookieData && cookieData.id) {
+                            console.log('✅ dashboard_sesh cookie found, redirecting to dashboard');
+                            console.log('   Cookie ID:', cookieData.id);
+                            console.log('   Cookie Email:', cookieData.email);
+                            window.location.replace('/dashboard.html');
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('⚠️ Error parsing dashboard_sesh cookie:', e);
+                }
+            }, 100);
         })();
     </script>
 
@@ -131,64 +235,203 @@
                 return re.test(email);
             }
 
+            let isProcessing = false; // Prevent multiple simultaneous requests
+            
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
+                console.log('📝 Form submitted');
+                
+                // Prevent multiple submissions
+                if (isProcessing) {
+                    console.log('⚠️ Request already in progress, ignoring...');
+                    return;
+                }
+                
                 statusEl.className = 'status';
 
                 const email = (document.getElementById('email').value || '').trim().toLowerCase();
+                console.log('📧 Email entered:', email);
 
                 if (!validateEmail(email)) {
                     showStatus("Veuillez entrer une adresse email valide.", 'error');
                     return;
                 }
 
+                // Disable form and set processing flag
+                isProcessing = true;
+                const submitButton = form.querySelector('button[type="submit"]');
+                const originalButtonText = submitButton.textContent;
+                submitButton.disabled = true;
+                submitButton.textContent = 'Connexion...';
+                
                 showStatus("Vérification en cours...", 'success');
 
                 try {
-                    // Wait for dbProxy to be available
+                    // Wait for Supabase to be available
                     let retries = 0;
-                    while (typeof window.dbProxy === 'undefined' && retries < 10) {
+                    while (typeof supabase === 'undefined' && retries < 30) {
                         await new Promise(resolve => setTimeout(resolve, 100));
                         retries++;
                     }
 
-                    if (typeof window.dbProxy === 'undefined') {
+                    if (typeof supabase === 'undefined') {
                         showStatus("Erreur de connexion. Veuillez réessayer.", 'error');
                         return;
                     }
                     
-                    // Find account by email only via webhook
-                    const { data, error } = await window.dbProxy.select('accounts', { email: email }, { select: ['id', 'email'], single: true });
+                    // Initialize Supabase client (same as db-proxy.js)
+                    const SUPABASE_URL = 'https://vigutqmfosxbpncussie.supabase.co';
+                    const SUPABASE_SERVICE_ROLE = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ3V0cW1mb3N4YnBuY3Vzc2llIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTU4NDc1MiwiZXhwIjoyMDc3MTYwNzUyfQ.WPhspJ5LQ7E6k9sUFJsaISU6eVcJnIPGYv0GPGQfd98';
+                    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE);
+                    
+                    // Normalize email: trim and lowercase for consistent search
+                    const normalizedEmail = email.trim().toLowerCase();
+                    
+                    console.log('🔍 Searching for email (case-insensitive):', normalizedEmail);
+                    console.log('🔍 Supabase client initialized:', !!supabaseClient);
+                    
+                    // Use ilike for case-insensitive search in PostgreSQL/Supabase
+                    // This will match emails regardless of case (e.g., "Test@Email.com" matches "test@email.com")
+                    console.log('📤 Sending query to Supabase...');
+                    const { data, error } = await supabaseClient
+                        .from('accounts')
+                        .select('id, email')
+                        .ilike('email', normalizedEmail)
+                        .maybeSingle();
+
+                    console.log('📥 Supabase response received');
+                    console.log('📥 Data:', data);
+                    console.log('📥 Error:', error);
 
                     if (error) {
-                        console.error('Database error:', error);
+                        console.error('❌ Database error:', error);
                         showStatus("Une erreur est survenue. Veuillez réessayer.", 'error');
+                        // Re-enable form
+                        isProcessing = false;
+                        submitButton.disabled = false;
+                        submitButton.textContent = originalButtonText;
                         return;
                     }
 
                     if (!data || !data.id) {
+                        console.log('⚠️ No account found for email:', normalizedEmail);
                         showStatus("Aucun compte trouvé avec cet email.", 'error');
+                        // Re-enable form
+                        isProcessing = false;
+                        submitButton.disabled = false;
+                        submitButton.textContent = originalButtonText;
                         return;
                     }
+                    
+                    console.log('✅ Account found:', data.id);
 
-                    // Create session cookie
-                    const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-                    const sessionData = {
+                    // Create dashboard_sesh cookie with account ID
+                    const cookieData = {
                         id: data.id,
                         email: data.email,
                         loginTime: new Date().toISOString()
                     };
-                    
-                    // Set cookie with 30 days expiration
                     const expirationDate = new Date();
                     expirationDate.setTime(expirationDate.getTime() + (30 * 24 * 60 * 60 * 1000)); // 30 days
-                    document.cookie = `goreview_session=${encodeURIComponent(JSON.stringify(sessionData))}; expires=${expirationDate.toUTCString()}; path=/; SameSite=Lax`;
+                    
+                    // Set cookie without encoding first to test if that's the issue
+                    const cookieValue = JSON.stringify(cookieData);
+                    const cookieString = `dashboard_sesh=${encodeURIComponent(cookieValue)}; expires=${expirationDate.toUTCString()}; path=/; SameSite=Lax`;
+                    document.cookie = cookieString;
+                    
+                    console.log('✅ dashboard_sesh cookie set');
+                    console.log('   Cookie string:', cookieString);
+                    console.log('   Cookie data:', cookieData);
+                    console.log('   All cookies after setting:', document.cookie);
+                    
+                    // Function to get cookie value
+                    function getCookie(name) {
+                        const value = `; ${document.cookie}`;
+                        const parts = value.split(`; ${name}=`);
+                        if (parts.length === 2) {
+                            return decodeURIComponent(parts.pop().split(';').shift());
+                        }
+                        return null;
+                    }
+                    
+                    // Verify cookie was set by reading it back
+                    let cookieVerified = false;
+                    let attempts = 0;
+                    for (let i = 0; i < 10; i++) {
+                        await new Promise(resolve => setTimeout(resolve, 50));
+                        attempts++;
+                        const cookieValue = getCookie('dashboard_sesh');
+                        console.log(`   Verification attempt ${attempts}: Cookie ${cookieValue ? 'found' : 'not found'}`);
+                        if (cookieValue) {
+                            try {
+                                const parsed = JSON.parse(cookieValue);
+                                console.log('   Parsed cookie:', parsed);
+                                if (parsed && parsed.id === data.id) {
+                                    cookieVerified = true;
+                                    console.log('✅ Cookie verified successfully on attempt', attempts);
+                                    console.log('   Verified ID:', parsed.id);
+                                    console.log('   Verified Email:', parsed.email);
+                                    break;
+                                } else {
+                                    console.warn('   Cookie ID mismatch:', parsed?.id, 'vs', data.id);
+                                }
+                            } catch (e) {
+                                console.warn('⚠️ Error parsing cookie during verification:', e);
+                                console.warn('   Cookie value was:', cookieValue);
+                            }
+                        }
+                    }
+                    
+                    if (!cookieVerified) {
+                        console.error('❌ Cookie verification failed after', attempts, 'attempts');
+                        console.error('   Final cookie check:', getCookie('dashboard_sesh'));
+                        console.error('   All cookies:', document.cookie);
+                        showStatus("Erreur lors de la création de la session. Veuillez réessayer.", 'error');
+                        isProcessing = false;
+                        submitButton.disabled = false;
+                        submitButton.textContent = originalButtonText;
+                        return;
+                    }
 
-                    // Email found, redirect to dashboard with the account ID
-                    window.location.href = `/dashboard.html?id=${encodeURIComponent(data.id)}`;
+                    // Show success message
+                    showStatus("Connexion réussie, redirection...", 'success');
+                    
+                    // Small delay before redirect to ensure cookie is fully set
+                    await new Promise(resolve => setTimeout(resolve, 300));
+
+                    // Final verification that cookie is readable
+                    const finalCookieCheck = getCookie('dashboard_sesh');
+                    console.log('🔍 Final cookie check before redirect:', finalCookieCheck ? 'Cookie present' : 'Cookie missing');
+                    
+                    if (!finalCookieCheck) {
+                        console.error('❌ Cookie verification failed right before redirect');
+                        showStatus("Erreur de session. Veuillez réessayer.", 'error');
+                        isProcessing = false;
+                        submitButton.disabled = false;
+                        submitButton.textContent = originalButtonText;
+                        return;
+                    }
+                    
+                    // Set redirect protection flag
+                    window.sessionStorage.setItem('dashboard_redirect_in_progress', 'true');
+                    
+                    // Email found, redirect to dashboard (ID will be read from cookie)
+                    const redirectUrl = `/dashboard.html`;
+                    console.log('🔄 Redirecting to:', redirectUrl);
+                    console.log('📍 Current location:', window.location.href);
+                    console.log('🍪 Cookie contains ID:', data.id);
+                    console.log('🍪 Cookie data:', finalCookieCheck);
+                    console.log('ℹ️ Dashboard will read ID from cookie (no ID needed in URL)');
+                    
+                    // Use replace to avoid adding to history and prevent back button issues
+                    window.location.replace(redirectUrl);
                 } catch (err) {
                     console.error('Login error:', err);
                     showStatus("Une erreur est survenue. Veuillez réessayer.", 'error');
+                    // Re-enable form
+                    isProcessing = false;
+                    submitButton.disabled = false;
+                    submitButton.textContent = originalButtonText;
                 }
             });
     </script>

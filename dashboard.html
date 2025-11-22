@@ -6,7 +6,7 @@
     <title>Dashboard - GoReview</title>
     <meta http-equiv="Content-Security-Policy" content="default-src 'self' http://localhost:*; connect-src 'self' http://localhost:* https://*.googleapis.com https://*.google.com https://maps.googleapis.com https://maps.gstatic.com https://vigutqmfosxbpncussie.supabase.co https://*.netlify.app https://*.netlify.com https://n8n.goreview.fr; img-src 'self' data: https: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://www.google.com https://*.google.com https://maps.googleapis.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; frame-src 'self' http://localhost:* https://www.google.com https://*.google.com https://maps.google.com;">
     <script>
-      // Suppress ONLY MCP/BrowserAutomation errors, keep all other errors visible
+      // Suppress ONLY MCP/BrowserAutomation and third-party extension errors, keep our errors visible
       (function(){
         const isMCPError = (msg) => {
           if (!msg) return false;
@@ -15,6 +15,9 @@
                  str.includes('browserautomation') || 
                  str.includes('registerwithmcp') || 
                  str.includes('pollforcommands') ||
+                 str.includes('solanaactionscontentscript') ||
+                 str.includes('chrome-extension://') ||
+                 str.includes('moz-extension://') ||
                  (str.includes('vm') && str.includes('register-iframe'));
         };
         
@@ -59,52 +62,42 @@
         })();
     </script>
     <script>
-        // Session management functions - Global scope
-        window.getCookie = function(name) {
+        // Delete goreview_session cookie on page load
+        (function() {
+            const cookieName = 'goreview_session';
+            const pastDate = 'Thu, 01 Jan 1970 00:00:00 UTC';
+            const hostname = window.location.hostname;
+            const hostnameParts = hostname.split('.');
+            
+            // Delete cookie with different paths and domains
+            document.cookie = `${cookieName}=;expires=${pastDate};path=/;`;
+            document.cookie = `${cookieName}=;expires=${pastDate};path=/;SameSite=Lax;`;
+            document.cookie = `${cookieName}=;expires=${pastDate};path=/;SameSite=Strict;`;
+            document.cookie = `${cookieName}=;expires=${pastDate};path=/;domain=${hostname};`;
+            
+            // Delete for parent domain if applicable
+            if (hostnameParts.length > 1) {
+                const parentDomain = '.' + hostnameParts.slice(-2).join('.');
+                document.cookie = `${cookieName}=;expires=${pastDate};path=/;domain=${parentDomain};`;
+                const parentDomainNoDot = hostnameParts.slice(-2).join('.');
+                document.cookie = `${cookieName}=;expires=${pastDate};path=/;domain=${parentDomainNoDot};`;
+            }
+            
+            console.log('✅ goreview_session cookie deleted');
+        })();
+        
+        // Function to get cookie value
+        function getCookie(name) {
             const value = `; ${document.cookie}`;
             const parts = value.split(`; ${name}=`);
             if (parts.length === 2) {
                 return decodeURIComponent(parts.pop().split(';').shift());
             }
             return null;
-        };
-
-        window.getSession = function() {
-            const sessionCookie = window.getCookie('goreview_session');
-            if (!sessionCookie) {
-                return null;
-            }
-            try {
-                return JSON.parse(sessionCookie);
-            } catch (e) {
-                console.error('Error parsing session cookie:', e);
-                return null;
-            }
-        };
-
-        // Check session on page load - MUST be done before any other code
-        (function() {
-            const params = new URLSearchParams(window.location.search);
-            const idFromUrl = params.get('id');
-            
-            // Check if session exists
-            const session = window.getSession();
-            if (!session || !session.id) {
-                // No session, redirect immediately to login
-                window.location.replace('/dashboardlogin.html');
-                return;
-            }
-            
-            // Verify that session ID matches URL ID (if ID is provided in URL)
-            if (idFromUrl && session.id !== idFromUrl) {
-                // Session exists but for different account, redirect to login
-                window.location.replace('/dashboardlogin.html');
-                return;
-            }
-            
-            // Session is valid, store it globally for use in other scripts
-            window.currentSession = session;
-        })();
+        }
+        
+        // Note: Cookie validation is now handled in the async function below
+        // to allow time for cookie to be available after redirect
     </script>
     <style>
         .centered-card {
@@ -598,7 +591,11 @@
 </head>
 <body>
 <div class="centered-card" id="main">
-    <!-- Populated by JS -->
+    <div style="text-align: center; padding: 3rem;">
+        <div style="font-size: 2rem; margin-bottom: 1rem;">⏳</div>
+        <div style="font-size: 1.25rem; font-weight: 600; color: #6366f1; margin-bottom: 0.5rem;">Chargement du dashboard...</div>
+        <div id="loadingStatus" style="font-size: 0.9rem; color: #6b7280;">Vérification de la session...</div>
+    </div>
 </div>
 
 <!-- Factory Reset Popup -->
@@ -631,50 +628,182 @@
 </div>
 <script>
 (async function() {
-    // First check: verify session exists before proceeding
-    const session = window.getSession();
-    if (!session || !session.id) {
-        // No valid session, redirect to login
-        window.location.replace('/dashboardlogin.html');
-        return; // Stop execution
-    }
-    
+    // Get account ID from cookie (required) or URL
     const mount = document.getElementById('main');
     const params = new URLSearchParams(window.location.search);
-    const id = params.get('id');
+    const idFromUrl = params.get('id');
     
-    // Second check: verify session ID matches URL ID
-    if (id && session.id !== id) {
-        // Session exists but for different account
-        window.location.replace('/dashboardlogin.html');
-        return; // Stop execution
-    }
-    
-    // Use session ID if URL ID is not provided, or use URL ID if it matches session
-    const accountId = (id && session.id === id) ? id : session.id;
-    
-    // If URL has different ID than session, we already redirected above
-    // So at this point, accountId is always valid and matches the session
-
-    function setCookie(name, value, days) {
-        const d = new Date();
-        d.setTime(d.getTime() + (days*24*60*60*1000));
-        const expires = "expires=" + d.toUTCString();
-        document.cookie = name + "=" + encodeURIComponent(value) + ";" + expires + ";path=/;SameSite=Lax";
-    }
-
+    // Function to get cookie value
     function getCookie(name) {
-        const nameEQ = name + "=";
-        const ca = document.cookie.split(';');
-        for (let c of ca) {
-            while (c.charAt(0) === ' ') c = c.substring(1);
-            if (c.indexOf(nameEQ) === 0) return decodeURIComponent(c.substring(nameEQ.length));
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) {
+            return decodeURIComponent(parts.pop().split(';').shift());
         }
         return null;
     }
-
-    // Session is already verified above, accountId is always valid at this point
-    // No need for additional cookie checks - session cookie handles authentication
+    
+    // Prevent infinite redirect loop - check if we've been here multiple times
+    const redirectCount = parseInt(window.sessionStorage.getItem('dashboard_load_count') || '0', 10);
+    if (redirectCount > 3) {
+        console.error('❌ Redirect loop detected (loaded ' + redirectCount + ' times), clearing session and redirecting to login');
+        window.sessionStorage.removeItem('dashboard_load_count');
+        window.sessionStorage.removeItem('dashboard_redirect_in_progress');
+        // Clear cookie to force re-login
+        document.cookie = 'dashboard_sesh=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+        // Redirect with error parameter to show message and prevent auto-redirect
+        window.location.replace('/dashboardlogin.html?error=auth_failed');
+        return;
+    }
+    
+    // Increment load counter
+    window.sessionStorage.setItem('dashboard_load_count', String(redirectCount + 1));
+    console.log('📊 Dashboard load count:', redirectCount + 1);
+    
+    // Update loading status
+    const loadingStatusEl = document.getElementById('loadingStatus');
+    if (loadingStatusEl) loadingStatusEl.textContent = 'Recherche du cookie de session...';
+    
+    // Get ID from cookie (required) - with retry mechanism for cookie availability
+    let accountId = null;
+    let cookieRetries = 0;
+    const maxCookieRetries = 20; // Wait up to 2 seconds for cookie
+    
+    console.log('═══════════════════════════════════════════════════════════');
+    console.log('🚀 DASHBOARD PAGE LOADED');
+    console.log('═══════════════════════════════════════════════════════════');
+    console.log('📍 Current URL:', window.location.href);
+    console.log('🔍 ID from URL parameter:', idFromUrl);
+    console.log('🍪 ALL COOKIES:', document.cookie);
+    console.log('🍪 Cookie count:', document.cookie ? document.cookie.split(';').length : 0);
+    console.log('🔍 Looking for: dashboard_sesh');
+    console.log('🔍 Cookie contains dashboard_sesh:', document.cookie.includes('dashboard_sesh'));
+    console.log('═══════════════════════════════════════════════════════════');
+    
+    while (!accountId && cookieRetries < maxCookieRetries) {
+        try {
+            const cookieValue = getCookie('dashboard_sesh');
+            if (cookieValue) {
+                console.log('📦 Raw cookie value found (attempt ' + (cookieRetries + 1) + ')');
+                const cookieData = JSON.parse(cookieValue);
+                if (cookieData && cookieData.id) {
+                    accountId = cookieData.id;
+                    window.currentAccountEmail = cookieData.email; // Store for later use
+                    console.log('✅ dashboard_sesh cookie found with ID:', accountId);
+                    console.log('📧 Email from cookie:', cookieData.email);
+                    break;
+                }
+            } else {
+                if (cookieRetries === 0 || cookieRetries % 5 === 0) {
+                    console.log('⏳ Cookie not found yet (attempt ' + (cookieRetries + 1) + '/' + maxCookieRetries + ')');
+                }
+            }
+        } catch (e) {
+            console.warn('⚠️ Error parsing dashboard_sesh cookie (attempt ' + (cookieRetries + 1) + '):', e);
+        }
+        
+        if (!accountId) {
+            cookieRetries++;
+            if (cookieRetries < maxCookieRetries) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+        }
+    }
+    
+    // If no cookie after retries, redirect to login with error message
+    if (!accountId) {
+        console.log('═══════════════════════════════════════════════════════════');
+        console.log('❌ AUTHENTICATION FAILED - NO COOKIE FOUND');
+        console.log('═══════════════════════════════════════════════════════════');
+        console.log('Retries attempted:', maxCookieRetries);
+        console.log('Final cookie check:', getCookie('dashboard_sesh'));
+        console.log('All cookies:', document.cookie);
+        console.log('Reason: dashboard_sesh cookie not found after multiple attempts');
+        console.log('Action: Redirecting to login page with error');
+        console.log('═══════════════════════════════════════════════════════════');
+        
+        if (loadingStatusEl) {
+            loadingStatusEl.innerHTML = '❌ Session introuvable<br><small style="font-size:0.8em;">Redirection vers la page de connexion...</small>';
+            loadingStatusEl.style.color = '#ef4444';
+        }
+        
+        // Clear session storage to prevent loops
+        window.sessionStorage.removeItem('dashboard_redirect_in_progress');
+        window.sessionStorage.removeItem('dashboard_load_count');
+        
+        // Redirect to login with error parameter (prevents auto-redirect loop)
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        window.location.replace('/dashboardlogin.html?error=session_expired');
+        return; // Stop execution
+    }
+    
+    console.log('✅ Cookie authentication successful!');
+    if (loadingStatusEl) loadingStatusEl.textContent = '✅ Session trouvée - Validation en cours...';
+    
+    // Normalize IDs to strings for comparison (URL params are always strings)
+    const accountIdStr = String(accountId);
+    const idFromUrlStr = idFromUrl ? String(idFromUrl) : null;
+    
+    console.log('🔍 Normalized comparison:');
+    console.log('   Cookie ID (string):', accountIdStr, '(type:', typeof accountIdStr + ')');
+    console.log('   URL ID (string):', idFromUrlStr, '(type:', typeof idFromUrlStr + ')');
+    
+    // If ID in URL, verify it matches cookie (using string comparison)
+    if (idFromUrlStr && idFromUrlStr !== accountIdStr) {
+        console.log('═══════════════════════════════════════════════════════════');
+        console.log('❌ AUTHENTICATION FAILED - ID MISMATCH');
+        console.log('═══════════════════════════════════════════════════════════');
+        console.log('URL ID:', idFromUrlStr);
+        console.log('Cookie ID:', accountIdStr);
+        console.log('Reason: ID in URL does not match ID in cookie');
+        console.log('Action: Redirecting to login page with error');
+        console.log('═══════════════════════════════════════════════════════════');
+        
+        if (loadingStatusEl) {
+            loadingStatusEl.textContent = '❌ Erreur d\'authentification - Redirection...';
+            loadingStatusEl.style.color = '#ef4444';
+        }
+        
+        // Clear session storage to prevent loops
+        window.sessionStorage.removeItem('dashboard_redirect_in_progress');
+        window.sessionStorage.removeItem('dashboard_load_count');
+        
+        // Redirect to login with error parameter (prevents auto-redirect loop)
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        window.location.replace('/dashboardlogin.html?error=invalid_session');
+        return; // Stop execution
+    }
+    
+    // Use cookie ID (it's the source of truth)
+    // Update URL to show ID (optional, for bookmarking)
+    if (!idFromUrlStr || idFromUrlStr !== accountIdStr) {
+        console.log('ℹ️ Updating URL to match cookie ID:', accountIdStr);
+        const newUrl = `/dashboard.html?id=${encodeURIComponent(accountIdStr)}`;
+        window.history.replaceState(null, '', newUrl);
+    }
+    
+    // Ensure accountId is in its original format for database queries
+    console.log('✅ Using account ID:', accountId, '(original type preserved)');
+    
+    // Clear redirect protection flags since we're successfully loading with valid credentials
+    window.sessionStorage.removeItem('dashboard_redirect_in_progress');
+    window.sessionStorage.removeItem('dashboard_load_count');
+    
+    console.log('═══════════════════════════════════════════════════════════');
+    console.log('✅ AUTHENTICATION SUCCESSFUL');
+    console.log('═══════════════════════════════════════════════════════════');
+    console.log('Account ID:', accountId);
+    console.log('Email:', window.currentAccountEmail || 'Unknown');
+    console.log('Session validated successfully');
+    console.log('═══════════════════════════════════════════════════════════');
+    
+    if (loadingStatusEl) {
+        loadingStatusEl.textContent = '✅ Authentification réussie - Chargement des données...';
+        loadingStatusEl.style.color = '#10b981';
+    }
+    
+    // Make accountId globally accessible for debugging
+    window.currentAccountId = accountId;
 
     // Status menu toggle
     function initStatusMenu() {
@@ -730,11 +859,20 @@
         if (!tbody) return;
 
         try {
+            // Use accountId from global scope or window
+            const currentAccountId = accountId || window.currentAccountId;
+            console.log('📋 loadContactsPreview - Account ID:', currentAccountId);
+            
+            if (!currentAccountId) {
+                console.error('❌ No account ID available in loadContactsPreview');
+                return;
+            }
+            
             // Wait for db-proxy to be available
             const dbProxy = await window.waitForDbProxy();
             
             // First, get the account data to retrieve contact_table
-            const { data: accountData, error: fetchError } = await dbProxy.select('accounts', { id: accountId }, { select: ['contact_table'], single: true });
+            const { data: accountData, error: fetchError } = await dbProxy.select('accounts', { id: currentAccountId }, { select: ['contact_table'], single: true });
 
             if (fetchError) {
                 tbody.innerHTML = `<tr><td colspan='5' class='contacts-preview-empty'>Erreur: ${fetchError.message}</td></tr>`;
@@ -1204,7 +1342,7 @@
                     </table>
                 </div>
                 <div class='btn-row'>
-                    <a id='contactsLink' class='btn-primary btn' href='/contacts.html?id=${encodeURIComponent(accountId)}'>Consulter les contacts</a>
+                    <a id='contactsLink' class='btn-primary btn' href='/contacts.html'>Consulter les contacts</a>
                 </div>
             </div>
         </div>
@@ -1239,19 +1377,32 @@
 
     // Supabase: fetch account row to populate the cards
     try {
+        console.log('🔄 Starting dashboard data load...');
+        console.log('📋 Account ID:', accountId);
+        
         // Init menu after DOM is ready
         setTimeout(() => initStatusMenu(), 0);
         
         // Wait for db-proxy to be available
+        console.log('⏳ Waiting for dbProxy...');
         const dbProxy = await window.waitForDbProxy();
+        console.log('✅ dbProxy loaded');
         
+        console.log('📤 Fetching account data for ID:', accountId);
         dbProxy.select('accounts', { id: accountId }, { limit: 1, single: true })
             .then(({ data, error }) => {
+                console.log('📥 Account data response received');
+                console.log('📥 Data:', data);
+                console.log('📥 Error:', error);
+                
                 if (error) {
-                    console.error('Database error', error);
+                    console.error('❌ Database error', error);
                     return;
                 }
-                if (!data) return;
+                if (!data) {
+                    console.error('❌ No data returned from database');
+                    return;
+                }
                 
                 // Check if account is factory reset (all essential fields are null/empty)
                 const isFactoryReset = !data.business_id && 
@@ -1378,52 +1529,8 @@
                                 throw new Error(error.message || 'Erreur lors de la réinitialisation');
                             }
                             
-                            // Delete ALL cookies
-                            function deleteAllCookies() {
-                                const cookies = document.cookie.split(';');
-                                const hostname = window.location.hostname;
-                                const hostnameParts = hostname.split('.');
-                                
-                                for (let cookie of cookies) {
-                                    const eqPos = cookie.indexOf('=');
-                                    const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
-                                    
-                                    if (!name) continue;
-                                    
-                                    // Delete cookie for current path
-                                    document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
-                                    document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;SameSite=Lax';
-                                    document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;SameSite=None';
-                                    
-                                    // Delete cookie for current domain
-                                    document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=' + hostname;
-                                    
-                                    // Delete cookie for parent domain (if applicable, e.g., .goreview.fr)
-                                    if (hostnameParts.length > 1) {
-                                        const parentDomain = '.' + hostnameParts.slice(-2).join('.');
-                                        document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=' + parentDomain;
-                                    }
-                                    
-                                    // Also try without leading dot
-                                    if (hostnameParts.length > 1) {
-                                        const parentDomainNoDot = hostnameParts.slice(-2).join('.');
-                                        document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=' + parentDomainNoDot;
-                                    }
-                                }
-                                
-                                // Explicitly delete the session cookie
-                                document.cookie = 'goreview_session=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
-                                document.cookie = 'goreview_session=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;SameSite=Lax';
-                                if (hostnameParts.length > 1) {
-                                    const parentDomain = '.' + hostnameParts.slice(-2).join('.');
-                                    document.cookie = 'goreview_session=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=' + parentDomain;
-                                }
-                                
-                                console.log('✅ All cookies deleted (including session cookie)');
-                            }
-                            
-                            // Delete all cookies
-                            deleteAllCookies();
+                            // No cookies to delete (system doesn't use cookies anymore)
+                            console.log('✅ Reset completed (no cookies to delete)');
                             
                             // Hide popup and redirect
                             hideResetPopup();
