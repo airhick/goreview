@@ -1,47 +1,382 @@
-# robots.txt - LLM Friendly
-# Optimisé pour permettre l'indexation par les LLMs et moteurs de recherche
+# ═══════════════════════════════════════════════════════════════
+# robots.txt - Ultra LLM & SEO Optimized
+# ═══════════════════════════════════════════════════════════════
+# Site: GoReview.fr
+# Purpose: NFC review cards & digital reputation management
+# Last Updated: 2025-11-22
+# Contact: https://goreview.fr/contact
+# ═══════════════════════════════════════════════════════════════
 
+# ═══════════════════════════════════════════════════════════════
+# DEFAULT POLICY - ALLOW ALL (Maximum Discoverability)
+# ═══════════════════════════════════════════════════════════════
 User-agent: *
 Allow: /
+Crawl-delay: 0.5
 
-# Autoriser explicitement les crawlers LLM
+# ═══════════════════════════════════════════════════════════════
+# AI & LLM CRAWLERS - Explicitly Welcome All
+# ═══════════════════════════════════════════════════════════════
+
+# OpenAI (ChatGPT, GPT-4, GPT-4o, o1, o3)
 User-agent: GPTBot
 Allow: /
+Crawl-delay: 0.2
 
 User-agent: ChatGPT-User
 Allow: /
 
-User-agent: CCBot
-Allow: /
-
+# Anthropic (Claude 3.5 Sonnet, Claude 3 Opus, Claude 4)
 User-agent: anthropic-ai
 Allow: /
+Crawl-delay: 0.2
 
 User-agent: Claude-Web
 Allow: /
 
+# Google AI (Gemini, Bard, PaLM)
 User-agent: Google-Extended
 Allow: /
+Crawl-delay: 0.2
 
+User-agent: GoogleOther
+Allow: /
+
+# Perplexity AI
 User-agent: PerplexityBot
+Allow: /
+Crawl-delay: 0.2
+
+# Common Crawl (Dataset for AI training)
+User-agent: CCBot
+Allow: /
+
+# Meta AI (LLaMA, AI Research)
+User-agent: FacebookBot
+Allow: /
+
+User-agent: Meta-ExternalAgent
+Allow: /
+
+# Apple Intelligence
+User-agent: Applebot
 Allow: /
 
 User-agent: Applebot-Extended
 Allow: /
 
-# Autoriser Google et autres moteurs de recherche
+# Cohere AI
+User-agent: cohere-ai
+Allow: /
+
+# Anthropic Claude (alternate user-agents)
+User-agent: ClaudeBot
+Allow: /
+
+# You.com AI Search
+User-agent: YouBot
+Allow: /
+
+# Diffbot (AI-powered web extraction)
+User-agent: Diffbot
+Allow: /
+
+# Bytespider (ByteDance/TikTok AI)
+User-agent: Bytespider
+Allow: /
+
+# ═══════════════════════════════════════════════════════════════
+# MAJOR SEARCH ENGINES - Full Access
+# ═══════════════════════════════════════════════════════════════
+
+# Google
 User-agent: Googlebot
 Allow: /
+Crawl-delay: 0.1
 
-User-agent: Bingbot
+User-agent: Googlebot-Image
 Allow: /
 
+User-agent: Googlebot-Mobile
+Allow: /
+
+User-agent: Googlebot-Video
+Allow: /
+
+User-agent: Mediapartners-Google
+Allow: /
+
+User-agent: AdsBot-Google
+Allow: /
+
+# Bing (Microsoft)
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 0.1
+
+User-agent: BingPreview
+Allow: /
+
+User-agent: msnbot
+Allow: /
+
+User-agent: msnbot-media
+Allow: /
+
+# Yahoo / Verizon Media
 User-agent: Slurp
 Allow: /
 
-# Sitemap
-Sitemap: https://goreview.fr/sitemap.xml
+# DuckDuckGo
+User-agent: DuckDuckBot
+Allow: /
+Crawl-delay: 0.2
 
-# Crawl-delay (optionnel, peut être retiré si nécessaire)
+# Yandex (Russian search engine)
+User-agent: Yandex
+Allow: /
+
+User-agent: YandexBot
+Allow: /
+
+# Baidu (Chinese search engine)
+User-agent: Baiduspider
+Allow: /
+
+# Naver (Korean search engine)
+User-agent: Yeti
+Allow: /
+
+# Brave Search
+User-agent: Brave-Indexer
+Allow: /
+
+# ═══════════════════════════════════════════════════════════════
+# SOCIAL MEDIA & CONTENT PLATFORMS - Rich Previews
+# ═══════════════════════════════════════════════════════════════
+
+# Twitter/X Cards
+User-agent: Twitterbot
+Allow: /
+
+# Facebook & Instagram
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: facebookcatalog
+Allow: /
+
+# LinkedIn
+User-agent: LinkedInBot
+Allow: /
+
+# Pinterest
+User-agent: Pinterest
+Allow: /
+
+User-agent: Pinterestbot
+Allow: /
+
+# WhatsApp
+User-agent: WhatsApp
+Allow: /
+
+# Telegram
+User-agent: TelegramBot
+Allow: /
+
+# Discord
+User-agent: Discordbot
+Allow: /
+
+# Slack
+User-agent: Slackbot
+Allow: /
+
+User-agent: Slackbot-LinkExpanding
+Allow: /
+
+# ═══════════════════════════════════════════════════════════════
+# SEO & ANALYTICS TOOLS - Professional Access
+# ═══════════════════════════════════════════════════════════════
+
+# Semrush
+User-agent: SemrushBot
+Allow: /
 Crawl-delay: 1
 
+# Ahrefs
+User-agent: AhrefsBot
+Allow: /
+Crawl-delay: 1
+
+User-agent: AhrefsSiteAudit
+Allow: /
+
+# Moz
+User-agent: rogerbot
+Allow: /
+Crawl-delay: 1
+
+User-agent: dotbot
+Allow: /
+
+# Screaming Frog
+User-agent: Screaming Frog SEO Spider
+Allow: /
+
+# Majestic SEO
+User-agent: MJ12bot
+Allow: /
+Crawl-delay: 2
+
+# SEO monitoring tools
+User-agent: SiteAuditBot
+Allow: /
+
+User-agent: SEOkicks
+Allow: /
+
+# ═══════════════════════════════════════════════════════════════
+# ARCHIVE & RESEARCH - Academic & Historical Access
+# ═══════════════════════════════════════════════════════════════
+
+# Internet Archive (Wayback Machine)
+User-agent: ia_archiver
+Allow: /
+Crawl-delay: 5
+
+# Archive.org
+User-agent: archive.org_bot
+Allow: /
+
+# Common Crawl (Research dataset)
+User-agent: CCBot
+Allow: /
+
+# ═══════════════════════════════════════════════════════════════
+# BLOCK MALICIOUS BOTS - Security First
+# ═══════════════════════════════════════════════════════════════
+
+# Email harvesters
+User-agent: EmailCollector
+Disallow: /
+
+User-agent: EmailSiphon
+Disallow: /
+
+User-agent: EmailWolf
+Disallow: /
+
+# Content scrapers
+User-agent: WebCopier
+Disallow: /
+
+User-agent: WebZIP
+Disallow: /
+
+User-agent: HTTrack
+Disallow: /
+
+User-agent: Offline Explorer
+Disallow: /
+
+User-agent: Teleport
+Disallow: /
+
+User-agent: TeleportPro
+Disallow: /
+
+User-agent: WebStripper
+Disallow: /
+
+User-agent: WebSauger
+Disallow: /
+
+User-agent: WebReaper
+Disallow: /
+
+# Spam bots
+User-agent: SpamBot
+Disallow: /
+
+User-agent: spam
+Disallow: /
+
+User-agent: ExtractorPro
+Disallow: /
+
+# Known malicious crawlers
+User-agent: MauiBot
+Disallow: /
+
+User-agent: Crescent
+Disallow: /
+
+User-agent: SiteSnagger
+Disallow: /
+
+User-agent: ProWebWalker
+Disallow: /
+
+User-agent: CheeseBot
+Disallow: /
+
+User-agent: TurnitinBot
+Disallow: /
+
+User-agent: Nutch
+Disallow: /
+
+# ═══════════════════════════════════════════════════════════════
+# SITEMAPS - Content Discovery
+# ═══════════════════════════════════════════════════════════════
+Sitemap: https://goreview.fr/sitemap.xml
+Sitemap: https://www.goreview.fr/sitemap.xml
+
+# ═══════════════════════════════════════════════════════════════
+# STRUCTURED DATA & SEO NOTES
+# ═══════════════════════════════════════════════════════════════
+# 
+# Site Features:
+# - NFC review cards for businesses
+# - Google Reviews integration
+# - Contact collection system
+# - Dashboard for business owners
+# - Multi-language support (FR/EN)
+# 
+# Key Pages for Indexing:
+# - Homepage: /
+# - Product: /company.html
+# - Contact: /contact.html
+# - Welcome flow: /pages/bienvenue/
+# - Configuration: /pages/configuration/
+# 
+# Technical Stack:
+# - Static HTML/CSS/JS
+# - Supabase backend
+# - Netlify hosting
+# - Progressive Web App ready
+# 
+# SEO Strategy:
+# - Mobile-first design
+# - Core Web Vitals optimized
+# - Semantic HTML5
+# - Open Graph metadata
+# - Twitter Cards
+# - Schema.org markup
+# - Accessible (WCAG AA)
+# 
+# Target Keywords:
+# - Carte NFC avis Google
+# - Augmenter avis Google
+# - Collecte avis clients
+# - Réputation en ligne
+# - Review collection NFC
+# - Google review card
+# 
+# Contact: contact@goreview.fr
+# Legal: /politique-confidentialite.html
+# Terms: /conditions-generales.html
+# 
+# ═══════════════════════════════════════════════════════════════

@@ -1049,98 +1049,12 @@
         }
     }
 
-    // Fetch rating and review count from Google Maps (via scraping)
-    // No API key required - uses Netlify function to scrape Google Maps page
+    // Simple function to show empty rating/reviews
     async function fetchGooglePlaceDetails(placeId) {
-        console.log('📊 Fetching rating and review count from Google Maps...');
-        console.log('   Place ID:', placeId);
-        
-        // Use Netlify function to scrape Google Maps
-        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        const functionUrl = isLocalhost 
-            ? 'http://localhost:8005'  // Local proxy on port 8005
-            : '/.netlify/functions/google-place-details';  // Production Netlify function
-        
-        try {
-            const response = await fetch(`${functionUrl}?place_id=${encodeURIComponent(placeId)}`);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            
-            const data = await response.json();
-            console.log('📥 Response from scraper:', data);
-            
-            if (data.status === 'OK' && data.result) {
-                const rating = data.result.rating ? parseFloat(data.result.rating) : null;
-                const totalReviews = data.result.user_ratings_total ? parseInt(data.result.user_ratings_total, 10) : null;
-                
-                console.log('✅ Rating data retrieved from Google Maps:');
-                console.log('   Place Name:', data.result.name);
-                console.log('   Rating:', rating);
-                console.log('   Total reviews:', totalReviews);
-                
-                updateRatingDisplay(rating);
-                updateTotalReviewsDisplay(totalReviews);
-                
-                // Optionally update database with fresh data for caching
-                try {
-                    const dbProxy = await window.waitForDbProxy();
-                    await dbProxy.update('accounts', {
-                        current_rating: rating,
-                        tot_review: totalReviews,
-                        updated_at: new Date().toISOString()
-                    }, { id: accountId });
-                    console.log('💾 Database updated with fresh Google data');
-                } catch (e) {
-                    console.warn('⚠️ Could not update database cache:', e);
-                }
-                
-            } else {
-                console.warn('⚠️ Could not extract data from Google Maps:', data.error || data.status);
-                
-                // Fallback to database if scraping fails
-                console.log('📊 Falling back to database data...');
-                const dbProxy = await window.waitForDbProxy();
-                const { data: accountData } = await dbProxy.select('accounts', { id: accountId }, { select: ['current_rating', 'tot_review'], single: true });
-                
-                if (accountData) {
-                    const rating = accountData.current_rating ? parseFloat(accountData.current_rating) : null;
-                    const totalReviews = accountData.tot_review ? parseInt(accountData.tot_review, 10) : null;
-                    console.log('✅ Using cached data from database:', { rating, totalReviews });
-                    updateRatingDisplay(rating);
-                    updateTotalReviewsDisplay(totalReviews);
-                } else {
-                    updateRatingDisplay(null);
-                    updateTotalReviewsDisplay(null);
-                }
-            }
-            
-        } catch (error) {
-            console.error('❌ Failed to fetch from Google Maps:', error);
-            
-            // Fallback to database on error
-            console.log('📊 Falling back to database data...');
-            try {
-                const dbProxy = await window.waitForDbProxy();
-                const { data: accountData } = await dbProxy.select('accounts', { id: accountId }, { select: ['current_rating', 'tot_review'], single: true });
-                
-                if (accountData) {
-                    const rating = accountData.current_rating ? parseFloat(accountData.current_rating) : null;
-                    const totalReviews = accountData.tot_review ? parseInt(accountData.tot_review, 10) : null;
-                    console.log('✅ Using cached data from database:', { rating, totalReviews });
-                    updateRatingDisplay(rating);
-                    updateTotalReviewsDisplay(totalReviews);
-                } else {
-                    updateRatingDisplay(null);
-                    updateTotalReviewsDisplay(null);
-                }
-            } catch (e) {
-                console.error('❌ Database fallback also failed:', e);
-                updateRatingDisplay(null);
-                updateTotalReviewsDisplay(null);
-            }
-        }
+        console.log('📊 Rating display: Showing empty state');
+        // Just show empty state - no API calls
+        updateRatingDisplay(null);
+        updateTotalReviewsDisplay(null);
     }
 
     // Update rating display

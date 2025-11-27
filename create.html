@@ -545,7 +545,8 @@
                         autocompleteService.getPlacePredictions(
                             {
                                 input: query,
-                                types: ['establishment'],
+                                // Remove types restriction to find ANY business/place
+                                // This allows searching for all types of businesses
                                 componentRestrictions: { country: ['fr', 'ch'] }
                             },
                             displaySuggestions

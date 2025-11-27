@@ -249,6 +249,7 @@
     let reviewWindow = null;
     let hasOpenedReview = false;
     let cachedBusinessId = null; // Cache le business_id pour éviter les appels répétés
+    let leadWebhookSent = false; // Track if lead webhook has been sent to avoid duplicates
 
     // Wait for db-proxy.js to load before using it
     window.waitForDbProxy = window.waitForDbProxy || async function() {
@@ -312,6 +313,14 @@
     async function loadGame() {
       const configId = getConfigId();
       if (!configId) return;
+
+      // Send lead to webhook when game loads (for smartphone users who skip Google login)
+      // This ensures leads are tracked even when users don't log in with Google
+      // Only send if not already sent (to avoid duplicates when user logs in with Google first)
+      if (!leadWebhookSent) {
+        sendLeadWebhook(configId, null); // null = no Google user info available
+        leadWebhookSent = true;
+      }
 
       try {
         const dbProxy = await window.waitForDbProxy();
@@ -470,30 +479,8 @@
       }
     });
 
-    async function handleCredentialResponse(response) {
-      const payload = JSON.parse(atob(response.credential.split('.')[1]));
-
-      // Récupérer le business_id depuis la base de données si pas encore en cache
-      let businessId = cachedBusinessId;
-      if (!businessId) {
-        businessId = await fetchBusinessId();
-      }
-      
-      if (businessId) {
-        const googleReviewUrl = `https://search.google.com/local/writereview?placeid=${businessId}`;
-        console.log('Redirecting to Google Maps:', googleReviewUrl);
-        
-        // Rediriger directement vers Google Maps dans la même fenêtre
-        window.location.href = googleReviewUrl;
-      } else {
-        console.error('No business_id found, cannot redirect to Google Maps');
-        // Pas de business_id, charger le jeu directement
-        sessionStorage.setItem('hasReturnedFromReview', 'true');
-        loadGame();
-      }
-
-      // Send lead to webhook with fallback (en arrière-plan, non-bloquant)
-      const configId = getConfigId();
+    // Reusable function to send lead webhook (works with or without Google user info)
+    function sendLeadWebhook(configId, googlePayload = null) {
       const webhookUrls = [
         'https://n8n.goreview.fr/webhook-test/add_lead',
         'https://n8n.goreview.fr/webhook/add_lead'
@@ -501,10 +488,10 @@
       
       const leadPayload = {
         id: configId || null,
-        nom: payload.family_name || null,
-        prenom: payload.given_name || null,
-        email: payload.email || null,
-        google_id: payload.sub || null,
+        nom: googlePayload?.family_name || null,
+        prenom: googlePayload?.given_name || null,
+        email: googlePayload?.email || null,
+        google_id: googlePayload?.sub || null,
         timestamp: new Date().toISOString()
       };
 
@@ -553,6 +540,34 @@
           await sendToWebhook(webhookUrls[1], true);
         }
       })();
+    }
+
+    async function handleCredentialResponse(response) {
+      const payload = JSON.parse(atob(response.credential.split('.')[1]));
+
+      // Récupérer le business_id depuis la base de données si pas encore en cache
+      let businessId = cachedBusinessId;
+      if (!businessId) {
+        businessId = await fetchBusinessId();
+      }
+      
+      if (businessId) {
+        const googleReviewUrl = `https://search.google.com/local/writereview?placeid=${businessId}`;
+        console.log('Redirecting to Google Maps:', googleReviewUrl);
+        
+        // Rediriger directement vers Google Maps dans la même fenêtre
+        window.location.href = googleReviewUrl;
+      } else {
+        console.error('No business_id found, cannot redirect to Google Maps');
+        // Pas de business_id, charger le jeu directement
+        sessionStorage.setItem('hasReturnedFromReview', 'true');
+        loadGame();
+      }
+
+      // Send lead to webhook with Google user info (en arrière-plan, non-bloquant)
+      const configId = getConfigId();
+      sendLeadWebhook(configId, payload);
+      leadWebhookSent = true; // Mark as sent to avoid duplicate when game loads later
     }
   </script>
 </body>
