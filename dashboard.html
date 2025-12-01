@@ -30,15 +30,11 @@
           }
         };
         
-        // Suppress fetch errors for dev tools and Google tracking
+        // Suppress fetch errors for dev tools only (allow Google Maps API calls)
         const originalFetch = window.fetch;
         window.fetch = function(...args) {
           const url = args[0] || '';
-          if (url.includes && (
-            url.includes('localhost:62462') ||
-            url.includes('gen_204') ||
-            url.includes('google-analytics')
-          )) {
+          if (url.includes && url.includes('localhost:62462')) {
             return Promise.reject(new Error('Blocked by filter')).catch(() => {});
           }
           return originalFetch.apply(this, args);
@@ -1049,12 +1045,52 @@
         }
     }
 
-    // Simple function to show empty rating/reviews
+    // Fetch rating and total reviews from Google Places API
     async function fetchGooglePlaceDetails(placeId) {
-        console.log('📊 Rating display: Showing empty state');
-        // Just show empty state - no API calls
-        updateRatingDisplay(null);
-        updateTotalReviewsDisplay(null);
+        if (!placeId) {
+            console.log('📊 No place_id provided, showing empty state');
+            updateRatingDisplay(null);
+            updateTotalReviewsDisplay(null);
+            return;
+        }
+        
+        console.log('📊 Fetching Google Places details for place_id:', placeId);
+        
+        try {
+            // Use the local server proxy endpoint to avoid CORS issues
+            const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            const apiUrl = isLocalhost 
+                ? `/api/google-place-details?place_id=${encodeURIComponent(placeId)}`
+                : `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(placeId)}&fields=rating,user_ratings_total&key=AIzaSyC1zqymSXocGXuCEVvpzXERWYwIzimV0Oo`;
+            
+            const response = await fetch(apiUrl);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.status === 'OK' && data.result) {
+                const rating = data.result.rating || null;
+                const totalReviews = data.result.user_ratings_total || null;
+                
+                console.log('✅ Google Places data received:', { rating, totalReviews });
+                
+                updateRatingDisplay(rating);
+                updateTotalReviewsDisplay(totalReviews);
+            } else {
+                console.warn('⚠️ Google Places API returned non-OK status:', data.status, data.error_message);
+                // Show empty state if API returns error
+                updateRatingDisplay(null);
+                updateTotalReviewsDisplay(null);
+            }
+        } catch (error) {
+            console.error('❌ Error fetching Google Places details:', error);
+            // Show empty state on error
+            updateRatingDisplay(null);
+            updateTotalReviewsDisplay(null);
+        }
     }
 
     // Update rating display

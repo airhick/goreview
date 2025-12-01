@@ -290,16 +290,94 @@
                     console.log('🔍 Searching for email (case-insensitive):', normalizedEmail);
                     console.log('🔍 Supabase client initialized:', !!supabaseClient);
                     
-                    // Use ilike for case-insensitive search in PostgreSQL/Supabase
-                    // This will match emails regardless of case (e.g., "Test@Email.com" matches "test@email.com")
-                    console.log('📤 Sending query to Supabase...');
-                    const { data, error } = await supabaseClient
+                    // First, let's check if we can query the table at all and see what emails exist
+                    console.log('🔍 Diagnostic: Fetching sample records from accounts table...');
+                    const diagnosticQuery = await supabaseClient
                         .from('accounts')
                         .select('id, email')
-                        .ilike('email', normalizedEmail)
+                        .limit(10);
+                    
+                    console.log('📊 Diagnostic query result:', {
+                        data: diagnosticQuery.data,
+                        error: diagnosticQuery.error,
+                        count: diagnosticQuery.data?.length || 0
+                    });
+                    
+                    if (diagnosticQuery.data && diagnosticQuery.data.length > 0) {
+                        console.log('📋 Sample emails in database:', diagnosticQuery.data.map(acc => ({
+                            id: acc.id,
+                            email: acc.email,
+                            emailLower: acc.email?.toLowerCase(),
+                            matches: acc.email?.toLowerCase() === normalizedEmail
+                        })));
+                    }
+                    
+                    // Try multiple query methods to find the account
+                    // Method 1: Case-insensitive search using filter with ilike
+                    console.log('📤 Sending query to Supabase (method 1: ilike)...');
+                    let { data, error } = await supabaseClient
+                        .from('accounts')
+                        .select('id, email')
+                        .filter('email', 'ilike', normalizedEmail)
                         .maybeSingle();
 
-                    console.log('📥 Supabase response received');
+                    console.log('📥 Supabase response (method 1):', { data, error });
+                    
+                    // Method 2: If no results, try exact match (in case email is already lowercase in DB)
+                    if (!data && !error) {
+                        console.log('🔄 Trying method 2: exact match...');
+                        const result2 = await supabaseClient
+                            .from('accounts')
+                            .select('id, email')
+                            .eq('email', normalizedEmail)
+                            .maybeSingle();
+                        data = result2.data;
+                        error = result2.error;
+                        console.log('📥 Supabase response (method 2):', { data, error });
+                    }
+                    
+                    // Method 3: If still no results, fetch all and filter client-side (last resort)
+                    if (!data && !error) {
+                        console.log('🔄 Trying method 3: fetch all and filter client-side...');
+                        const result3 = await supabaseClient
+                            .from('accounts')
+                            .select('id, email');
+                        
+                        console.log('📥 Method 3 query result:', { 
+                            data: result3.data, 
+                            error: result3.error,
+                            count: result3.data?.length || 0
+                        });
+                        
+                        if (!result3.error && result3.data) {
+                            console.log('🔍 Filtering through', result3.data.length, 'records...');
+                            const found = result3.data.find(acc => {
+                                if (!acc.email) return false;
+                                const accEmailNormalized = acc.email.trim().toLowerCase();
+                                const matches = accEmailNormalized === normalizedEmail;
+                                if (matches) {
+                                    console.log('✅ Match found!', {
+                                        dbEmail: acc.email,
+                                        dbEmailNormalized: accEmailNormalized,
+                                        searchEmail: normalizedEmail,
+                                        id: acc.id
+                                    });
+                                }
+                                return matches;
+                            });
+                            if (found) {
+                                data = found;
+                                console.log('✅ Found with client-side filtering:', data);
+                            } else {
+                                console.log('❌ No match found in', result3.data.length, 'records');
+                                console.log('🔍 All emails in DB:', result3.data.map(a => a.email).filter(Boolean));
+                            }
+                        } else {
+                            console.error('❌ Method 3 query failed:', result3.error);
+                        }
+                    }
+
+                    console.log('📥 Final Supabase response');
                     console.log('📥 Data:', data);
                     console.log('📥 Error:', error);
 
