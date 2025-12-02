@@ -3,7 +3,7 @@
 # ═══════════════════════════════════════════════════════════════
 # Site: GoReview.fr
 # Purpose: NFC review cards & digital reputation management
-# Last Updated: 2025-11-22
+# Last Updated: 2025-01-27
 # Contact: https://goreview.fr/contact
 # ═══════════════════════════════════════════════════════════════
 
@@ -347,10 +347,27 @@ Sitemap: https://www.goreview.fr/sitemap.xml
 # 
 # Key Pages for Indexing:
 # - Homepage: /
+# - Blog: /blog.html
 # - Product: /company.html
 # - Contact: /contact.html
+# - Cart: /cart.html
+# - Create: /create.html
+# - Games: /games.html
 # - Welcome flow: /pages/bienvenue/
 # - Configuration: /pages/configuration/
+# 
+# Blog Articles (11 SEO-optimized articles):
+# - /articles/ecosysteme.google.html
+# - /articles/augmenter-avis-google-plaque-nfc.html
+# - /articles/plaques-nfc-revolution-commerces-locaux.html
+# - /articles/5-strategies-ameliorer-note-google.html
+# - /articles/pourquoi-avis-clients-cruciaux-2025.html
+# - /articles/guide-optimiser-google-business-profile.html
+# - /articles/nfc-vs-qr-code-meilleur-commerce.html
+# - /articles/repondre-avis-google-negatifs.html
+# - /articles/pouvoir-avis-clients-ventes.html
+# - /articles/marketing-local-dominer-zone-chalandise.html
+# - /articles/plaque-nfc-gratuite-comment-fonctionne.html
 # 
 # Technical Stack:
 # - Static HTML/CSS/JS
@@ -369,9 +386,15 @@ Sitemap: https://www.goreview.fr/sitemap.xml
 # 
 # Target Keywords:
 # - Carte NFC avis Google
+# - Plaque NFC avis clients
 # - Augmenter avis Google
 # - Collecte avis clients
 # - Réputation en ligne
+# - Google Business Profile
+# - Marketing local
+# - SEO local
+# - NFC vs QR Code
+# - Optimiser Google Business Profile
 # - Review collection NFC
 # - Google review card
 # 

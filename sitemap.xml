@@ -12,64 +12,148 @@
         <priority>1.0</priority>
     </url>
     
-    <!-- Page produit -->
+    <!-- Blog principal -->
     <url>
-        <loc>https://goreview.fr/#produit</loc>
+        <loc>https://goreview.fr/blog.html</loc>
         <lastmod>2025-01-27</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.9</priority>
     </url>
     
-    <!-- Section concept -->
+    <!-- Articles de blog -->
     <url>
-        <loc>https://goreview.fr/#concept</loc>
+        <loc>https://goreview.fr/articles/ecosysteme.google.html</loc>
         <lastmod>2025-01-27</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.8</priority>
     </url>
     
-    <!-- Section avantages -->
     <url>
-        <loc>https://goreview.fr/#avantages</loc>
+        <loc>https://goreview.fr/articles/augmenter-avis-google-plaque-nfc.html</loc>
         <lastmod>2025-01-27</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.8</priority>
     </url>
     
-    <!-- Section fonctionnalités -->
     <url>
-        <loc>https://goreview.fr/#features</loc>
+        <loc>https://goreview.fr/articles/plaques-nfc-revolution-commerces-locaux.html</loc>
+        <lastmod>2025-01-27</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.8</priority>
+    </url>
+    
+    <url>
+        <loc>https://goreview.fr/articles/5-strategies-ameliorer-note-google.html</loc>
+        <lastmod>2025-01-27</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.8</priority>
+    </url>
+    
+    <url>
+        <loc>https://goreview.fr/articles/pourquoi-avis-clients-cruciaux-2025.html</loc>
+        <lastmod>2025-01-27</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.8</priority>
+    </url>
+    
+    <url>
+        <loc>https://goreview.fr/articles/guide-optimiser-google-business-profile.html</loc>
+        <lastmod>2025-01-27</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.8</priority>
+    </url>
+    
+    <url>
+        <loc>https://goreview.fr/articles/nfc-vs-qr-code-meilleur-commerce.html</loc>
+        <lastmod>2025-01-27</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.8</priority>
+    </url>
+    
+    <url>
+        <loc>https://goreview.fr/articles/repondre-avis-google-negatifs.html</loc>
+        <lastmod>2025-01-27</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.8</priority>
+    </url>
+    
+    <url>
+        <loc>https://goreview.fr/articles/pouvoir-avis-clients-ventes.html</loc>
+        <lastmod>2025-01-27</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.8</priority>
+    </url>
+    
+    <url>
+        <loc>https://goreview.fr/articles/marketing-local-dominer-zone-chalandise.html</loc>
+        <lastmod>2025-01-27</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.8</priority>
+    </url>
+    
+    <url>
+        <loc>https://goreview.fr/articles/plaque-nfc-gratuite-comment-fonctionne.html</loc>
+        <lastmod>2025-01-27</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.8</priority>
+    </url>
+    
+    <!-- Pages principales -->
+    <url>
+        <loc>https://goreview.fr/contact.html</loc>
         <lastmod>2025-01-27</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.7</priority>
     </url>
     
-    <!-- Page company -->
+    <url>
+        <loc>https://goreview.fr/cart.html</loc>
+        <lastmod>2025-01-27</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.7</priority>
+    </url>
+    
+    <url>
+        <loc>https://goreview.fr/create.html</loc>
+        <lastmod>2025-01-27</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.7</priority>
+    </url>
+    
+    <url>
+        <loc>https://goreview.fr/games.html</loc>
+        <lastmod>2025-01-27</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.6</priority>
+    </url>
+    
     <url>
         <loc>https://goreview.fr/company.html</loc>
         <lastmod>2025-01-27</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.8</priority>
     </url>
-
+    
+    <!-- Pages légales -->
     <url>
         <loc>https://goreview.fr/politique-confidentialite.html</loc>
-        <lastmod>2025-11-17</lastmod>
+        <lastmod>2025-01-27</lastmod>
         <changefreq>yearly</changefreq>
         <priority>0.5</priority>
     </url>
+    
     <url>
         <loc>https://goreview.fr/conditions-generales.html</loc>
-        <lastmod>2025-11-17</lastmod>
+        <lastmod>2025-01-27</lastmod>
         <changefreq>yearly</changefreq>
         <priority>0.5</priority>
     </url>
+    
     <url>
         <loc>https://goreview.fr/politique-cookies.html</loc>
-        <lastmod>2025-11-17</lastmod>
+        <lastmod>2025-01-27</lastmod>
         <changefreq>yearly</changefreq>
         <priority>0.5</priority>
     </url>
     
 </urlset>
-

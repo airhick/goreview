@@ -1,0 +1,173 @@
+# ═══════════════════════════════════════════════════════════════
+# llm.txt - AI/LLM Optimization File for GoReview.fr
+# ═══════════════════════════════════════════════════════════════
+# Purpose: Help AI systems understand and index GoReview content
+# Last Updated: 2025-01-27
+# Contact: goreview.fr@gmail.com
+# ═══════════════════════════════════════════════════════════════
+
+# ═══════════════════════════════════════════════════════════════
+# SITE OVERVIEW
+# ═══════════════════════════════════════════════════════════════
+
+Site Name: GoReview
+Domain: https://goreview.fr
+Language: French (fr-FR)
+Primary Purpose: NFC review cards for businesses to collect Google reviews
+Target Audience: French businesses, restaurants, local commerce, service providers
+
+# ═══════════════════════════════════════════════════════════════
+# KEY PAGES & CONTENT
+# ═══════════════════════════════════════════════════════════════
+
+## Homepage
+URL: https://goreview.fr/
+Content: Main landing page explaining NFC review cards, features, benefits
+Keywords: carte NFC avis Google, plaque NFC, collecte avis clients
+
+## Blog
+URL: https://goreview.fr/blog.html
+Content: Complete list of all SEO-optimized articles about Google reviews, NFC technology, local marketing
+
+## Blog Articles (11 articles)
+1. https://goreview.fr/articles/ecosysteme.google.html
+   Title: L'Écosystème Google : Vital pour votre Commerce
+   Topic: Google Business Profile importance, local SEO
+
+2. https://goreview.fr/articles/augmenter-avis-google-plaque-nfc.html
+   Title: Comment augmenter ses avis Google avec une plaque NFC
+   Topic: How to increase Google reviews using NFC cards
+
+3. https://goreview.fr/articles/plaques-nfc-revolution-commerces-locaux.html
+   Title: Les plaques NFC : révolution pour les commerces locaux
+   Topic: NFC technology for local businesses
+
+4. https://goreview.fr/articles/5-strategies-ameliorer-note-google.html
+   Title: 5 stratégies pour améliorer sa note Google
+   Topic: Strategies to improve Google Business Profile rating
+
+5. https://goreview.fr/articles/pourquoi-avis-clients-cruciaux-2025.html
+   Title: Pourquoi les avis clients sont cruciaux en 2025
+   Topic: Importance of customer reviews in 2025
+
+6. https://goreview.fr/articles/guide-optimiser-google-business-profile.html
+   Title: Guide complet : optimiser son Google Business Profile
+   Topic: Complete guide to optimize Google Business Profile
+
+7. https://goreview.fr/articles/nfc-vs-qr-code-meilleur-commerce.html
+   Title: NFC vs QR Code : quel est le meilleur pour votre commerce
+   Topic: Comparison between NFC and QR Code technologies
+
+8. https://goreview.fr/articles/repondre-avis-google-negatifs.html
+   Title: Comment répondre aux avis Google négatifs
+   Topic: How to respond to negative Google reviews
+
+9. https://goreview.fr/articles/pouvoir-avis-clients-ventes.html
+   Title: Le pouvoir des avis clients sur les ventes
+   Topic: Impact of customer reviews on sales
+
+10. https://goreview.fr/articles/marketing-local-dominer-zone-chalandise.html
+    Title: Marketing local : comment dominer sa zone de chalandise
+    Topic: Local marketing strategies to dominate catchment area
+
+11. https://goreview.fr/articles/plaque-nfc-gratuite-comment-fonctionne.html
+    Title: Plaque NFC gratuite : comment ça fonctionne vraiment
+    Topic: How free NFC cards work
+
+## Product Pages
+- https://goreview.fr/company.html (Google Sign-In & Review Flow)
+- https://goreview.fr/create.html (NFC Card Configuration)
+- https://goreview.fr/cart.html (Order Page)
+- https://goreview.fr/contact.html (Contact Form)
+
+## Legal Pages
+- https://goreview.fr/politique-confidentialite.html (Privacy Policy)
+- https://goreview.fr/conditions-generales.html (Terms & Conditions)
+- https://goreview.fr/politique-cookies.html (Cookie Policy)
+
+# ═══════════════════════════════════════════════════════════════
+# KEYWORDS & TOPICS
+# ═══════════════════════════════════════════════════════════════
+
+Primary Keywords:
+- Carte NFC avis Google
+- Plaque NFC avis clients
+- Augmenter avis Google
+- Collecte avis Google
+- Réputation en ligne
+- Google Business Profile
+- Marketing local
+- Avis clients commerce
+
+Secondary Keywords:
+- NFC vs QR Code
+- Optimiser Google Business Profile
+- Répondre avis négatifs
+- Zone de chalandise
+- SEO local
+- Avis Google gratuit
+
+# ═══════════════════════════════════════════════════════════════
+# TECHNICAL INFORMATION
+# ═══════════════════════════════════════════════════════════════
+
+Technology Stack:
+- Frontend: HTML5, CSS3, JavaScript (Vanilla)
+- Backend: Supabase (PostgreSQL)
+- Hosting: Netlify
+- Analytics: Google Tag Manager (GTM-MDMVT6V8)
+- Structured Data: Schema.org (Article, Product, Organization)
+
+SEO Features:
+- Mobile-first responsive design
+- Semantic HTML5 structure
+- Open Graph metadata
+- Twitter Cards
+- Schema.org JSON-LD
+- Canonical URLs
+- XML Sitemap
+- robots.txt optimized
+
+# ═══════════════════════════════════════════════════════════════
+# CONTENT STRUCTURE
+# ═══════════════════════════════════════════════════════════════
+
+All blog articles follow SEO best practices:
+- Unique H1 per page
+- Proper heading hierarchy (H2 → H3)
+- Meta descriptions (max 160 chars)
+- Title tags (max 60 chars)
+- Canonical URLs
+- Schema.org Article markup
+- Breadcrumb navigation
+- Internal linking
+- Image alt text
+- Reading time estimates
+
+# ═══════════════════════════════════════════════════════════════
+# CONTACT & LEGAL
+# ═══════════════════════════════════════════════════════════════
+
+Contact Email: goreview.fr@gmail.com
+Contact Page: https://goreview.fr/contact.html
+Privacy Policy: https://goreview.fr/politique-confidentialite.html
+Terms: https://goreview.fr/conditions-generales.html
+
+# ═══════════════════════════════════════════════════════════════
+# SITEMAP & ROBOTS
+# ═══════════════════════════════════════════════════════════════
+
+Sitemap: https://goreview.fr/sitemap.xml
+Robots.txt: https://goreview.fr/robots.txt
+
+# ═══════════════════════════════════════════════════════════════
+# AI/LLM CRAWLING NOTES
+# ═══════════════════════════════════════════════════════════════
+
+This site welcomes all AI crawlers and LLM training systems.
+All public pages are accessible and optimized for AI understanding.
+Content is in French, focused on NFC technology for Google review collection.
+Articles are well-structured with clear headings, meta descriptions, and semantic markup.
+
+# ═══════════════════════════════════════════════════════════════
+
