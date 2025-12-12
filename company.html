@@ -451,8 +451,35 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       }, 1000);
     }
 
+    // Check for pending webhook data and send it (fallback mechanism)
+    async function checkAndSendPendingWebhook() {
+      try {
+        const pendingLead = sessionStorage.getItem('pendingLeadWebhook');
+        if (pendingLead) {
+          const leadData = JSON.parse(pendingLead);
+          console.log('Found pending lead webhook, sending now...', leadData);
+          const configId = leadData.id;
+          // Send webhook with the stored data
+          await sendLeadWebhook(configId, {
+            family_name: leadData.nom,
+            given_name: leadData.prenom,
+            email: leadData.email,
+            sub: leadData.google_id
+          }, false);
+          // Remove from sessionStorage after successful send
+          sessionStorage.removeItem('pendingLeadWebhook');
+          console.log('Pending lead webhook sent successfully');
+        }
+      } catch (e) {
+        console.error('Error sending pending webhook:', e);
+      }
+    }
+
     // Initialiser Google Sign-In au chargement de la page
     window.onload = async () => {
+      // Check for pending webhook first (in case previous redirect interrupted it)
+      await checkAndSendPendingWebhook();
+      
       // Vérifier si l'utilisateur revient (check localStorage ou sessionStorage)
       const hasReturned = sessionStorage.getItem('hasReturnedFromReview');
       if (hasReturned === 'true') {
@@ -460,6 +487,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         loginContainer.style.display = 'none';
         await loadGame();
         sessionStorage.removeItem('hasReturnedFromReview');
+        // Also check for pending webhook when returning
+        await checkAndSendPendingWebhook();
         return;
       }
 
@@ -497,7 +526,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     });
 
     // Reusable function to send lead webhook (works with or without Google user info)
-    function sendLeadWebhook(configId, googlePayload = null) {
+    // Returns a Promise that resolves when webhook is sent (or attempted)
+    function sendLeadWebhook(configId, googlePayload = null, useBeacon = false) {
       const webhookUrls = [
         'https://n8n.goreview.fr/webhook-test/add_lead',
         'https://n8n.goreview.fr/webhook/add_lead'
@@ -514,21 +544,37 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
       console.log('Sending lead to webhook:', leadPayload);
 
-      // Basic Auth credentials
-      const username = 'yck69';
-      const password = 'yck69';
-      const credentials = btoa(`${username}:${password}`);
+      // Use sendBeacon for mobile/navigation scenarios (more reliable during page unload)
+      if (useBeacon && navigator.sendBeacon) {
+        console.log('Using sendBeacon for webhook (mobile/navigation scenario)');
+        const payloadString = JSON.stringify(leadPayload);
+        const blob = new Blob([payloadString], { type: 'application/json' });
+        
+        // sendBeacon doesn't support custom headers, but webhook no longer requires authentication
+        // Try sendBeacon first for the test webhook, then fallback to fetch if needed
+        const testSent = navigator.sendBeacon(webhookUrls[0], blob);
+        if (testSent) {
+          console.log('Lead sent via sendBeacon to test webhook');
+        }
+        // Also try live webhook
+        const liveSent = navigator.sendBeacon(webhookUrls[1], blob);
+        if (liveSent) {
+          console.log('Lead sent via sendBeacon to live webhook');
+        }
+        return Promise.resolve(testSent || liveSent);
+      }
 
-      // Helper function to send to a webhook
+      // Helper function to send to a webhook using fetch with keepalive (works during navigation)
       const sendToWebhook = async (url, isFallback = false) => {
         try {
+          // Use keepalive: true to ensure request completes even during page unload
           const response = await fetch(url, {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Basic ${credentials}`
+              'Content-Type': 'application/json'
             },
-            body: JSON.stringify(leadPayload)
+            body: JSON.stringify(leadPayload),
+            keepalive: true // Critical for mobile - ensures request completes during navigation
           });
 
           console.log(`${isFallback ? 'Fallback ' : ''}Webhook response status:`, response.status);
@@ -545,22 +591,74 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           }
         } catch (err) {
           console.error(`${isFallback ? 'Fallback ' : ''}Webhook send failed:`, url, err);
+          // If fetch fails, try sendBeacon as last resort
+          if (navigator.sendBeacon) {
+            try {
+              const blob = new Blob([JSON.stringify(leadPayload)], { type: 'application/json' });
+              const beaconSent = navigator.sendBeacon(url, blob);
+              if (beaconSent) {
+                console.log('Fallback: Lead sent via sendBeacon');
+              }
+            } catch (beaconErr) {
+              console.error('sendBeacon also failed:', beaconErr);
+            }
+          }
           return false; // Failed
         }
       };
 
       // Try test webhook first, then fallback to live webhook
-      (async () => {
+      return (async () => {
         const testSuccess = await sendToWebhook(webhookUrls[0], false);
         if (!testSuccess) {
           console.log('Test webhook failed, trying live webhook...');
           await sendToWebhook(webhookUrls[1], true);
         }
+        return testSuccess;
       })();
     }
 
     async function handleCredentialResponse(response) {
       const payload = JSON.parse(atob(response.credential.split('.')[1]));
+      const configId = getConfigId();
+
+      // IMPORTANT: Send webhook BEFORE redirecting (especially critical on mobile)
+      // On mobile, redirects can interrupt JavaScript execution
+      console.log('Sending lead webhook BEFORE redirect...');
+      leadWebhookSent = true; // Mark as sent to avoid duplicate when game loads later
+      
+      // Store lead data in sessionStorage as backup (in case webhook fails during redirect)
+      const leadData = {
+        id: configId || null,
+        nom: payload?.family_name || null,
+        prenom: payload?.given_name || null,
+        email: payload?.email || null,
+        google_id: payload?.sub || null,
+        timestamp: new Date().toISOString()
+      };
+      try {
+        sessionStorage.setItem('pendingLeadWebhook', JSON.stringify(leadData));
+        console.log('Lead data stored in sessionStorage as backup');
+      } catch (e) {
+        console.warn('Could not store lead in sessionStorage:', e);
+      }
+      
+      // Send webhook with keepalive flag for mobile compatibility
+      // Use a short timeout to ensure it starts before redirect
+      const webhookPromise = sendLeadWebhook(configId, payload, false);
+      
+      // Wait a short time for webhook to start (but don't block too long)
+      // On mobile, we want to redirect quickly but give webhook time to initiate
+      try {
+        await Promise.race([
+          webhookPromise,
+          new Promise(resolve => setTimeout(resolve, 300)) // Max 300ms wait
+        ]);
+        console.log('Webhook sent (or timeout reached)');
+      } catch (e) {
+        console.error('Error sending webhook:', e);
+        // Webhook failed, but we have backup in sessionStorage
+      }
 
       // Récupérer le business_id depuis la base de données si pas encore en cache
       let businessId = cachedBusinessId;
@@ -572,6 +670,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         const googleReviewUrl = `https://search.google.com/local/writereview?placeid=${businessId}`;
         console.log('Redirecting to Google Maps:', googleReviewUrl);
         
+        // Small delay to ensure webhook request is initiated before redirect
+        // This is especially important on mobile devices
+        await new Promise(resolve => setTimeout(resolve, 150));
+        
         // Rediriger directement vers Google Maps dans la même fenêtre
         window.location.href = googleReviewUrl;
       } else {
@@ -580,11 +682,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         sessionStorage.setItem('hasReturnedFromReview', 'true');
         loadGame();
       }
-
-      // Send lead to webhook with Google user info (en arrière-plan, non-bloquant)
-      const configId = getConfigId();
-      sendLeadWebhook(configId, payload);
-      leadWebhookSent = true; // Mark as sent to avoid duplicate when game loads later
     }
   </script>
 </body>

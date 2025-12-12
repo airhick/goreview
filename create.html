@@ -722,11 +722,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                     throw new Error('Place ID manquant - cette erreur ne devrait jamais se produire');
                 }
 
-                // Basic Auth credentials
-                const username = 'yck69';
-                const password = 'yck69';
-                const credentials = btoa(`${username}:${password}`);
-
                 console.log('Sending to webhook:', webhookUrl, payload);
 
                 // Try to send to webhook, but don't block on CORS errors
@@ -735,8 +730,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                     const response = await fetch(webhookUrl, {
                         method: 'POST',
                         headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Basic ${credentials}`
+                            'Content-Type': 'application/json'
                         },
                         body: JSON.stringify(payload)
                     });

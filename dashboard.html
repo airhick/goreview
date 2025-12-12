@@ -1049,7 +1049,7 @@
         }
     }
 
-    // Fetch rating and total reviews from Google Places API
+    // Fetch rating and total reviews from Google Maps (via scraping function)
     async function fetchGooglePlaceDetails(placeId) {
         if (!placeId) {
             console.log('📊 No place_id provided, showing empty state');
@@ -1061,12 +1061,13 @@
         console.log('📊 Fetching Google Places details for place_id:', placeId);
         
         try {
-            // Use the local server proxy endpoint to avoid CORS issues
+            // Use the local server proxy endpoint for localhost, Netlify function for production
             const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
             const apiUrl = isLocalhost 
                 ? `/api/google-place-details?place_id=${encodeURIComponent(placeId)}`
-                : `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(placeId)}&fields=rating,user_ratings_total&key=AIzaSyC1zqymSXocGXuCEVvpzXERWYwIzimV0Oo`;
+                : `/.netlify/functions/google-place-details?place_id=${encodeURIComponent(placeId)}`;
             
+            console.log('📡 Fetching from:', apiUrl);
             const response = await fetch(apiUrl);
             
             if (!response.ok) {
@@ -1074,6 +1075,7 @@
             }
             
             const data = await response.json();
+            console.log('📥 Response data:', data);
             
             if (data.status === 'OK' && data.result) {
                 const rating = data.result.rating || null;
@@ -1083,15 +1085,65 @@
                 
                 updateRatingDisplay(rating);
                 updateTotalReviewsDisplay(totalReviews);
+                
+                // Optionally cache to database for fallback
+                if (rating !== null || totalReviews !== null) {
+                    try {
+                        const dbProxy = await window.waitForDbProxy();
+                        const updateData = {};
+                        if (rating !== null) updateData.current_rating = rating;
+                        if (totalReviews !== null) updateData.tot_review = totalReviews;
+                        if (Object.keys(updateData).length > 0) {
+                            await dbProxy.update('accounts', updateData, { id: accountId });
+                            console.log('💾 Cached rating data to database');
+                        }
+                    } catch (cacheError) {
+                        console.warn('⚠️ Failed to cache rating data:', cacheError);
+                    }
+                }
             } else {
-                console.warn('⚠️ Google Places API returned non-OK status:', data.status, data.error_message);
-                // Show empty state if API returns error
+                console.warn('⚠️ Google Places scraper returned non-OK status:', data.status, data.error);
+                // Fallback to database cache if available
+                try {
+                    const dbProxy = await window.waitForDbProxy();
+                    const { data: accountData } = await dbProxy.select('accounts', { id: accountId }, { select: ['current_rating', 'tot_review'], single: true });
+                    if (accountData) {
+                        const cachedRating = parseFloat(accountData.current_rating) || null;
+                        const cachedReviews = parseInt(accountData.tot_review || '0', 10) || null;
+                        if (cachedRating || cachedReviews) {
+                            console.log('📦 Using cached data from database:', { cachedRating, cachedReviews });
+                            updateRatingDisplay(cachedRating);
+                            updateTotalReviewsDisplay(cachedReviews);
+                            return;
+                        }
+                    }
+                } catch (fallbackError) {
+                    console.warn('⚠️ Fallback to database cache failed:', fallbackError);
+                }
+                // Show empty state if no cache available
                 updateRatingDisplay(null);
                 updateTotalReviewsDisplay(null);
             }
         } catch (error) {
             console.error('❌ Error fetching Google Places details:', error);
-            // Show empty state on error
+            // Fallback to database cache on error
+            try {
+                const dbProxy = await window.waitForDbProxy();
+                const { data: accountData } = await dbProxy.select('accounts', { id: accountId }, { select: ['current_rating', 'tot_review'], single: true });
+                if (accountData) {
+                    const cachedRating = parseFloat(accountData.current_rating) || null;
+                    const cachedReviews = parseInt(accountData.tot_review || '0', 10) || null;
+                    if (cachedRating || cachedReviews) {
+                        console.log('📦 Using cached data from database (error fallback):', { cachedRating, cachedReviews });
+                        updateRatingDisplay(cachedRating);
+                        updateTotalReviewsDisplay(cachedReviews);
+                        return;
+                    }
+                }
+            } catch (fallbackError) {
+                console.warn('⚠️ Fallback to database cache failed:', fallbackError);
+            }
+            // Show empty state if no cache available
             updateRatingDisplay(null);
             updateTotalReviewsDisplay(null);
         }
@@ -1140,25 +1192,6 @@
     function updateStatusMenu(data) {
         if (!data) return;
         
-        // Game toggle - Disabled, show "Bientôt"
-        const gameToggle = document.getElementById('statusGameToggle');
-        const gameIcon = document.getElementById('statusGameIcon');
-        if (gameToggle) {
-            // Disable toggle
-            gameToggle.style.opacity = '0.5';
-            gameToggle.style.pointerEvents = 'none';
-            gameToggle.classList.remove('active');
-            // Remove any existing listeners by cloning
-            const oldToggle = gameToggle;
-            const newToggle = oldToggle.cloneNode(true);
-            newToggle.style.opacity = '0.5';
-            newToggle.style.pointerEvents = 'none';
-            oldToggle.parentNode.replaceChild(newToggle, oldToggle);
-        }
-        if (gameIcon) {
-            gameIcon.className = 'status-icon';
-        }
-
         // Health check
         const healthIssues = [];
         if (!data.business_id && !data.place_id) healthIssues.push('Place ID manquant');
@@ -1186,10 +1219,6 @@
         if (redirectBadge) redirectBadge.className = `status-badge ${hasRedirect ? 'green' : 'orange'}`;
         if (redirectText) redirectText.textContent = hasRedirect ? 'Configuré' : 'Non configuré';
         if (redirectIcon) redirectIcon.className = `status-icon ${hasRedirect ? 'healthy' : 'warning'}`;
-
-        // Database (always healthy if we got data)
-        const dbIcon = document.getElementById('statusDbIcon');
-        if (dbIcon) dbIcon.className = 'status-icon healthy';
 
         // Reviews bar (visual scale: 0-50 for better visibility)
         const reviewCount = parseInt(data.review_number || '0', 10);
@@ -1220,25 +1249,6 @@
                                 <div class='status-value'>
                                     <span class='status-badge green' id='statusHealthBadge'></span>
                                     <span id='statusHealthText'>Opérationnel</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class='status-item'>
-                            <div class='status-icon' id='statusGameIcon'>🎮</div>
-                            <div class='status-content'>
-                                <div class='status-label'>Jeu</div>
-                                <div class='status-value'>
-                                    <div class='toggle-visual' id='statusGameToggle'></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class='status-item'>
-                            <div class='status-icon' id='statusDbIcon'>🗄️</div>
-                            <div class='status-content'>
-                                <div class='status-label'>Base de données</div>
-                                <div class='status-value'>
-                                    <span class='status-badge green' id='statusDbBadge'></span>
-                                    <span>Connecté</span>
                                 </div>
                             </div>
                         </div>
@@ -1419,15 +1429,25 @@
                 if (titleEl) titleEl.textContent = name;
                 
                 // Fetch rating and total reviews from Google Maps API using business_id (place_id)
+                console.log('🔍 Checking for business_id in account data...');
+                console.log('   data.business_id:', data.business_id);
+                console.log('   data.place_id:', data.place_id);
+                console.log('   All data keys:', Object.keys(data));
+                
                 const placeId = data.business_id || data.place_id || null;
+                console.log('📍 Final placeId to use:', placeId);
+                
                 if (placeId) {
+                    console.log('✅ Place ID found, fetching Google Places details...');
                     // Fetch both rating and user_ratings_total from Google Maps API
                     fetchGooglePlaceDetails(placeId);
                 } else {
+                    console.warn('⚠️ No place_id found in account data, using fallback from database');
                     // Fallback to Supabase data if no place_id
                     const rating = parseFloat(data.current_rating) || null;
-                    updateRatingDisplay(rating);
                     const totalReviews = parseInt(data.tot_review || '0', 10) || null;
+                    console.log('📦 Using cached data from database:', { rating, totalReviews });
+                    updateRatingDisplay(rating);
                     updateTotalReviewsDisplay(totalReviews);
                 }
                 

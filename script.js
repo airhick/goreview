@@ -1508,3 +1508,132 @@ if (checkoutCard) {
     observer.observe(checkoutCard, { attributes: true, attributeFilter: ['hidden'] });
 }
 
+// Product Gallery Swipe Functionality
+(function() {
+    const gallery = document.querySelector('.product-gallery');
+    if (!gallery) return;
+
+    const container = gallery.querySelector('.product-gallery-container');
+    const slides = gallery.querySelectorAll('.product-gallery-slide');
+    const dots = gallery.querySelectorAll('.gallery-dot');
+    
+    if (!container || slides.length === 0) return;
+
+    let currentSlide = 0;
+    let startX = 0;
+    let currentX = 0;
+    let isDragging = false;
+    let scrollLeft = 0;
+
+    // Initialize: show first slide
+    updateSlide(0);
+
+    // Touch events for mobile
+    container.addEventListener('touchstart', (e) => {
+        isDragging = true;
+        startX = e.touches[0].pageX - container.offsetLeft;
+        scrollLeft = container.scrollLeft;
+        container.style.scrollBehavior = 'auto';
+    }, { passive: true });
+
+    container.addEventListener('touchmove', (e) => {
+        if (!isDragging) return;
+        e.preventDefault();
+        currentX = e.touches[0].pageX - container.offsetLeft;
+        const walk = (currentX - startX) * 2;
+        container.scrollLeft = scrollLeft - walk;
+    }, { passive: false });
+
+    container.addEventListener('touchend', () => {
+        if (!isDragging) return;
+        isDragging = false;
+        container.style.scrollBehavior = 'smooth';
+        
+        // Determine which slide to snap to
+        const slideWidth = container.offsetWidth;
+        const newSlide = Math.round(container.scrollLeft / slideWidth);
+        updateSlide(Math.max(0, Math.min(newSlide, slides.length - 1)));
+    }, { passive: true });
+
+    // Mouse events for desktop drag
+    let isMouseDown = false;
+    let mouseStartX = 0;
+    let mouseScrollLeft = 0;
+
+    container.addEventListener('mousedown', (e) => {
+        isMouseDown = true;
+        mouseStartX = e.pageX - container.offsetLeft;
+        mouseScrollLeft = container.scrollLeft;
+        container.style.scrollBehavior = 'auto';
+        container.style.cursor = 'grabbing';
+    });
+
+    container.addEventListener('mousemove', (e) => {
+        if (!isMouseDown) return;
+        e.preventDefault();
+        const x = e.pageX - container.offsetLeft;
+        const walk = (x - mouseStartX) * 2;
+        container.scrollLeft = mouseScrollLeft - walk;
+    });
+
+    container.addEventListener('mouseup', () => {
+        if (!isMouseDown) return;
+        isMouseDown = false;
+        container.style.scrollBehavior = 'smooth';
+        container.style.cursor = 'grab';
+        
+        const slideWidth = container.offsetWidth;
+        const newSlide = Math.round(container.scrollLeft / slideWidth);
+        updateSlide(Math.max(0, Math.min(newSlide, slides.length - 1)));
+    });
+
+    container.addEventListener('mouseleave', () => {
+        if (isMouseDown) {
+            isMouseDown = false;
+            container.style.scrollBehavior = 'smooth';
+            container.style.cursor = 'grab';
+            
+            const slideWidth = container.offsetWidth;
+            const newSlide = Math.round(container.scrollLeft / slideWidth);
+            updateSlide(Math.max(0, Math.min(newSlide, slides.length - 1)));
+        }
+    });
+
+    // Scroll event to update active slide
+    container.addEventListener('scroll', () => {
+        const slideWidth = container.offsetWidth;
+        const newSlide = Math.round(container.scrollLeft / slideWidth);
+        if (newSlide !== currentSlide) {
+            updateSlide(newSlide);
+        }
+    }, { passive: true });
+
+    // Dot navigation
+    dots.forEach((dot, index) => {
+        dot.addEventListener('click', () => {
+            updateSlide(index);
+            container.scrollTo({
+                left: index * container.offsetWidth,
+                behavior: 'smooth'
+            });
+        });
+    });
+
+    function updateSlide(index) {
+        currentSlide = index;
+        
+        // Update slides
+        slides.forEach((slide, i) => {
+            slide.classList.toggle('active', i === index);
+        });
+        
+        // Update dots
+        dots.forEach((dot, i) => {
+            dot.classList.toggle('active', i === index);
+        });
+    }
+
+    // Set cursor style
+    container.style.cursor = 'grab';
+})();
+
