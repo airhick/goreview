@@ -7,6 +7,7 @@ Usage: python3 server.py
 import http.server
 import socketserver
 from urllib.parse import urlparse, parse_qs
+from urllib import error as urllib_error
 import os
 
 PORT = 8000
@@ -89,8 +90,10 @@ class RedirectHandler(http.server.SimpleHTTPRequestHandler):
             return super().do_GET()
         
         # Handle Google Places API proxy (to avoid CORS)
+        # Uses Google Places API (most reliable method)
         if path == '/api/google-place-details':
             import urllib.request
+            import json
             GOOGLE_MAPS_API_KEY = 'AIzaSyC1zqymSXocGXuCEVvpzXERWYwIzimV0Oo'
             query_params = parse_qs(query)
             place_id = query_params.get('place_id', [None])[0]
@@ -98,25 +101,131 @@ class RedirectHandler(http.server.SimpleHTTPRequestHandler):
             if not place_id:
                 self.send_response(400)
                 self.send_header('Content-Type', 'application/json')
+                self.send_header('Access-Control-Allow-Origin', '*')
                 self.end_headers()
-                self.wfile.write(b'{"error": "place_id parameter is required"}')
+                self.wfile.write(b'{"status": "ERROR", "error": "place_id parameter is required"}')
                 return
             
-            google_url = f'https://maps.googleapis.com/maps/api/place/details/json?place_id={place_id}&fields=rating,user_ratings_total&key={GOOGLE_MAPS_API_KEY}'
+            # Try Google Places API first (most reliable)
+            google_api_url = f'https://maps.googleapis.com/maps/api/place/details/json?place_id={place_id}&fields=rating,user_ratings_total,name&key={GOOGLE_MAPS_API_KEY}'
             
             try:
-                with urllib.request.urlopen(google_url, timeout=15) as response:
-                    data = response.read()
-                    self.send_response(200)
-                    self.send_header('Content-Type', 'application/json')
-                    self.end_headers()
-                    self.wfile.write(data)
-                    return
+                with urllib.request.urlopen(google_api_url, timeout=15) as response:
+                    api_data = json.loads(response.read().decode('utf-8'))
+                    
+                    # Check if API returned valid data
+                    if api_data.get('status') == 'OK' and api_data.get('result'):
+                        result = api_data['result']
+                        # Format response to match expected structure
+                        formatted_response = {
+                            'status': 'OK',
+                            'result': {
+                                'name': result.get('name'),
+                                'rating': result.get('rating'),
+                                'user_ratings_total': result.get('user_ratings_total'),
+                                'place_id': place_id
+                            }
+                        }
+                        
+                        self.send_response(200)
+                        self.send_header('Content-Type', 'application/json')
+                        self.send_header('Access-Control-Allow-Origin', '*')
+                        self.end_headers()
+                        self.wfile.write(json.dumps(formatted_response).encode())
+                        print(f"[API] ✅ Successfully fetched via Google Places API for {place_id}")
+                        return
+                    else:
+                        # API returned error, try HTML scraping as fallback
+                        print(f"[API] ⚠️ Google Places API returned: {api_data.get('status')}, trying HTML scraping fallback...")
+                        raise Exception(f"API status: {api_data.get('status')}")
+                        
+            except urllib_error.HTTPError as e:
+                error_body = e.read().decode('utf-8', errors='ignore')
+                print(f"[API] ⚠️ Google Places API HTTP error {e.code}, trying HTML scraping fallback...")
+                # Fall through to HTML scraping
             except Exception as e:
+                print(f"[API] ⚠️ Google Places API error: {str(e)}, trying HTML scraping fallback...")
+                # Fall through to HTML scraping
+            
+            # FALLBACK: HTML scraping if API fails
+            try:
+                print(f"[API] 🔄 Attempting HTML scraping fallback for {place_id}")
+                google_maps_url = f'https://www.google.com/maps/place/?q=place_id:{place_id}'
+                
+                req = urllib.request.Request(google_maps_url, headers={
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
+                })
+                
+                with urllib.request.urlopen(req, timeout=15) as response:
+                    html = response.read().decode('utf-8', errors='ignore')
+                    
+                    # Simple extraction (basic patterns)
+                    rating = None
+                    total_reviews = None
+                    place_name = None
+                    
+                    # Try JSON-LD first
+                    import re
+                    json_ld_match = re.search(r'<script[^>]*type=["\']application/ld\+json["\'][^>]*>(.*?)</script>', html, re.DOTALL | re.IGNORECASE)
+                    if json_ld_match:
+                        try:
+                            json_data = json.loads(json_ld_match.group(1))
+                            items = json_data if isinstance(json_data, list) else [json_data]
+                            for item in items:
+                                if item.get('@type') and ('LocalBusiness' in str(item.get('@type')) or 'Place' in str(item.get('@type'))):
+                                    if item.get('aggregateRating'):
+                                        rating = item['aggregateRating'].get('ratingValue')
+                                        total_reviews = item['aggregateRating'].get('reviewCount')
+                                    if item.get('name') and not place_name:
+                                        place_name = item.get('name')
+                        except:
+                            pass
+                    
+                    # Pattern matching fallback
+                    if rating is None:
+                        rating_match = re.search(r'"ratingValue"\s*:\s*"?([\d.,]+)"?', html, re.IGNORECASE)
+                        if rating_match:
+                            rating = float(rating_match.group(1).replace(',', '.'))
+                    
+                    if total_reviews is None:
+                        reviews_match = re.search(r'"reviewCount"\s*:\s*"?(\d+)"?', html, re.IGNORECASE)
+                        if reviews_match:
+                            total_reviews = int(reviews_match.group(1))
+                    
+                    if rating is not None or total_reviews is not None:
+                        formatted_response = {
+                            'status': 'OK',
+                            'result': {
+                                'name': place_name,
+                                'rating': float(rating) if rating is not None else None,
+                                'user_ratings_total': int(total_reviews) if total_reviews is not None else None,
+                                'place_id': place_id
+                            }
+                        }
+                        
+                        self.send_response(200)
+                        self.send_header('Content-Type', 'application/json')
+                        self.send_header('Access-Control-Allow-Origin', '*')
+                        self.end_headers()
+                        self.wfile.write(json.dumps(formatted_response).encode())
+                        print(f"[API] ✅ Successfully scraped via HTML for {place_id}")
+                        return
+                    else:
+                        raise Exception("Could not extract data from HTML")
+                        
+            except Exception as scrape_error:
+                print(f"[API] ❌ HTML scraping also failed: {str(scrape_error)}")
                 self.send_response(500)
                 self.send_header('Content-Type', 'application/json')
+                self.send_header('Access-Control-Allow-Origin', '*')
                 self.end_headers()
-                self.wfile.write(f'{{"error": "{str(e)}"}}'.encode())
+                error_response = {
+                    'status': 'ERROR',
+                    'error': f'Both API and HTML scraping failed. Last error: {str(scrape_error)}'
+                }
+                self.wfile.write(json.dumps(error_response).encode())
                 return
         
         # Handle Google review page proxy (to bypass X-Frame-Options)

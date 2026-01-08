@@ -1068,9 +1068,22 @@
                 : `/.netlify/functions/google-place-details?place_id=${encodeURIComponent(placeId)}`;
             
             console.log('📡 Fetching from:', apiUrl);
+            console.log('🌐 Current hostname:', window.location.hostname);
+            
             const response = await fetch(apiUrl);
             
             if (!response.ok) {
+                const errorText = await response.text().catch(() => 'No error details');
+                console.error('❌ API Error Response:', errorText);
+                
+                // Provide helpful error message based on status code
+                if (response.status === 404) {
+                    if (isLocalhost) {
+                        throw new Error(`HTTP 404: Endpoint not found. Make sure the Python server is running (npm run dev or python3 server.py)`);
+                    } else {
+                        throw new Error(`HTTP 404: Netlify function not found. Check deployment.`);
+                    }
+                }
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
             
