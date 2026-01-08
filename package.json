@@ -1,0 +1,19 @@
+{
+  "name": "goreview-landing",
+  "version": "1.0.0",
+  "description": "GoReview Landing Page - Static site with custom redirects",
+  "scripts": {
+    "dev": "python3 server.py",
+    "start": "python3 server.py",
+    "serve": "python3 server.py"
+  },
+  "keywords": [
+    "goreview",
+    "landing-page",
+    "static-site"
+  ],
+  "author": "",
+  "license": "UNLICENSED",
+  "private": true
+}
+
