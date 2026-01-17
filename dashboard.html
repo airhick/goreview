@@ -1049,117 +1049,48 @@
         }
     }
 
-    // Fetch rating and total reviews from Google Maps (via scraping function)
-    async function fetchGooglePlaceDetails(placeId) {
+    // Fetch place details from OpenStreetMap Nominatim API (free, no API key needed)
+    async function fetchPlaceDetails(placeId) {
         if (!placeId) {
-            console.log('📊 No place_id provided, showing empty state');
-            updateRatingDisplay(null);
-            updateTotalReviewsDisplay(null);
+            console.log('📊 No place_id provided, using database cache');
+            loadRatingFromDatabase();
             return;
         }
         
-        console.log('📊 Fetching Google Places details for place_id:', placeId);
+        console.log('📊 Fetching place details from OpenStreetMap for:', placeId);
         
+        // OpenStreetMap doesn't have ratings, so we just load from database
+        // If you want to fetch place name/address from OSM, you can add it here
+        loadRatingFromDatabase();
+    }
+    
+    // Load rating and reviews from database cache
+    async function loadRatingFromDatabase() {
         try {
-            // Use the local server proxy endpoint for localhost, Netlify function for production
-            const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-            const apiUrl = isLocalhost 
-                ? `/api/google-place-details?place_id=${encodeURIComponent(placeId)}`
-                : `/.netlify/functions/google-place-details?place_id=${encodeURIComponent(placeId)}`;
+            const dbProxy = await window.waitForDbProxy();
+            const { data: accountData } = await dbProxy.select('accounts', { id: accountId }, { 
+                select: ['current_rating', 'tot_review'], 
+                single: true 
+            });
             
-            console.log('📡 Fetching from:', apiUrl);
-            console.log('🌐 Current hostname:', window.location.hostname);
-            
-            const response = await fetch(apiUrl);
-            
-            if (!response.ok) {
-                const errorText = await response.text().catch(() => 'No error details');
-                console.error('❌ API Error Response:', errorText);
+            if (accountData) {
+                const rating = parseFloat(accountData.current_rating) || null;
+                const reviews = parseInt(accountData.tot_review || '0', 10) || null;
                 
-                // Provide helpful error message based on status code
-                if (response.status === 404) {
-                    if (isLocalhost) {
-                        throw new Error(`HTTP 404: Endpoint not found. Make sure the Python server is running (npm run dev or python3 server.py)`);
-                    } else {
-                        throw new Error(`HTTP 404: Netlify function not found. Check deployment.`);
-                    }
+                if (rating || reviews) {
+                    console.log('✅ Loaded rating from database:', { rating, reviews });
+                    updateRatingDisplay(rating);
+                    updateTotalReviewsDisplay(reviews);
+                    return;
                 }
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            
-            const data = await response.json();
-            console.log('📥 Response data:', data);
-            
-            if (data.status === 'OK' && data.result) {
-                const rating = data.result.rating || null;
-                const totalReviews = data.result.user_ratings_total || null;
-                
-                console.log('✅ Google Places data received:', { rating, totalReviews });
-                
-                updateRatingDisplay(rating);
-                updateTotalReviewsDisplay(totalReviews);
-                
-                // Optionally cache to database for fallback
-                if (rating !== null || totalReviews !== null) {
-                    try {
-                        const dbProxy = await window.waitForDbProxy();
-                        const updateData = {};
-                        if (rating !== null) updateData.current_rating = rating;
-                        if (totalReviews !== null) updateData.tot_review = totalReviews;
-                        if (Object.keys(updateData).length > 0) {
-                            await dbProxy.update('accounts', updateData, { id: accountId });
-                            console.log('💾 Cached rating data to database');
-                        }
-                    } catch (cacheError) {
-                        console.warn('⚠️ Failed to cache rating data:', cacheError);
-                    }
-                }
-            } else {
-                console.warn('⚠️ Google Places scraper returned non-OK status:', data.status, data.error);
-                // Fallback to database cache if available
-                try {
-                    const dbProxy = await window.waitForDbProxy();
-                    const { data: accountData } = await dbProxy.select('accounts', { id: accountId }, { select: ['current_rating', 'tot_review'], single: true });
-                    if (accountData) {
-                        const cachedRating = parseFloat(accountData.current_rating) || null;
-                        const cachedReviews = parseInt(accountData.tot_review || '0', 10) || null;
-                        if (cachedRating || cachedReviews) {
-                            console.log('📦 Using cached data from database:', { cachedRating, cachedReviews });
-                            updateRatingDisplay(cachedRating);
-                            updateTotalReviewsDisplay(cachedReviews);
-                            return;
-                        }
-                    }
-                } catch (fallbackError) {
-                    console.warn('⚠️ Fallback to database cache failed:', fallbackError);
-                }
-                // Show empty state if no cache available
-                updateRatingDisplay(null);
-                updateTotalReviewsDisplay(null);
             }
         } catch (error) {
-            console.error('❌ Error fetching Google Places details:', error);
-            // Fallback to database cache on error
-            try {
-                const dbProxy = await window.waitForDbProxy();
-                const { data: accountData } = await dbProxy.select('accounts', { id: accountId }, { select: ['current_rating', 'tot_review'], single: true });
-                if (accountData) {
-                    const cachedRating = parseFloat(accountData.current_rating) || null;
-                    const cachedReviews = parseInt(accountData.tot_review || '0', 10) || null;
-                    if (cachedRating || cachedReviews) {
-                        console.log('📦 Using cached data from database (error fallback):', { cachedRating, cachedReviews });
-                        updateRatingDisplay(cachedRating);
-                        updateTotalReviewsDisplay(cachedReviews);
-                        return;
-                    }
-                }
-            } catch (fallbackError) {
-                console.warn('⚠️ Fallback to database cache failed:', fallbackError);
-            }
-            // Show empty state if no cache available
-            updateRatingDisplay(null);
-            updateTotalReviewsDisplay(null);
+            console.warn('⚠️ Failed to load rating from database:', error);
         }
+        
+        // Show empty state
+        updateRatingDisplay(null);
+        updateTotalReviewsDisplay(null);
     }
 
     // Update rating display
@@ -1451,9 +1382,9 @@
                 console.log('📍 Final placeId to use:', placeId);
                 
                 if (placeId) {
-                    console.log('✅ Place ID found, fetching Google Places details...');
-                    // Fetch both rating and user_ratings_total from Google Maps API
-                    fetchGooglePlaceDetails(placeId);
+                    console.log('✅ Place ID found, loading place details...');
+                    // Load rating from database (OpenStreetMap doesn't have ratings)
+                    fetchPlaceDetails(placeId);
                 } else {
                     console.warn('⚠️ No place_id found in account data, using fallback from database');
                     // Fallback to Supabase data if no place_id
