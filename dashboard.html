@@ -3,1564 +3,2188 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Favicon -->
     <link rel="icon" type="image/png" href="/logo.png">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <link rel="apple-touch-icon" href="/logo.png">
     <title>Dashboard - GoReview</title>
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' http://localhost:*; connect-src 'self' http://localhost:* https://*.googleapis.com https://*.google.com https://maps.googleapis.com https://maps.gstatic.com https://vigutqmfosxbpncussie.supabase.co https://*.netlify.app https://*.netlify.com https://n8n.goreview.fr; img-src 'self' data: https: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://www.google.com https://*.google.com https://maps.googleapis.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; frame-src 'self' http://localhost:* https://www.google.com https://*.google.com https://maps.google.com;">
-    <script>
-      // Suppress ONLY MCP/BrowserAutomation and third-party extension errors, keep our errors visible
-      (function(){
-        const isMCPError = (msg) => {
-          if (!msg) return false;
-          const str = String(msg).toLowerCase();
-          return str.includes('localhost:62462') || 
-                 str.includes('browserautomation') || 
-                 str.includes('registerwithmcp') || 
-                 str.includes('pollforcommands') ||
-                 str.includes('solanaactionscontentscript') ||
-                 str.includes('chrome-extension://') ||
-                 str.includes('moz-extension://') ||
-                 (str.includes('vm') && str.includes('register-iframe'));
-        };
-        
-        // Only suppress console errors that are MCP-related
-        const originalError = console.error;
-        console.error = function(...args) {
-          const isMCP = args.some(arg => isMCPError(String(arg)));
-          if (!isMCP) {
-            originalError.apply(console, args);
-          }
-        };
-        
-        // Suppress fetch errors for dev tools only (allow Google Maps API calls)
-        const originalFetch = window.fetch;
-        window.fetch = function(...args) {
-          const url = args[0] || '';
-          if (url.includes && url.includes('localhost:62462')) {
-            return Promise.reject(new Error('Blocked by filter')).catch(() => {});
-          }
-          return originalFetch.apply(this, args);
-        };
-        
-        // Suppress XMLHttpRequest errors only for localhost:62462
-        const originalOpen = XMLHttpRequest.prototype.open;
-        XMLHttpRequest.prototype.open = function(method, url, ...rest) {
-          if (url && url.includes('localhost:62462')) {
-            this.addEventListener('error', () => {}, {once: true});
-            this.addEventListener('loadend', () => {}, {once: true});
-          }
-          return originalOpen.apply(this, [method, url, ...rest]);
-        };
-      })();
-    </script>
-    <link rel="stylesheet" href="styles.css">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' http://localhost:*; connect-src 'self' http://localhost:* https://*.googleapis.com https://*.google.com https://maps.googleapis.com https://maps.gstatic.com https://vigutqmfosxbpncussie.supabase.co https://*.netlify.app https://*.netlify.com https://n8n.goreview.fr https://serpapi.com https://cdn.jsdelivr.net; img-src 'self' data: https: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://www.google.com https://*.google.com https://maps.googleapis.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; frame-src 'self' http://localhost:* https://www.google.com https://*.google.com https://maps.google.com;">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        // Force reload of db-proxy.js to avoid cache issues
         (function() {
             const script = document.createElement('script');
             script.src = `db-proxy.js?v=${Date.now()}`;
-            script.async = false; // Load synchronously to ensure it's available
+            script.async = false;
             document.head.appendChild(script);
         })();
     </script>
-    <script>
-        // Delete goreview_session cookie on page load
-        (function() {
-            const cookieName = 'goreview_session';
-            const pastDate = 'Thu, 01 Jan 1970 00:00:00 UTC';
-            const hostname = window.location.hostname;
-            const hostnameParts = hostname.split('.');
-            
-            // Delete cookie with different paths and domains
-            document.cookie = `${cookieName}=;expires=${pastDate};path=/;`;
-            document.cookie = `${cookieName}=;expires=${pastDate};path=/;SameSite=Lax;`;
-            document.cookie = `${cookieName}=;expires=${pastDate};path=/;SameSite=Strict;`;
-            document.cookie = `${cookieName}=;expires=${pastDate};path=/;domain=${hostname};`;
-            
-            // Delete for parent domain if applicable
-            if (hostnameParts.length > 1) {
-                const parentDomain = '.' + hostnameParts.slice(-2).join('.');
-                document.cookie = `${cookieName}=;expires=${pastDate};path=/;domain=${parentDomain};`;
-                const parentDomainNoDot = hostnameParts.slice(-2).join('.');
-                document.cookie = `${cookieName}=;expires=${pastDate};path=/;domain=${parentDomainNoDot};`;
-            }
-            
-            console.log('✅ goreview_session cookie deleted');
-        })();
-        
-        // Function to get cookie value
-        function getCookie(name) {
-            const value = `; ${document.cookie}`;
-            const parts = value.split(`; ${name}=`);
-            if (parts.length === 2) {
-                return decodeURIComponent(parts.pop().split(';').shift());
-            }
-            return null;
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a24;
+            --bg-card-hover: #222230;
+            --border-color: #2a2a3a;
+            --text-primary: #ffffff;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            --accent-primary: #8b5cf6;
+            --accent-secondary: #a78bfa;
+            --accent-glow: rgba(139, 92, 246, 0.3);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+            --star-gold: #fbbf24;
         }
         
-        // Note: Cookie validation is now handled in the async function below
-        // to allow time for cookie to be available after redirect
-    </script>
-    <style>
-        .centered-card {
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+        
+        /* Loading State */
+        .loading-screen {
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+            background: radial-gradient(ellipse at center, var(--bg-secondary) 0%, var(--bg-primary) 100%);
         }
-        .dashboard-wrap {
-            background: #fff;
-            border-radius: 18px;
-            border: 1px solid #e5e7eb;
-            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.08);
-            max-width: 1000px;
-            width: 100%;
+        
+        .loading-content {
+            text-align: center;
+        }
+        
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--accent-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1.5rem;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--accent-primary);
+            margin-bottom: 0.5rem;
+        }
+        
+        .loading-status {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+        
+        /* Main Dashboard Layout */
+        .dashboard-container {
+            max-width: 1600px;
+            margin: 0 auto;
             padding: 2rem;
         }
+        
+        /* Header */
         .dashboard-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 1rem;
-            margin-bottom: 1.25rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
         }
-        .dash-brand {
+        
+        .header-left {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 1rem;
         }
-        .dash-logo {
-            height: 32px;
+        
+        .logo {
+            height: 40px;
             width: auto;
         }
-        .dashboard-title {
+        
+        .business-name {
             font-size: 1.5rem;
-            margin: 0;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
-        .cards-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 1rem;
-        }
-        .stars-container {
+        
+        .header-right {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            margin: 0.75rem 0;
-        }
-        .stars {
-            display: flex;
-            gap: 2px;
-        }
-        .star {
-            font-size: 1.5rem;
-            color: #d1d5db;
-            line-height: 1;
-        }
-        .star.filled {
-            color: #fbbf24;
-        }
-        .rating-value {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: #111827;
-        }
-        .review-count-large {
-            font-size: 2rem;
-            font-weight: 700;
-            color: #6366f1;
-            margin: 0.75rem 0;
-        }
-        .card {
-            border: 1px solid #e5e7eb;
-            border-radius: 14px;
-            padding: 1rem;
-            background: #fff;
-            display: flex;
-            flex-direction: column;
-            margin-bottom: 0;
-        }
-        .card h3 {
-            margin: 0 0 0.35rem 0;
-            font-size: 1.125rem;
-        }
-        .card p {
-            color: #4b5563;
-            margin: 0 0 0.75rem 0;
-            font-size: 0.95rem;
-        }
-        .big-count { font-size: 2.25rem; font-weight: 800; color: #111827; }
-        .card .btn-row {
-            display: flex;
-            gap: 0.5rem;
-            flex-wrap: wrap;
-            margin-top: auto;
-        }
-        .btn {
-            display: inline-block;
-            padding: 0.5rem 0.9rem;
-            border-radius: 10px;
-            border: 1px solid #e5e7eb;
-            text-decoration: none;
-            font-weight: 600;
-            color: #111827;
-            transition: background 0.15s;
-        }
-        .btn:hover { background: #f3f4f6; }
-        .btn-primary { color: #fff; background: #6366f1; border-color: #6366f1; }
-        .btn-primary:hover { background: #4f46e5; }
-        .muted { color: #6b7280; font-size: 0.9rem; }
-        .back-link { display: inline-block; margin-bottom: 2rem; text-decoration: none; color: #6366f1; }
-        @media (max-width: 520px) { 
-            .dashboard-title { font-size: 1.25rem; }
-            .cards-grid {
-                grid-template-columns: 1fr;
-            }
-            .card[style*="grid-column: span 2"] {
-                grid-column: span 1 !important;
-            }
-        }
-        .mini-map { width: 100%; height: 200px; border: 1px solid #e5e7eb; border-radius: 12px; }
-        /* Contacts table preview */
-        .contacts-preview {
-            overflow-x: auto;
-            margin: 1rem 0;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            max-height: 400px;
-            overflow-y: auto;
-        }
-        .contacts-preview-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.875rem;
-            min-width: 500px;
-        }
-        .contacts-preview-table thead {
-            background: #f9fafb;
-            position: sticky;
-            top: 0;
-            z-index: 1;
-        }
-        .contacts-preview-table th {
-            padding: 0.75rem;
-            text-align: left;
-            font-weight: 600;
-            color: #111827;
-            border-bottom: 2px solid #e5e7eb;
-            font-size: 0.875rem;
-        }
-        .contacts-preview-table td {
-            padding: 0.75rem;
-            border-bottom: 1px solid #f3f4f6;
-            color: #4b5563;
-        }
-        .contacts-preview-table td.contact-actions {
-            text-align: center;
-            width: 60px;
-        }
-        .delete-contact-btn {
-            background: none;
-            border: none;
-            color: #ef4444;
-            font-size: 0.95rem;
-            cursor: pointer;
-            padding: 0.25rem;
-            border-radius: 6px;
-            transition: background 0.2s, color 0.2s;
-        }
-        .delete-contact-btn:hover {
-            background: rgba(239, 68, 68, 0.1);
-            color: #b91c1c;
-        }
-        .contacts-preview-table tbody tr:hover {
-            background: #f9fafb;
-        }
-        .contacts-preview-empty {
-            padding: 2rem;
-            text-align: center;
-            color: #6b7280;
-            font-size: 0.875rem;
-        }
-        /* Account Info Grid */
-        .account-info-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
             gap: 1rem;
-            margin-top: 1rem;
         }
-        .info-item {
+        
+        .last-updated {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .settings-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            font-size: 1.25rem;
+            cursor: pointer;
+            transition: all 0.2s;
             display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-            padding: 0.75rem;
-            background: #f9fafb;
-            border-radius: 8px;
-            border: 1px solid #e5e7eb;
+            align-items: center;
+            justify-content: center;
         }
-        .info-item.full-width {
-            grid-column: 1 / -1;
+        
+        .settings-btn:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
         }
-        .info-label {
-            font-size: 0.75rem;
+        
+        /* Grid Layout */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 1.5rem;
+        }
+        
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 30px var(--accent-glow);
+        }
+        
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+        
+        .card-title {
+            font-size: 0.85rem;
             font-weight: 600;
-            color: #6b7280;
+            color: var(--text-muted);
             text-transform: uppercase;
             letter-spacing: 0.05em;
         }
-        .info-value {
-            font-size: 0.95rem;
-            color: #111827;
-            font-weight: 500;
-            word-break: break-word;
+        
+        .card-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
         }
-        .info-value a {
-            color: #6366f1;
-            text-decoration: none;
+        
+        .card-icon.purple { background: rgba(139, 92, 246, 0.2); color: var(--accent-primary); }
+        .card-icon.green { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+        .card-icon.orange { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
+        .card-icon.blue { background: rgba(59, 130, 246, 0.2); color: var(--info); }
+        .card-icon.red { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+        
+        /* Span classes */
+        .span-3 { grid-column: span 3; }
+        .span-4 { grid-column: span 4; }
+        .span-6 { grid-column: span 6; }
+        .span-8 { grid-column: span 8; }
+        .span-12 { grid-column: span 12; }
+        
+        /* Main Metrics */
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            line-height: 1;
+            margin-bottom: 0.5rem;
         }
-        .info-value a:hover {
-            text-decoration: underline;
+        
+        .metric-label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
         }
-        @media (max-width: 640px) {
-            .account-info-grid {
-                grid-template-columns: 1fr;
-            }
+        
+        /* Stars */
+        .stars-display {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 0.75rem;
         }
-        /* Status Menu */
-        .status-menu {
+        
+        .star {
+            font-size: 1.75rem;
+            color: var(--border-color);
+        }
+        
+        .star.filled {
+            color: var(--star-gold);
+        }
+        
+        .star.half {
+            background: linear-gradient(90deg, var(--star-gold) 50%, var(--border-color) 50%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        /* Rating Distribution Bar */
+        .rating-distribution {
+            margin-top: 1rem;
+        }
+        
+        .rating-bar-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .rating-bar-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            width: 20px;
+            text-align: right;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .rating-bar-track {
+            flex: 1;
+            height: 8px;
+            background: var(--border-color);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .rating-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+        
+        .rating-bar-fill.star-5 { background: linear-gradient(90deg, #10b981, #34d399); }
+        .rating-bar-fill.star-4 { background: linear-gradient(90deg, #22c55e, #4ade80); }
+        .rating-bar-fill.star-3 { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+        .rating-bar-fill.star-2 { background: linear-gradient(90deg, #f97316, #fb923c); }
+        .rating-bar-fill.star-1 { background: linear-gradient(90deg, #ef4444, #f87171); }
+        
+        .rating-bar-count {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            width: 50px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        /* Response Rate Gauge */
+        .gauge-container {
+            position: relative;
+            width: 140px;
+            height: 70px;
+            margin: 1rem auto;
+        }
+        
+        .gauge-bg {
+            position: absolute;
+            width: 140px;
+            height: 70px;
+            border-radius: 70px 70px 0 0;
+            background: conic-gradient(
+                from 180deg at 50% 100%,
+                var(--border-color) 0deg,
+                var(--border-color) 180deg
+            );
+        }
+        
+        .gauge-fill {
+            position: absolute;
+            width: 140px;
+            height: 70px;
+            border-radius: 70px 70px 0 0;
+            background: conic-gradient(
+                from 180deg at 50% 100%,
+                var(--success) 0deg,
+                var(--success) calc(var(--gauge-value, 0) * 1.8deg),
+                transparent calc(var(--gauge-value, 0) * 1.8deg)
+            );
+        }
+        
+        .gauge-center {
+            position: absolute;
+            width: 100px;
+            height: 50px;
+            border-radius: 50px 50px 0 0;
+            background: var(--bg-card);
+            bottom: 0;
+            left: 20px;
+        }
+        
+        .gauge-value {
+            position: absolute;
+            bottom: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--success);
+        }
+        
+        /* Popular Times Chart */
+        .popular-times-chart {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .day-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .day-label {
+            width: 35px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+        
+        .hours-chart {
+            flex: 1;
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+            height: 40px;
+        }
+        
+        .hour-bar {
+            flex: 1;
+            background: var(--border-color);
+            border-radius: 2px 2px 0 0;
+            transition: all 0.3s ease;
+            min-height: 4px;
             position: relative;
         }
-        .status-menu-btn {
-            width: 44px;
-            height: 44px;
-            border: 1px solid #e5e7eb;
+        
+        .hour-bar:hover {
+            background: var(--accent-primary) !important;
+        }
+        
+        .hour-bar.peak {
+            background: linear-gradient(to top, var(--warning), var(--danger));
+        }
+        
+        .hour-bar.high {
+            background: linear-gradient(to top, var(--success), var(--warning));
+        }
+        
+        .hour-bar.medium {
+            background: var(--info);
+        }
+        
+        .hour-bar.low {
+            background: var(--border-color);
+        }
+        
+        /* Competitor Cards */
+        .competitors-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+        
+        .competitor-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem;
+            background: var(--bg-secondary);
             border-radius: 10px;
-            background: #fff;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
+            border: 1px solid var(--border-color);
             transition: all 0.2s;
-            font-size: 18px;
         }
-        .status-menu-btn:hover {
-            background: #f9fafb;
-            border-color: #d1d5db;
+        
+        .competitor-item:hover {
+            border-color: var(--accent-primary);
         }
-        .status-menu-panel {
-            position: absolute;
-            top: calc(100% + 8px);
-            right: 0;
-            width: 280px;
-            background: #fff;
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.15);
-            padding: 16px;
-            display: none;
-            z-index: 100;
+        
+        .competitor-item.you {
+            border-color: var(--accent-primary);
+            background: rgba(139, 92, 246, 0.1);
         }
-        .status-menu-panel.open {
-            display: block;
-        }
-        .status-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 8px;
-            transition: background 0.15s;
-        }
-        .status-item:last-child {
-            margin-bottom: 0;
-        }
-        .status-item:hover {
-            background: #f9fafb;
-        }
-        .status-icon {
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
+        
+        .competitor-rank {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--border-color);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 18px;
-            flex-shrink: 0;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text-secondary);
         }
-        .status-icon.healthy { background: #d1fae5; }
-        .status-icon.warning { background: #fef3c7; }
-        .status-icon.error { background: #fee2e2; }
-        .status-content {
+        
+        .competitor-item.you .competitor-rank {
+            background: var(--accent-primary);
+            color: white;
+        }
+        
+        .competitor-info {
             flex: 1;
             min-width: 0;
         }
-        .status-label {
-            font-size: 12px;
-            color: #6b7280;
-            margin-bottom: 4px;
-        }
-        .status-value {
-            font-size: 14px;
+        
+        .competitor-name {
             font-weight: 600;
-            color: #111827;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .status-badge {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            flex-shrink: 0;
-        }
-        .status-badge.green { background: #10b981; }
-        .status-badge.orange { background: #f59e0b; }
-        .status-badge.red { background: #ef4444; }
-        .toggle-visual {
-            width: 48px;
-            height: 28px;
-            border-radius: 9999px;
-            background: #e5e7eb;
-            position: relative;
-            cursor: pointer;
-            transition: background 0.2s;
-            flex-shrink: 0;
-        }
-        .toggle-visual.active {
-            background: #6366f1;
-        }
-        .toggle-visual::after {
-            content: '';
-            position: absolute;
-            width: 22px;
-            height: 22px;
-            border-radius: 50%;
-            background: #fff;
-            top: 3px;
-            left: 3px;
-            transition: transform 0.2s;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-        }
-        .toggle-visual.active::after {
-            transform: translateX(20px);
-        }
-        .stat-visual {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .stat-bar {
-            flex: 1;
-            height: 6px;
-            background: #e5e7eb;
-            border-radius: 9999px;
+            font-size: 0.9rem;
+            white-space: nowrap;
             overflow: hidden;
+            text-overflow: ellipsis;
         }
-        .stat-bar-fill {
-            height: 100%;
-            background: #6366f1;
-            border-radius: 9999px;
-            transition: width 0.3s;
+        
+        .competitor-type {
+            font-size: 0.75rem;
+            color: var(--text-muted);
         }
-        @media (max-width: 640px) {
-            .status-menu-panel {
-                right: -8px;
-                width: calc(100vw - 32px);
-                max-width: 280px;
-            }
-            .status-menu-btn {
-                width: 40px;
-                height: 40px;
-            }
-        }
-        /* Factory Reset Popup */
-        .reset-popup-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 10000;
-            align-items: center;
-            justify-content: center;
-            padding: 1rem;
-        }
-        .reset-popup-overlay.show {
-            display: flex;
-        }
-        .reset-popup {
-            background: #fff;
-            border-radius: 12px;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-            max-width: 480px;
-            width: 100%;
-            padding: 0;
-            overflow: hidden;
-        }
-        .reset-popup-header {
-            background: #fee2e2;
-            padding: 1.25rem;
-            border-bottom: 1px solid #fecaca;
-        }
-        .reset-popup-header h3 {
-            margin: 0;
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: #991b1b;
+        
+        .competitor-rating {
             display: flex;
             align-items: center;
             gap: 0.5rem;
         }
-        .reset-popup-body {
-            padding: 1.5rem;
+        
+        .competitor-rating .star {
+            font-size: 1rem;
+            color: var(--star-gold);
         }
-        .reset-popup-disclaimer {
-            background: #fef2f2;
-            border: 1px solid #fecaca;
-            border-radius: 8px;
-            padding: 1rem;
-            margin-bottom: 1.5rem;
-        }
-        .reset-popup-disclaimer h4 {
-            margin: 0 0 0.75rem 0;
-            font-size: 0.875rem;
+        
+        .competitor-rating-value {
             font-weight: 600;
-            color: #991b1b;
+            font-size: 0.9rem;
         }
-        .reset-popup-disclaimer ul {
-            margin: 0;
-            padding-left: 1.25rem;
-            color: #7f1d1d;
-            font-size: 0.875rem;
-            line-height: 1.6;
+        
+        .competitor-reviews {
+            font-size: 0.75rem;
+            color: var(--text-muted);
         }
-        .reset-popup-disclaimer li {
+        
+        /* Reviews List */
+        .reviews-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-top: 1rem;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .review-item {
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+        
+        .review-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
             margin-bottom: 0.5rem;
         }
-        .reset-popup-disclaimer li:last-child {
-            margin-bottom: 0;
-        }
-        .reset-popup-warning {
-            background: #fef3c7;
-            border-left: 4px solid #f59e0b;
-            padding: 0.75rem 1rem;
-            margin-bottom: 1.5rem;
-            border-radius: 4px;
-        }
-        .reset-popup-warning p {
-            margin: 0;
-            color: #92400e;
-            font-size: 0.875rem;
-            font-weight: 500;
-        }
-        .reset-popup-actions {
+        
+        .review-author {
             display: flex;
-            gap: 0.75rem;
-            justify-content: flex-end;
+            align-items: center;
+            gap: 0.5rem;
         }
-        .reset-popup-btn {
-            padding: 0.625rem 1.25rem;
+        
+        .review-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--accent-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .review-name {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .review-date {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        
+        .review-rating {
+            display: flex;
+            gap: 2px;
+        }
+        
+        .review-rating .star {
+            font-size: 0.9rem;
+        }
+        
+        .review-text {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+        
+        .review-response {
+            margin-top: 0.75rem;
+            padding: 0.75rem;
+            background: rgba(139, 92, 246, 0.1);
+            border-left: 3px solid var(--accent-primary);
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .review-response-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--accent-primary);
+            margin-bottom: 0.25rem;
+        }
+        
+        .review-response-text {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+        
+        .review-no-response {
+            margin-top: 0.75rem;
+            padding: 0.5rem 0.75rem;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px dashed var(--danger);
             border-radius: 8px;
-            font-size: 0.875rem;
-            font-weight: 500;
+            font-size: 0.8rem;
+            color: var(--danger);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        /* Review Management Section */
+        .review-filters {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .filter-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .filter-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .filter-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
             cursor: pointer;
-            border: none;
             transition: all 0.2s;
         }
-        .reset-popup-btn-cancel {
-            background: #f3f4f6;
-            color: #374151;
+        
+        .filter-btn:hover {
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
         }
-        .reset-popup-btn-cancel:hover {
-            background: #e5e7eb;
-        }
-        .reset-popup-btn-continue {
-            background: #ef4444;
+        
+        .filter-btn.active {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
             color: white;
         }
-        .reset-popup-btn-continue:hover {
-            background: #dc2626;
+        
+        .filter-btn.rating-1 { border-color: var(--danger); color: var(--danger); }
+        .filter-btn.rating-1.active { background: var(--danger); color: white; }
+        .filter-btn.rating-2 { border-color: #f97316; color: #f97316; }
+        .filter-btn.rating-2.active { background: #f97316; color: white; }
+        .filter-btn.rating-3 { border-color: var(--warning); color: var(--warning); }
+        .filter-btn.rating-3.active { background: var(--warning); color: white; }
+        
+        .sort-select {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-width: 180px;
         }
-        .reset-popup-btn-continue:disabled {
-            background: #fca5a5;
-            cursor: not-allowed;
+        
+        .sort-select:hover, .sort-select:focus {
+            border-color: var(--accent-primary);
+            outline: none;
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+        
+        .review-stats {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+        }
+        
+        .review-stat {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        
+        .review-stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .review-stat-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        
+        .reply-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border: 1px solid var(--accent-primary);
+            background: var(--accent-primary);
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .reply-btn:hover {
+            background: var(--accent-secondary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px var(--accent-glow);
+        }
+        
+        .reply-btn.urgent {
+            background: var(--danger);
+            animation: pulse-urgent 2s infinite;
+        }
+        
+        @keyframes pulse-urgent {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+        }
+        
+        .view-review-btn {
+            padding: 0.4rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+        }
+        
+        .view-review-btn:hover {
+            background: var(--bg-card-hover);
+            color: var(--accent-primary);
+        }
+        
+        .local-guide-badge {
+            font-size: 0.85rem;
+            margin-left: 0.25rem;
+        }
+        
+        .review-no-response.urgent {
+            background: rgba(239, 68, 68, 0.15);
+            border-left: 3px solid var(--danger);
+            padding-left: 0.75rem;
+        }
+        
+        .review-item.bad-review {
+            border-color: var(--danger);
+            background: rgba(239, 68, 68, 0.05);
+        }
+        
+        /* AI Insight Card */
+        .ai-insight {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(59, 130, 246, 0.1) 100%);
+            border: 1px solid var(--accent-primary);
+            padding: 1.5rem;
+            border-radius: 16px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .ai-insight::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-primary), var(--info), var(--accent-primary));
+            background-size: 200% 100%;
+            animation: shimmer 2s linear infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        
+        .ai-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        
+        .ai-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--info));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+        
+        .ai-title {
+            font-size: 1rem;
+            font-weight: 700;
+        }
+        
+        .ai-subtitle {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+        
+        .ai-content {
+            font-size: 0.95rem;
+            line-height: 1.7;
+            color: var(--text-secondary);
+        }
+        
+        .ai-highlight {
+            background: rgba(139, 92, 246, 0.3);
+            padding: 0.1rem 0.4rem;
+            border-radius: 4px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+        
+        .ai-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        
+        .ai-tag {
+            padding: 0.25rem 0.75rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+        
+        .ai-tag.positive { border-color: var(--success); color: var(--success); }
+        .ai-tag.negative { border-color: var(--danger); color: var(--danger); }
+        
+        /* Staffing Alert */
+        .staffing-alert {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 1rem;
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid var(--warning);
+            border-radius: 12px;
+            margin-top: 1rem;
+        }
+        
+        .staffing-alert-icon {
+            font-size: 1.5rem;
+        }
+        
+        .staffing-alert-content h4 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--warning);
+            margin-bottom: 0.25rem;
+        }
+        
+        .staffing-alert-content p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+        
+        /* Social Post Generator */
+        .social-post-preview {
+            margin-top: 1rem;
+            padding: 1.25rem;
+            background: linear-gradient(135deg, #833ab4 0%, #fd1d1d 50%, #fcb045 100%);
+            border-radius: 12px;
+            color: white;
+        }
+        
+        .social-post-quote {
+            font-size: 1.1rem;
+            font-style: italic;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+        
+        .social-post-author {
+            font-size: 0.85rem;
+            opacity: 0.9;
+        }
+        
+        .social-post-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: var(--accent-primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--accent-secondary);
+        }
+        
+        .btn-secondary {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+        
+        .btn-secondary:hover {
+            border-color: var(--accent-primary);
+        }
+        
+        /* Attributes Grid */
+        .attributes-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        
+        .attribute-tag {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        
+        .attribute-tag .icon {
+            font-size: 1rem;
+        }
+        
+        /* Time Spent */
+        .time-spent-display {
+            text-align: center;
+            padding: 1.5rem;
+        }
+        
+        .time-spent-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--info);
+        }
+        
+        .time-spent-label {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+        
+        /* Contacts Table */
+        .contacts-preview {
+            margin-top: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .contacts-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+        
+        .contacts-table thead {
+            background: var(--bg-secondary);
+        }
+        
+        .contacts-table th {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .contacts-table td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+        
+        .contacts-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .contacts-table tr:hover td {
+            background: var(--bg-card-hover);
+        }
+        
+        .contacts-table a {
+            color: var(--accent-primary);
+            text-decoration: none;
+        }
+        
+        .contacts-table a:hover {
+            text-decoration: underline;
+        }
+        
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+        }
+        
+        .empty-state-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+        
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .span-3 { grid-column: span 6; }
+            .span-4 { grid-column: span 6; }
+            .span-8 { grid-column: span 12; }
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard-container {
+                padding: 1rem;
+            }
+            
+            .span-3, .span-4, .span-6, .span-8 { 
+                grid-column: span 12; 
+            }
+            
+            .dashboard-header {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+            
+            .header-left {
+                flex-direction: column;
+            }
+            
+            .metric-value {
+                font-size: 2rem;
+            }
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
         }
     </style>
 </head>
 <body>
-<div class="centered-card" id="main">
-    <div style="text-align: center; padding: 3rem;">
-        <div style="font-size: 2rem; margin-bottom: 1rem;">⏳</div>
-        <div style="font-size: 1.25rem; font-weight: 600; color: #6366f1; margin-bottom: 0.5rem;">Chargement du dashboard...</div>
-        <div id="loadingStatus" style="font-size: 0.9rem; color: #6b7280;">Vérification de la session...</div>
+<div id="app">
+    <div class="loading-screen">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Chargement du Dashboard</div>
+            <div class="loading-status" id="loadingStatus">Vérification de la session...</div>
+        </div>
     </div>
 </div>
 
-<!-- Factory Reset Popup -->
-<div class="reset-popup-overlay" id="resetPopupOverlay">
-    <div class="reset-popup">
-        <div class="reset-popup-header">
-            <h3>⚠️ Réinitialisation de la plaque NFC</h3>
-        </div>
-        <div class="reset-popup-body">
-            <div class="reset-popup-disclaimer">
-                <h4>Cette action est irréversible et supprimera :</h4>
-                <ul>
-                    <li>Toutes les données de configuration</li>
-                    <li>Les informations de l'établissement</li>
-                    <li>L'identifiant Google Maps (Place ID)</li>
-                    <li>L'URL de redirection</li>
-                    <li>Les statistiques et avis récoltés</li>
-                    <li>Votre session de connexion</li>
-                </ul>
-            </div>
-            <div class="reset-popup-warning">
-                <p><strong>Attention :</strong> La plaque sera remise aux valeurs d'usine. Vous devrez reconfigurer tous les paramètres.</p>
-            </div>
-            <div class="reset-popup-actions">
-                <button class="reset-popup-btn reset-popup-btn-cancel" id="resetPopupCancel">Annuler</button>
-                <button class="reset-popup-btn reset-popup-btn-continue" id="resetPopupContinue">Continuer</button>
-            </div>
-        </div>
-    </div>
-</div>
 <script>
 (async function() {
-    // Get account ID from cookie (required) or URL
-    const mount = document.getElementById('main');
-    const params = new URLSearchParams(window.location.search);
-    const idFromUrl = params.get('id');
+    const app = document.getElementById('app');
     
-    // Function to get cookie value
+    // ═══════════════════════════════════════════════════════════════════
+    // AUTHENTICATION
+    // ═══════════════════════════════════════════════════════════════════
+    
     function getCookie(name) {
         const value = `; ${document.cookie}`;
         const parts = value.split(`; ${name}=`);
-        if (parts.length === 2) {
-            return decodeURIComponent(parts.pop().split(';').shift());
-        }
+        if (parts.length === 2) return decodeURIComponent(parts.pop().split(';').shift());
         return null;
     }
     
-    // Prevent infinite redirect loop - check if we've been here multiple times
-    const redirectCount = parseInt(window.sessionStorage.getItem('dashboard_load_count') || '0', 10);
-    if (redirectCount > 3) {
-        console.error('❌ Redirect loop detected (loaded ' + redirectCount + ' times), clearing session and redirecting to login');
-        window.sessionStorage.removeItem('dashboard_load_count');
-        window.sessionStorage.removeItem('dashboard_redirect_in_progress');
-        // Clear cookie to force re-login
-        document.cookie = 'dashboard_sesh=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-        // Redirect with error parameter to show message and prevent auto-redirect
-        window.location.replace('/dashboardlogin.html?error=auth_failed');
-        return;
-    }
-    
-    // Increment load counter
-    window.sessionStorage.setItem('dashboard_load_count', String(redirectCount + 1));
-    console.log('📊 Dashboard load count:', redirectCount + 1);
-    
-    // Update loading status
-    const loadingStatusEl = document.getElementById('loadingStatus');
-    if (loadingStatusEl) loadingStatusEl.textContent = 'Recherche du cookie de session...';
-    
-    // Get ID from cookie (required) - with retry mechanism for cookie availability
+    const params = new URLSearchParams(window.location.search);
+    const idFromUrl = params.get('id');
     let accountId = null;
+    let accountEmail = null;
+    
+    // Check for session cookie
     let cookieRetries = 0;
-    const maxCookieRetries = 20; // Wait up to 2 seconds for cookie
+    const maxRetries = 20;
     
-    console.log('═══════════════════════════════════════════════════════════');
-    console.log('🚀 DASHBOARD PAGE LOADED');
-    console.log('═══════════════════════════════════════════════════════════');
-    console.log('📍 Current URL:', window.location.href);
-    console.log('🔍 ID from URL parameter:', idFromUrl);
-    console.log('🍪 ALL COOKIES:', document.cookie);
-    console.log('🍪 Cookie count:', document.cookie ? document.cookie.split(';').length : 0);
-    console.log('🔍 Looking for: dashboard_sesh');
-    console.log('🔍 Cookie contains dashboard_sesh:', document.cookie.includes('dashboard_sesh'));
-    console.log('═══════════════════════════════════════════════════════════');
-    
-    while (!accountId && cookieRetries < maxCookieRetries) {
+    while (!accountId && cookieRetries < maxRetries) {
         try {
             const cookieValue = getCookie('dashboard_sesh');
             if (cookieValue) {
-                console.log('📦 Raw cookie value found (attempt ' + (cookieRetries + 1) + ')');
                 const cookieData = JSON.parse(cookieValue);
                 if (cookieData && cookieData.id) {
                     accountId = cookieData.id;
-                    window.currentAccountEmail = cookieData.email; // Store for later use
-                    console.log('✅ dashboard_sesh cookie found with ID:', accountId);
-                    console.log('📧 Email from cookie:', cookieData.email);
+                    accountEmail = cookieData.email;
                     break;
                 }
-            } else {
-                if (cookieRetries === 0 || cookieRetries % 5 === 0) {
-                    console.log('⏳ Cookie not found yet (attempt ' + (cookieRetries + 1) + '/' + maxCookieRetries + ')');
-                }
             }
-        } catch (e) {
-            console.warn('⚠️ Error parsing dashboard_sesh cookie (attempt ' + (cookieRetries + 1) + '):', e);
-        }
-        
+        } catch (e) {}
+        cookieRetries++;
+        await new Promise(r => setTimeout(r, 100));
+    }
+    
         if (!accountId) {
-            cookieRetries++;
-            if (cookieRetries < maxCookieRetries) {
-                await new Promise(resolve => setTimeout(resolve, 100));
-            }
-        }
-    }
-    
-    // If no cookie after retries, redirect to login with error message
-    if (!accountId) {
-        console.log('═══════════════════════════════════════════════════════════');
-        console.log('❌ AUTHENTICATION FAILED - NO COOKIE FOUND');
-        console.log('═══════════════════════════════════════════════════════════');
-        console.log('Retries attempted:', maxCookieRetries);
-        console.log('Final cookie check:', getCookie('dashboard_sesh'));
-        console.log('All cookies:', document.cookie);
-        console.log('Reason: dashboard_sesh cookie not found after multiple attempts');
-        console.log('Action: Redirecting to login page with error');
-        console.log('═══════════════════════════════════════════════════════════');
-        
-        if (loadingStatusEl) {
-            loadingStatusEl.innerHTML = '❌ Session introuvable<br><small style="font-size:0.8em;">Redirection vers la page de connexion...</small>';
-            loadingStatusEl.style.color = '#ef4444';
-        }
-        
-        // Clear session storage to prevent loops
-        window.sessionStorage.removeItem('dashboard_redirect_in_progress');
-        window.sessionStorage.removeItem('dashboard_load_count');
-        
-        // Redirect to login with error parameter (prevents auto-redirect loop)
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        document.getElementById('loadingStatus').innerHTML = '❌ Session expirée';
+        await new Promise(r => setTimeout(r, 1000));
         window.location.replace('/dashboardlogin.html?error=session_expired');
-        return; // Stop execution
-    }
-    
-    console.log('✅ Cookie authentication successful!');
-    if (loadingStatusEl) loadingStatusEl.textContent = '✅ Session trouvée - Validation en cours...';
-    
-    // Normalize IDs to strings for comparison (URL params are always strings)
-    const accountIdStr = String(accountId);
-    const idFromUrlStr = idFromUrl ? String(idFromUrl) : null;
-    
-    console.log('🔍 Normalized comparison:');
-    console.log('   Cookie ID (string):', accountIdStr, '(type:', typeof accountIdStr + ')');
-    console.log('   URL ID (string):', idFromUrlStr, '(type:', typeof idFromUrlStr + ')');
-    
-    // If ID in URL, verify it matches cookie (using string comparison)
-    if (idFromUrlStr && idFromUrlStr !== accountIdStr) {
-        console.log('═══════════════════════════════════════════════════════════');
-        console.log('❌ AUTHENTICATION FAILED - ID MISMATCH');
-        console.log('═══════════════════════════════════════════════════════════');
-        console.log('URL ID:', idFromUrlStr);
-        console.log('Cookie ID:', accountIdStr);
-        console.log('Reason: ID in URL does not match ID in cookie');
-        console.log('Action: Redirecting to login page with error');
-        console.log('═══════════════════════════════════════════════════════════');
-        
-        if (loadingStatusEl) {
-            loadingStatusEl.textContent = '❌ Erreur d\'authentification - Redirection...';
-            loadingStatusEl.style.color = '#ef4444';
+            return;
         }
-        
-        // Clear session storage to prevent loops
-        window.sessionStorage.removeItem('dashboard_redirect_in_progress');
-        window.sessionStorage.removeItem('dashboard_load_count');
-        
-        // Redirect to login with error parameter (prevents auto-redirect loop)
-        await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // URL validation
+    if (idFromUrl && String(idFromUrl) !== String(accountId)) {
         window.location.replace('/dashboardlogin.html?error=invalid_session');
-        return; // Stop execution
-    }
-    
-    // Use cookie ID (it's the source of truth)
-    // Update URL to show ID (optional, for bookmarking)
-    if (!idFromUrlStr || idFromUrlStr !== accountIdStr) {
-        console.log('ℹ️ Updating URL to match cookie ID:', accountIdStr);
-        const newUrl = `/dashboard.html?id=${encodeURIComponent(accountIdStr)}`;
-        window.history.replaceState(null, '', newUrl);
-    }
-    
-    // Ensure accountId is in its original format for database queries
-    console.log('✅ Using account ID:', accountId, '(original type preserved)');
-    
-    // Clear redirect protection flags since we're successfully loading with valid credentials
-    window.sessionStorage.removeItem('dashboard_redirect_in_progress');
-    window.sessionStorage.removeItem('dashboard_load_count');
-    
-    console.log('═══════════════════════════════════════════════════════════');
-    console.log('✅ AUTHENTICATION SUCCESSFUL');
-    console.log('═══════════════════════════════════════════════════════════');
-    console.log('Account ID:', accountId);
-    console.log('Email:', window.currentAccountEmail || 'Unknown');
-    console.log('Session validated successfully');
-    console.log('═══════════════════════════════════════════════════════════');
-    
-    if (loadingStatusEl) {
-        loadingStatusEl.textContent = '✅ Authentification réussie - Chargement des données...';
-        loadingStatusEl.style.color = '#10b981';
-    }
-    
-    // Make accountId globally accessible for debugging
-    window.currentAccountId = accountId;
-
-    // Status menu toggle
-    function initStatusMenu() {
-        const btn = document.getElementById('statusMenuBtn');
-        const panel = document.getElementById('statusMenuPanel');
-        if (!btn || !panel) return;
+            return;
+        }
         
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            panel.classList.toggle('open');
-        });
-        
-        document.addEventListener('click', (e) => {
-            if (!panel.contains(e.target) && !btn.contains(e.target)) {
-                panel.classList.remove('open');
-            }
-        });
+    if (!idFromUrl) {
+        window.history.replaceState(null, '', `/dashboard.html?id=${encodeURIComponent(accountId)}`);
     }
-
-    function updateReviewStatsFromContacts(count) {
-        const safeCount = Math.max(Number(count) || 0, 0);
-        const statsEl = document.getElementById('statsCount');
-        const countMini = document.getElementById('statCountMini');
-        const barFill = document.getElementById('statBarFill');
-        
-        if (statsEl) statsEl.textContent = safeCount.toString();
-        if (countMini) countMini.textContent = safeCount.toString();
-        if (barFill) {
-            const maxScale = 50;
-            const percentage = Math.min((safeCount / maxScale) * 100, 100);
-            barFill.style.width = percentage + '%';
+    
+    document.getElementById('loadingStatus').textContent = 'Chargement des données...';
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // DATA FETCHING
+    // ═══════════════════════════════════════════════════════════════════
+    
+    window.waitForDbProxy = async function() {
+        if (window.dbProxy) return window.dbProxy;
+        let retries = 0;
+        while (!window.dbProxy && retries < 50) {
+            await new Promise(r => setTimeout(r, 100));
+            retries++;
+        }
+        if (!window.dbProxy) throw new Error('db-proxy.js failed to load');
+        return window.dbProxy;
+    };
+    
+    // Fetch enriched data from Serp API
+    async function fetchEnrichedData(placeId) {
+            const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            const apiUrl = isLocalhost 
+            ? `/api/serp-reviews?account_id=${encodeURIComponent(accountId)}&business_id=${encodeURIComponent(placeId || '')}`
+            : `/.netlify/functions/serp-reviews?account_id=${encodeURIComponent(accountId)}&business_id=${encodeURIComponent(placeId || '')}`;
+            
+        try {
+            const response = await fetch(apiUrl);
+            if (!response.ok) throw new Error('API Error');
+            return await response.json();
+        } catch (e) {
+            console.error('Failed to fetch enriched data:', e);
+            return null;
         }
     }
-    let previewContacts = [];
-    const DEFAULT_CONTACT_EMAIL = 'goreview.fr@gmail.com';
-    function escapeHtml(value) {
-        if (typeof value !== 'string') return value || '';
-        return value
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#39;');
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // HELPER FUNCTIONS
+    // ═══════════════════════════════════════════════════════════════════
+    
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
-    function isDefaultPreviewContact(contact) {
-        if (!contact || !contact.email) return false;
-        return contact.email.toLowerCase() === DEFAULT_CONTACT_EMAIL;
-    }
-
-    // Load contacts preview from contact_table column
-    async function loadContactsPreview() {
-        const tbody = document.getElementById('contactsPreviewBody');
-        if (!tbody) return;
-
-        try {
-            // Use accountId from global scope or window
-            const currentAccountId = accountId || window.currentAccountId;
-            console.log('📋 loadContactsPreview - Account ID:', currentAccountId);
-            
-            if (!currentAccountId) {
-                console.error('❌ No account ID available in loadContactsPreview');
-                return;
-            }
-            
-            // Wait for db-proxy to be available
-            const dbProxy = await window.waitForDbProxy();
-            
-            // First, get the account data to retrieve contact_table
-            const { data: accountData, error: fetchError } = await dbProxy.select('accounts', { id: currentAccountId }, { select: ['contact_table'], single: true });
-
-            if (fetchError) {
-                tbody.innerHTML = `<tr><td colspan='5' class='contacts-preview-empty'>Erreur: ${fetchError.message}</td></tr>`;
-                return;
-            }
-
-            // Parse contact_table (should be a JSON string or already an array)
-            let contacts = [];
-            if (accountData && accountData.contact_table) {
-                try {
-                    contacts = typeof accountData.contact_table === 'string' 
-                        ? JSON.parse(accountData.contact_table) 
-                        : accountData.contact_table;
-                    if (!Array.isArray(contacts)) {
-                        contacts = [];
-                    }
-                } catch (parseError) {
-                    console.warn('Failed to parse contact_table', parseError);
-                    contacts = [];
-                }
-            }
-
-            // If no contacts and contact_table is empty/null, initialize with example contact
-            if (contacts.length === 0) {
-                const exampleContact = {
-                    nom: 'go',
-                    prenom: 'Review',
-                    email: 'goreview.fr@gmail.com',
-                    time: new Date().toISOString()
-                };
-                contacts = [exampleContact];
-                
-                // Save the example contact to contact_table
-                try {
-                    const dbProxy = await window.waitForDbProxy();
-                    await dbProxy.update('accounts', { contact_table: JSON.stringify(contacts) }, { id: accountId });
-                } catch (updateError) {
-                    console.warn('Failed to initialize contact_table', updateError);
-                }
+    
+    function renderStars(rating, size = '1.75rem') {
+        let html = '';
+        const fullStars = Math.floor(rating);
+        const hasHalf = rating % 1 >= 0.5;
+        
+        for (let i = 0; i < 5; i++) {
+            if (i < fullStars) {
+                html += `<span class="star filled" style="font-size:${size}">★</span>`;
+            } else if (i === fullStars && hasHalf) {
+                html += `<span class="star half" style="font-size:${size}">★</span>`;
             } else {
-                // Normalize date fields - convert 'timestamp' to 'time' for consistency
-                contacts = contacts.map(c => {
-                    if (c.timestamp && !c.time) {
-                        c.time = c.timestamp;
-                        delete c.timestamp;
+                html += `<span class="star" style="font-size:${size}">★</span>`;
+            }
+        }
+        return html;
+    }
+    
+    // Analyze sentiment from reviews (simple version)
+    function analyzeReviews(reviews) {
+        if (!reviews || !reviews.length) return null;
+        
+        const positiveWords = ['excellent', 'super', 'parfait', 'génial', 'recommande', 'magnifique', 'top', 'délicieux', 'sympa', 'agréable', 'bien', 'bon', 'accueil', 'qualité', 'frais', 'variety', 'choix'];
+        const negativeWords = ['mauvais', 'nul', 'horrible', 'décevant', 'éviter', 'froid', 'désagréable', 'impoli', 'cher', 'lent', 'sale', 'attendre', 'problème'];
+        
+        const themes = {};
+        let positiveCount = 0;
+        let negativeCount = 0;
+        let responded = 0;
+        let notResponded = 0;
+        
+        reviews.forEach(r => {
+            const text = (r.description || '').toLowerCase();
+            
+            positiveWords.forEach(word => {
+                if (text.includes(word)) {
+                    themes[word] = (themes[word] || 0) + 1;
+                    positiveCount++;
+                }
+            });
+            
+            negativeWords.forEach(word => {
+                if (text.includes(word)) {
+                    themes[word] = (themes[word] || 0) + 1;
+                    negativeCount++;
+                }
+            });
+            
+            if (r.response) responded++;
+            else notResponded++;
+        });
+        
+        // Sort themes by frequency
+        const sortedThemes = Object.entries(themes).sort((a, b) => b[1] - a[1]).slice(0, 10);
+        const positiveThemes = sortedThemes.filter(([word]) => positiveWords.includes(word));
+        const negativeThemes = sortedThemes.filter(([word]) => negativeWords.includes(word));
+        
+        return {
+            positiveThemes: positiveThemes.map(([w]) => w),
+            negativeThemes: negativeThemes.map(([w]) => w),
+            responseRate: reviews.length > 0 ? Math.round((responded / reviews.length) * 100) : 0,
+            notRespondedCount: notResponded,
+            sentiment: positiveCount > negativeCount ? 'positive' : negativeCount > positiveCount ? 'negative' : 'neutral'
+        };
+    }
+    
+    // Find peak hours from popular_times
+    function analyzeBusyTimes(popularTimes) {
+        if (!popularTimes) return null;
+        
+        const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        const daysFr = { sunday: 'Dim', monday: 'Lun', tuesday: 'Mar', wednesday: 'Mer', thursday: 'Jeu', friday: 'Ven', saturday: 'Sam' };
+        
+        let peakDay = null;
+        let peakHour = null;
+        let peakScore = 0;
+        let quietestDay = null;
+        let quietestScore = 100;
+        
+        const analyzed = {};
+        
+        days.forEach(day => {
+            const dayData = popularTimes[day];
+            if (!dayData) return;
+            
+            let dayTotal = 0;
+            let hourData = [];
+            
+            // Handle different formats
+            if (Array.isArray(dayData)) {
+                dayData.forEach(h => {
+                    const score = h.busyness_score || h.percentage || 0;
+                    const hour = h.time || h.hour;
+                    hourData.push({ hour, score });
+                    dayTotal += score;
+                    
+                    if (score > peakScore) {
+                        peakScore = score;
+                        peakDay = day;
+                        peakHour = hour;
                     }
-                    return c;
+                });
+            } else if (dayData.graph_results) {
+                dayData.graph_results.forEach(h => {
+                    const score = h.busyness_score || 0;
+                    hourData.push({ hour: h.time, score });
+                    dayTotal += score;
+                    
+                    if (score > peakScore) {
+                        peakScore = score;
+                        peakDay = day;
+                        peakHour = h.time;
+                    }
+                });
+            }
+            
+            const avgScore = hourData.length > 0 ? dayTotal / hourData.length : 0;
+            analyzed[day] = { hours: hourData, avg: avgScore };
+            
+            if (avgScore < quietestScore && avgScore > 0) {
+                quietestScore = avgScore;
+                quietestDay = day;
+            }
+        });
+        
+        return {
+            peakDay: peakDay ? daysFr[peakDay] : null,
+            peakHour: peakHour,
+            peakScore: peakScore,
+            quietestDay: quietestDay ? daysFr[quietestDay] : null,
+            quietestScore: quietestScore,
+            analyzed: analyzed,
+            daysFr: daysFr
+        };
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // RENDER DASHBOARD
+    // ═══════════════════════════════════════════════════════════════════
+    
+    async function renderDashboard(accountData, enrichedData) {
+        const businessName = accountData.business_name || accountData.company_name || 'Mon Commerce';
+        const rating = enrichedData?.rating || parseFloat(accountData.current_rating) || 0;
+        const totalReviews = enrichedData?.reviews || parseInt(accountData.tot_review) || 0;
+        const userReviews = enrichedData?.user_reviews || [];
+        const ratingSummary = enrichedData?.rating_summary || {};
+        const popularTimes = enrichedData?.popular_times || null;
+        const competitors = enrichedData?.competitors || [];
+        const timeSpent = enrichedData?.time_spent || null;
+        const extensions = enrichedData?.extensions || [];
+        const lastUpdated = enrichedData?.last_updated;
+        
+        // Analyze data
+        const sentimentAnalysis = analyzeReviews(userReviews);
+        const busyAnalysis = analyzeBusyTimes(popularTimes);
+        
+        // Build HTML
+        let html = `
+        <div class="dashboard-container">
+            <header class="dashboard-header">
+                <div class="header-left">
+                    <img src="/logo.png" alt="GoReview" class="logo">
+                    <h1 class="business-name">${escapeHtml(businessName)}</h1>
+                </div>
+                <div class="header-right">
+                    ${lastUpdated ? `<span class="last-updated">Mis à jour: ${new Date(lastUpdated).toLocaleString('fr-FR')}</span>` : ''}
+                    <button class="settings-btn" onclick="window.location.href='/config.html?id=${accountId}'">⚙️</button>
+                </div>
+            </header>
+            
+            <div class="dashboard-grid">
+        `;
+        
+        // ═══════════════════════════════════════════════════════════════════
+        // ROW 1: Main Metrics
+        // ═══════════════════════════════════════════════════════════════════
+        
+        // Rating Card
+                html += `
+            <div class="card span-3">
+                <div class="card-header">
+                    <span class="card-title">Note moyenne</span>
+                    <span class="card-icon purple">⭐</span>
+                </div>
+                <div class="stars-display">${renderStars(rating)}</div>
+                <div class="metric-value">${rating > 0 ? rating.toFixed(1) : '–'}</div>
+                <div class="metric-label">sur 5 étoiles</div>
+                    </div>
+                `;
+            
+        // Total Reviews Card
+                html += `
+            <div class="card span-3">
+                <div class="card-header">
+                    <span class="card-title">Total avis</span>
+                    <span class="card-icon blue">📊</span>
+                </div>
+                <div class="metric-value" style="color: var(--info);">${totalReviews > 0 ? totalReviews.toLocaleString('fr-FR') : '–'}</div>
+                <div class="metric-label">avis sur Google</div>
+                    </div>
+                `;
+        
+        // Response Rate Card
+        const responseRate = sentimentAnalysis?.responseRate || 0;
+        html += `
+            <div class="card span-3">
+                <div class="card-header">
+                    <span class="card-title">Taux de réponse</span>
+                    <span class="card-icon ${responseRate >= 80 ? 'green' : responseRate >= 50 ? 'orange' : 'red'}">💬</span>
+                </div>
+                <div class="gauge-container">
+                    <div class="gauge-bg"></div>
+                    <div class="gauge-fill" style="--gauge-value: ${responseRate}"></div>
+                    <div class="gauge-center"></div>
+                    <div class="gauge-value">${responseRate}%</div>
+                </div>
+                ${sentimentAnalysis?.notRespondedCount > 0 ? `
+                <div style="text-align:center; margin-top:0.5rem;">
+                    <span style="color: var(--danger); font-size: 0.85rem;">⚠️ ${sentimentAnalysis.notRespondedCount} avis sans réponse</span>
+                </div>
+                ` : ''}
+            </div>
+        `;
+        
+        // NFC Reviews Collected
+        const nfcReviews = parseInt(accountData.review_number) || 0;
+        html += `
+            <div class="card span-3">
+                <div class="card-header">
+                    <span class="card-title">Avis via NFC</span>
+                    <span class="card-icon green">📱</span>
+                </div>
+                <div class="metric-value" style="color: var(--success);">${nfcReviews}</div>
+                <div class="metric-label">collectés via votre plaque</div>
+            </div>
+        `;
+        
+        // ═══════════════════════════════════════════════════════════════════
+        // ROW 2: AI Insight + Rating Distribution
+        // ═══════════════════════════════════════════════════════════════════
+        
+        // AI Insight Card (Leia)
+        html += `
+            <div class="card span-8">
+                <div class="ai-insight">
+                    <div class="ai-header">
+                        <div class="ai-icon">🤖</div>
+                        <div>
+                            <div class="ai-title">Conseil IA de la semaine</div>
+                            <div class="ai-subtitle">Analyse basée sur vos ${userReviews.length} derniers avis</div>
+                        </div>
+                    </div>
+                    <div class="ai-content">
+                        ${userReviews.length > 0 ? `
+                            ${sentimentAnalysis?.positiveThemes?.length > 0 ? `
+                                <p>🟢 <strong>Points forts mentionnés :</strong> ${sentimentAnalysis.positiveThemes.map(t => `<span class="ai-highlight">${t}</span>`).join(', ')}</p>
+                            ` : ''}
+                            ${sentimentAnalysis?.negativeThemes?.length > 0 ? `
+                                <p style="margin-top:0.75rem;">🔴 <strong>Points d'amélioration :</strong> ${sentimentAnalysis.negativeThemes.map(t => `<span class="ai-highlight" style="background:rgba(239,68,68,0.3)">${t}</span>`).join(', ')}</p>
+                            ` : ''}
+                            ${busyAnalysis?.peakDay ? `
+                                <p style="margin-top:0.75rem;">📈 <strong>Conseil staffing :</strong> Votre pic d'affluence est le <span class="ai-highlight">${busyAnalysis.peakDay} à ${busyAnalysis.peakHour}</span>. Assurez-vous d'avoir suffisamment de personnel à ce moment.</p>
+                            ` : ''}
+                            ${responseRate < 50 ? `
+                                <p style="margin-top:0.75rem;">💬 <strong>Action recommandée :</strong> Votre taux de réponse est de ${responseRate}%. Répondre aux avis améliore votre visibilité Google et fidélise vos clients.</p>
+                            ` : ''}
+                        ` : `
+                            <p>Pas assez de données pour générer une analyse. Encouragez vos clients à laisser des avis via votre plaque NFC !</p>
+                        `}
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Rating Distribution
+        html += `
+            <div class="card span-4">
+                <div class="card-header">
+                    <span class="card-title">Distribution des avis</span>
+                    <span class="card-icon purple">📈</span>
+                </div>
+                <div class="rating-distribution">
+        `;
+        
+        // Calculate distribution
+        const distribution = {};
+        if (ratingSummary && typeof ratingSummary === 'object') {
+            for (let i = 5; i >= 1; i--) {
+                const key = String(i);
+                distribution[i] = ratingSummary[key] || ratingSummary[`${i}_star`] || ratingSummary[`stars_${i}`] || 0;
+            }
+                } else {
+            // Estimate from reviews
+            userReviews.forEach(r => {
+                const star = Math.round(r.rating);
+                distribution[star] = (distribution[star] || 0) + 1;
+            });
+        }
+        
+        const totalDist = Object.values(distribution).reduce((a, b) => a + b, 0) || 1;
+        
+        for (let i = 5; i >= 1; i--) {
+            const count = distribution[i] || 0;
+            const pct = (count / totalDist) * 100;
+                html += `
+                <div class="rating-bar-row">
+                    <span class="rating-bar-label">${i}★</span>
+                    <div class="rating-bar-track">
+                        <div class="rating-bar-fill star-${i}" style="width: ${pct}%"></div>
+                    </div>
+                    <span class="rating-bar-count">${count.toLocaleString('fr-FR')}</span>
+                    </div>
+                `;
+            }
+            
+        html += `
+                </div>
+            </div>
+        `;
+        
+        // ═══════════════════════════════════════════════════════════════════
+        // ROW 3: Popular Times + Competitors
+        // ═══════════════════════════════════════════════════════════════════
+        
+        // Popular Times Chart
+        html += `
+            <div class="card span-8">
+                <div class="card-header">
+                    <span class="card-title">Affluence hebdomadaire</span>
+                    <span class="card-icon orange">📊</span>
+                </div>
+        `;
+        
+        if (busyAnalysis && busyAnalysis.analyzed) {
+            html += `<div class="popular-times-chart">`;
+            
+            const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+            
+            days.forEach(day => {
+                const dayData = busyAnalysis.analyzed[day];
+                if (!dayData || !dayData.hours || dayData.hours.length === 0) return;
+                
+                html += `
+                    <div class="day-row">
+                        <span class="day-label">${busyAnalysis.daysFr[day]}</span>
+                        <div class="hours-chart">
+                `;
+                
+                dayData.hours.forEach(h => {
+                    const score = h.score || 0;
+                    const height = Math.max(score, 5);
+                    let cls = 'low';
+                    if (score >= 80) cls = 'peak';
+                    else if (score >= 60) cls = 'high';
+                    else if (score >= 30) cls = 'medium';
+                    
+                    html += `<div class="hour-bar ${cls}" style="height: ${height}%" title="${h.hour}: ${score}%"></div>`;
                 });
                 
-                // Save normalized contacts back to database
-                    try {
-                        const dbProxy = await window.waitForDbProxy();
-                    await dbProxy.update('accounts', { contact_table: JSON.stringify(contacts) }, { id: accountId });
-                    } catch (updateError) {
-                        console.warn('Failed to save normalized contacts', updateError);
-                    }
-                
-                // Check if the example contact exists, if not add it
-                const hasExample = contacts.some(c => 
-                    c.email === 'goreview.fr@gmail.com' || 
-                    (c.nom === 'go' && c.prenom === 'Review')
-                );
-                
-                if (!hasExample) {
-                    const exampleContact = {
-                        nom: 'go',
-                        prenom: 'Review',
-                        email: 'goreview.fr@gmail.com',
-                        time: new Date().toISOString()
-                    };
-                    contacts.unshift(exampleContact); // Add at the beginning
-                    
-                    // Save updated contacts
-                    try {
-                        const dbProxy = await window.waitForDbProxy();
-                        await dbProxy.update('accounts', { contact_table: JSON.stringify(contacts) }, { id: accountId });
-                    } catch (updateError) {
-                        console.warn('Failed to update contact_table with example', updateError);
-                    }
-                }
-            }
-
-            // Sort by time (most recent first) - handle both 'time' and 'timestamp' fields
-            contacts.sort((a, b) => {
-                const timeA = (a.time || a.timestamp) ? new Date(a.time || a.timestamp).getTime() : 0;
-                const timeB = (b.time || b.timestamp) ? new Date(b.time || b.timestamp).getTime() : 0;
-                return timeB - timeA;
-            });
-
-            previewContacts = contacts;
-            const effectiveContactCount = Math.max(previewContacts.length - 1, 0);
-            updateReviewStatsFromContacts(effectiveContactCount);
-            renderContactsPreviewTable();
-        } catch (err) {
-            tbody.innerHTML = `<tr><td colspan='5' class='contacts-preview-empty'>Erreur de chargement</td></tr>`;
-            console.error('Failed to load contacts', err);
-        }
-    }
-
-    function renderContactsPreviewTable() {
-        const tbody = document.getElementById('contactsPreviewBody');
-        if (!tbody) return;
-        if (!previewContacts.length) {
-            tbody.innerHTML = `<tr><td colspan='5' class='contacts-preview-empty'>Aucun contact enregistré</td></tr>`;
-            return;
-        }
-        const displayContacts = previewContacts.map((contact, index) => ({ contact, index })).slice(0, 10);
-        tbody.innerHTML = displayContacts.map(({ contact, index }) => {
-            const nom = escapeHtml(contact.nom || '–');
-            const prenom = escapeHtml(contact.prenom || '–');
-            const email = escapeHtml(contact.email || '–');
-            const dateValue = contact.time || contact.timestamp;
-            let date = '-';
-            if (dateValue) {
-                try {
-                    const dateObj = new Date(dateValue);
-                    if (!isNaN(dateObj.getTime())) {
-                        date = dateObj.toLocaleDateString('fr-FR', {
-                            year: 'numeric',
-                            month: '2-digit',
-                            day: '2-digit',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                        });
-                    }
-                } catch (e) {
-                    console.warn('Failed to parse date:', dateValue, e);
-                    date = '-';
-                }
-            }
-            const isDefault = isDefaultPreviewContact(contact);
-            const actionButton = isDefault
-                ? `<button class="delete-contact-btn" title="Contact système" disabled>🔒</button>`
-                : `<button class="delete-contact-btn" data-index="${index}" title="Supprimer ce contact">🗑️</button>`;
-            return `
-                <tr>
-                    <td>${nom}</td>
-                    <td>${prenom}</td>
-                    <td><a href="mailto:${email}" style="color: #6366f1; text-decoration: none;">${email}</a></td>
-                    <td>${date}</td>
-                    <td class="contact-actions">
-                        ${actionButton}
-                    </td>
-                </tr>
-            `;
-        }).join('');
-    }
-
-    async function handleDeletePreviewContact(index) {
-        if (index < 0 || index >= previewContacts.length) return;
-        const contact = previewContacts[index];
-        if (isDefaultPreviewContact(contact)) {
-            alert('Ce contact système ne peut pas être supprimé.');
-            return;
-        }
-        const label = `${contact?.prenom || ''} ${contact?.nom || ''}`.trim() || contact?.email || 'ce contact';
-        const confirmed = window.confirm(`Supprimer ${label} ? Cette action est définitive.`);
-        if (!confirmed) return;
-        try {
-            previewContacts.splice(index, 1);
-            const dbProxy = await window.waitForDbProxy();
-            await dbProxy.update('accounts', { contact_table: JSON.stringify(previewContacts) }, { id: accountId });
-            const effectiveContactCount = Math.max(previewContacts.length - 1, 0);
-            updateReviewStatsFromContacts(effectiveContactCount);
-            renderContactsPreviewTable();
-        } catch (error) {
-            console.error('Failed to delete contact', error);
-            alert('Impossible de supprimer ce contact. Veuillez réessayer.');
-        }
-    }
-
-    // Fetch place details from OpenStreetMap Nominatim API (free, no API key needed)
-    async function fetchPlaceDetails(placeId) {
-        if (!placeId) {
-            console.log('📊 No place_id provided, using database cache');
-            loadRatingFromDatabase();
-            return;
-        }
-        
-        console.log('📊 Fetching place details from OpenStreetMap for:', placeId);
-        
-        // OpenStreetMap doesn't have ratings, so we just load from database
-        // If you want to fetch place name/address from OSM, you can add it here
-        loadRatingFromDatabase();
-    }
-    
-    // Load rating and reviews from database cache
-    async function loadRatingFromDatabase() {
-        try {
-            const dbProxy = await window.waitForDbProxy();
-            const { data: accountData } = await dbProxy.select('accounts', { id: accountId }, { 
-                select: ['current_rating', 'tot_review'], 
-                single: true 
+                html += `
+                </div>
+                                </div>
+                `;
             });
             
-            if (accountData) {
-                const rating = parseFloat(accountData.current_rating) || null;
-                const reviews = parseInt(accountData.tot_review || '0', 10) || null;
-                
-                if (rating || reviews) {
-                    console.log('✅ Loaded rating from database:', { rating, reviews });
-                    updateRatingDisplay(rating);
-                    updateTotalReviewsDisplay(reviews);
-                    return;
-                }
-            }
-        } catch (error) {
-            console.warn('⚠️ Failed to load rating from database:', error);
-        }
-        
-        // Show empty state
-        updateRatingDisplay(null);
-        updateTotalReviewsDisplay(null);
-    }
-
-    // Update rating display
-    function updateRatingDisplay(rating) {
-        const starsDisplay = document.getElementById('starsDisplay');
-        const ratingValue = document.getElementById('ratingValue');
-        
-        if (starsDisplay) {
-            starsDisplay.innerHTML = '';
-            if (rating && rating > 0) {
-                for (let i = 1; i <= 5; i++) {
-                    const star = document.createElement('span');
-                    const isFilled = rating >= i;
-                    star.className = 'star' + (isFilled ? ' filled' : '');
-                    star.textContent = '★';
-                    starsDisplay.appendChild(star);
-                }
-            } else {
-                // Show empty stars if no rating
-                for (let i = 1; i <= 5; i++) {
-                    const star = document.createElement('span');
-                    star.className = 'star';
-                    star.textContent = '★';
-                    starsDisplay.appendChild(star);
-                }
-            }
-        }
-        
-        if (ratingValue) {
-            ratingValue.textContent = rating && rating > 0 ? rating.toFixed(1) : '–';
-        }
-    }
-
-    // Update total reviews display
-    function updateTotalReviewsDisplay(totalReviews) {
-        const totalReviewsEl = document.getElementById('totalReviewsCount');
-        if (totalReviewsEl) {
-            totalReviewsEl.textContent = totalReviews && totalReviews > 0 ? totalReviews.toLocaleString('fr-FR') : '–';
-        }
-    }
-
-    // Update status indicators
-    function updateStatusMenu(data) {
-        if (!data) return;
-        
-        // Health check
-        const healthIssues = [];
-        if (!data.business_id && !data.place_id) healthIssues.push('Place ID manquant');
-        if (!data.redirection_url) healthIssues.push('Redirection non configurée');
-        
-        const healthIcon = document.getElementById('statusHealthIcon');
-        const healthBadge = document.getElementById('statusHealthBadge');
-        const healthText = document.getElementById('statusHealthText');
-        
-        if (healthIssues.length === 0) {
-            if (healthIcon) { healthIcon.className = 'status-icon healthy'; healthIcon.textContent = '✓'; }
-            if (healthBadge) { healthBadge.className = 'status-badge green'; }
-            if (healthText) healthText.textContent = 'Opérationnel';
-        } else {
-            if (healthIcon) { healthIcon.className = 'status-icon error'; healthIcon.textContent = '⚠'; }
-            if (healthBadge) { healthBadge.className = 'status-badge red'; }
-            if (healthText) healthText.textContent = healthIssues[0];
-        }
-
-        // Redirection
-        const redirectBadge = document.getElementById('statusRedirectBadge');
-        const redirectText = document.getElementById('statusRedirectText');
-        const redirectIcon = document.getElementById('statusRedirectIcon');
-        const hasRedirect = !!data.redirection_url;
-        if (redirectBadge) redirectBadge.className = `status-badge ${hasRedirect ? 'green' : 'orange'}`;
-        if (redirectText) redirectText.textContent = hasRedirect ? 'Configuré' : 'Non configuré';
-        if (redirectIcon) redirectIcon.className = `status-icon ${hasRedirect ? 'healthy' : 'warning'}`;
-
-        // Reviews bar (visual scale: 0-50 for better visibility)
-        const reviewCount = parseInt(data.review_number || '0', 10);
-        const barFill = document.getElementById('statBarFill');
-        const countMini = document.getElementById('statCountMini');
-        if (barFill) {
-            const maxScale = 50;
-            const percentage = Math.min((reviewCount / maxScale) * 100, 100);
-            barFill.style.width = percentage + '%';
-        }
-        if (countMini) countMini.textContent = reviewCount;
-    }
-
-    mount.innerHTML = `
-        <div class='dashboard-wrap'>
-            <div class='dashboard-header'>
-                <div class='dash-brand'>
-                    <img src='logo.png' alt='GoReview' class='dash-logo'>
-                    <h1 class='dashboard-title'>Dashboard GoReview <span id='bizName' style='color:#6366f1'>#${accountId}</span></h1>
-                </div>
-                <div class='status-menu'>
-                    <button class='status-menu-btn' id='statusMenuBtn' title='Statut système'>⚙️</button>
-                    <div class='status-menu-panel' id='statusMenuPanel'>
-                        <div class='status-item'>
-                            <div class='status-icon healthy' id='statusHealthIcon'>✓</div>
-                            <div class='status-content'>
-                                <div class='status-label'>Système</div>
-                                <div class='status-value'>
-                                    <span class='status-badge green' id='statusHealthBadge'></span>
-                                    <span id='statusHealthText'>Opérationnel</span>
-                                </div>
+            html += `</div>`;
+            
+            // Staffing Alert
+            if (busyAnalysis.peakDay) {
+                html += `
+                    <div class="staffing-alert">
+                        <span class="staffing-alert-icon">⚡</span>
+                        <div class="staffing-alert-content">
+                            <h4>Pic d'affluence détecté</h4>
+                            <p><strong>${busyAnalysis.peakDay} à ${busyAnalysis.peakHour}</strong> est votre moment le plus chargé (${busyAnalysis.peakScore}%). Prévoyez du personnel supplémentaire.</p>
                             </div>
                         </div>
-                        <div class='status-item'>
-                            <div class='status-icon' id='statusRedirectIcon'>🔗</div>
-                            <div class='status-content'>
-                                <div class='status-label'>Redirection</div>
-                                <div class='status-value'>
-                                    <span class='status-badge' id='statusRedirectBadge'></span>
-                                    <span id='statusRedirectText'>-</span>
+                `;
+            }
+                } else {
+            html += `
+                <div class="empty-state">
+                    <div class="empty-state-icon">📊</div>
+                    <p>Données d'affluence non disponibles</p>
                                 </div>
+            `;
+        }
+        
+        html += `</div>`;
+        
+        // Competitors Card
+        html += `
+            <div class="card span-4">
+                <div class="card-header">
+                    <span class="card-title">Benchmark concurrentiel</span>
+                    <span class="card-icon blue">🏆</span>
                             </div>
+        `;
+        
+        if (competitors && competitors.length > 0) {
+            // Sort competitors by rating
+            const allCompetitors = [
+                { name: businessName, rating: rating, reviews: totalReviews, isYou: true }
+            ].concat(competitors.filter(c => c.rating).map(c => ({
+                name: c.name,
+                rating: c.rating,
+                reviews: c.reviews,
+                type: Array.isArray(c.type) ? c.type[0] : c.type,
+                isYou: false
+            })));
+            
+            allCompetitors.sort((a, b) => b.rating - a.rating);
+            
+            html += `<div class="competitors-list">`;
+            
+            allCompetitors.slice(0, 5).forEach((comp, idx) => {
+                html += `
+                    <div class="competitor-item ${comp.isYou ? 'you' : ''}">
+                        <span class="competitor-rank">${idx + 1}</span>
+                        <div class="competitor-info">
+                            <div class="competitor-name">${escapeHtml(comp.name)} ${comp.isYou ? '(Vous)' : ''}</div>
+                            ${comp.type ? `<div class="competitor-type">${escapeHtml(comp.type)}</div>` : ''}
                         </div>
-                        <div class='status-item'>
-                            <div class='status-icon' id='statusReviewsIcon'>📊</div>
-                            <div class='status-content'>
-                                <div class='status-label'>Avis récoltés</div>
-                                <div class='stat-visual'>
-                                    <div class='stat-bar'>
-                                        <div class='stat-bar-fill' id='statBarFill' style='width:0%'></div>
+                        <div class="competitor-rating">
+                            <span class="star filled">★</span>
+                            <span class="competitor-rating-value">${comp.rating?.toFixed(1) || '–'}</span>
+                            <span class="competitor-reviews">(${comp.reviews?.toLocaleString('fr-FR') || '–'})</span>
                                     </div>
-                                    <span id='statCountMini'>0</span>
+                                </div>
+                `;
+            });
+            
+            html += `</div>`;
+        } else {
+            html += `
+                <div class="empty-state">
+                    <div class="empty-state-icon">🏆</div>
+                    <p>Pas de concurrents identifiés</p>
+                            </div>
+            `;
+        }
+        
+        html += `</div>`;
+        
+        // ═══════════════════════════════════════════════════════════════════
+        // ROW 4: Reviews + Marketing
+        // ═══════════════════════════════════════════════════════════════════
+        
+        // Recent Reviews
+        html += `
+            <div class="card span-6">
+                <div class="card-header">
+                    <span class="card-title">Derniers avis</span>
+                    <span class="card-icon purple">💬</span>
+                        </div>
+        `;
+        
+        if (userReviews && userReviews.length > 0) {
+            html += `<div class="reviews-list">`;
+            
+            userReviews.slice(0, 5).forEach(review => {
+                const initial = (review.name || 'A')[0].toUpperCase();
+                html += `
+                    <div class="review-item">
+                        <div class="review-header">
+                            <div class="review-author">
+                                <div class="review-avatar">${initial}</div>
+                                <div>
+                                    <div class="review-name">${escapeHtml(review.name)}</div>
+                                    <div class="review-date">${escapeHtml(review.date || '')}</div>
                                 </div>
                             </div>
+                            <div class="review-rating">${renderStars(review.rating, '0.9rem')}</div>
                         </div>
-                        <div class='status-item' style='border-top:1px solid #e5e7eb; padding-top:12px; margin-top:8px;'>
-                            <div class='status-icon' style='background:#fee2e2;'>🔄</div>
-                            <div class='status-content' style='flex:1;'>
-                                <div class='status-label'>Réinitialisation</div>
-                                <div class='status-value'>
-                                    <button id='resetBtn' style='padding:6px 12px; background:#ef4444; color:white; border:none; border-radius:6px; font-size:12px; font-weight:500; cursor:pointer; width:100%;'>
-                                        Réinitialiser la plaque
-                                    </button>
+                        ${review.description ? `<div class="review-text">${escapeHtml(review.description.slice(0, 200))}${review.description.length > 200 ? '...' : ''}</div>` : ''}
+                        ${review.response ? `
+                            <div class="review-response">
+                                <div class="review-response-label">Votre réponse</div>
+                                <div class="review-response-text">${escapeHtml(review.response.slice(0, 150))}${review.response.length > 150 ? '...' : ''}</div>
+                    </div>
+                        ` : review.rating <= 3 ? `
+                            <div class="review-no-response">
+                                <span>⚠️</span> Cet avis n'a pas de réponse - Répondre améliore votre SEO
+                </div>
+                        ` : ''}
+            </div>
+                `;
+            });
+            
+            html += `</div>`;
+        } else {
+            html += `
+                <div class="empty-state">
+                    <div class="empty-state-icon">💬</div>
+                    <p>Aucun avis récent disponible</p>
+                    </div>
+            `;
+        }
+        
+        html += `</div>`;
+        
+        // Marketing Card
+        html += `
+            <div class="card span-6">
+                <div class="card-header">
+                    <span class="card-title">Marketing & Social</span>
+                    <span class="card-icon green">📣</span>
+                </div>
+        `;
+        
+        // Find best review for social post
+        const bestReview = userReviews.find(r => r.rating >= 4 && r.description && r.description.length > 20);
+        
+        if (bestReview) {
+            html += `
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+                    Transformez vos meilleurs avis en contenu social 📱
+                </p>
+                <div class="social-post-preview">
+                    <div class="social-post-quote">"${escapeHtml(bestReview.description.slice(0, 150))}${bestReview.description.length > 150 ? '...' : ''}"</div>
+                    <div class="social-post-author">— ${escapeHtml(bestReview.name)}, client satisfait ⭐⭐⭐⭐⭐</div>
+                </div>
+                <div class="social-post-actions">
+                    <button class="btn btn-primary" onclick="copyToClipboard('${escapeHtml(bestReview.description.replace(/'/g, "\\'"))}')">📋 Copier</button>
+                    <button class="btn btn-secondary" onclick="generateNextReview()">🔄 Autre avis</button>
+                </div>
+            `;
+        }
+        
+        // Attributes
+        if (extensions && extensions.length > 0) {
+            html += `
+                <div style="margin-top: 1.5rem;">
+                    <h4 style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">Vos attributs Google</h4>
+                    <div class="attributes-grid">
+            `;
+            
+            const attrIcons = {
+                'wheelchair': '♿',
+                'delivery': '🚚',
+                'takeout': '🥡',
+                'dine-in': '🍽️',
+                'credit': '💳',
+                'nfc': '📱',
+                'parking': '🅿️',
+                'wifi': '📶',
+                'outdoor': '☀️'
+            };
+            
+            extensions.slice(0, 8).forEach(attr => {
+                const attrLower = (attr || '').toLowerCase();
+                let icon = '✓';
+                Object.keys(attrIcons).forEach(key => {
+                    if (attrLower.includes(key)) icon = attrIcons[key];
+                });
+                
+                html += `
+                    <div class="attribute-tag">
+                        <span class="icon">${icon}</span>
+                        ${escapeHtml(attr)}
+                    </div>
+                `;
+            });
+            
+            html += `</div></div>`;
+        }
+        
+        // Time spent
+        if (timeSpent) {
+            html += `
+                <div style="margin-top: 1.5rem; padding: 1rem; background: var(--bg-secondary); border-radius: 12px; text-align: center;">
+                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">Durée moyenne de visite</div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: var(--info);">${escapeHtml(timeSpent)}</div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">💡 Un temps court = paiement rapide essentiel</div>
+                </div>
+            `;
+        }
+        
+        html += `</div>`;
+        
+        // ═══════════════════════════════════════════════════════════════════
+        // ROW 5: Reviews Management
+        // ═══════════════════════════════════════════════════════════════════
+        
+        html += `
+            <div class="card span-12">
+                <div class="card-header">
+                    <span class="card-title">Gestion des avis</span>
+                    <span class="card-icon purple">⭐</span>
                                 </div>
+                
+                <div class="review-stats">
+                    <div class="review-stat">
+                        <div class="review-stat-value">${userReviews.length}</div>
+                        <div class="review-stat-label">Total avis</div>
+                            </div>
+                    <div class="review-stat">
+                        <div class="review-stat-value" style="color: var(--danger);">${userReviews.filter(r => r.rating <= 3).length}</div>
+                        <div class="review-stat-label">Avis négatifs (≤3★)</div>
+                        </div>
+                    <div class="review-stat">
+                        <div class="review-stat-value" style="color: var(--success);">${userReviews.filter(r => r.response).length}</div>
+                        <div class="review-stat-label">Avec réponse</div>
+                                </div>
+                    <div class="review-stat">
+                        <div class="review-stat-value" style="color: var(--warning);">${userReviews.filter(r => !r.response).length}</div>
+                        <div class="review-stat-label">Sans réponse</div>
                             </div>
                         </div>
+                
+                <div class="review-filters">
+                    <div class="filter-group">
+                        <div class="filter-label">Filtrer par note</div>
+                        <div class="filter-buttons">
+                            <button class="filter-btn active" data-rating="all" onclick="filterReviews('rating', 'all')">Tous</button>
+                            <button class="filter-btn rating-1" data-rating="1" onclick="filterReviews('rating', '1')">1★</button>
+                            <button class="filter-btn rating-2" data-rating="2" onclick="filterReviews('rating', '2')">2★</button>
+                            <button class="filter-btn rating-3" data-rating="3" onclick="filterReviews('rating', '3')">3★</button>
+                            <button class="filter-btn" data-rating="4" onclick="filterReviews('rating', '4')">4★</button>
+                            <button class="filter-btn" data-rating="5" onclick="filterReviews('rating', '5')">5★</button>
+                                    </div>
+                                </div>
+                    
+                    <div class="filter-group">
+                        <div class="filter-label">Filtrer par réponse</div>
+                        <div class="filter-buttons">
+                            <button class="filter-btn active" data-response="all" onclick="filterReviews('response', 'all')">Tous</button>
+                            <button class="filter-btn" data-response="replied" onclick="filterReviews('response', 'replied')">Avec réponse</button>
+                            <button class="filter-btn" data-response="unreplied" onclick="filterReviews('response', 'unreplied')">Sans réponse</button>
+                            </div>
+                        </div>
+                    
+                    <div class="filter-group">
+                        <div class="filter-label">Trier par</div>
+                        <select class="sort-select" id="reviewSortSelect" onchange="sortReviews(this.value)">
+                            <option value="rating-asc">Note ↑ (pire d'abord)</option>
+                            <option value="rating-desc">Note ↓ (meilleure d'abord)</option>
+                            <option value="date-desc" selected>Date ↓ (récent d'abord)</option>
+                            <option value="date-asc">Date ↑ (ancien d'abord)</option>
+                        </select>
+                                </div>
+                            </div>
+                
+                <div class="reviews-list" id="reviewsManagementList">
+        `;
+        
+        // Store reviews globally for filtering
+        if (userReviews && userReviews.length > 0) {
+            // Sort by rating (worst first) then by date
+            const sortedReviews = [...userReviews].sort((a, b) => {
+                if (a.rating !== b.rating) return a.rating - b.rating;
+                return new Date(b.date || 0) - new Date(a.date || 0);
+            });
+            
+            sortedReviews.forEach((review, idx) => {
+                const initial = (review.name || 'A')[0].toUpperCase();
+                const isBadReview = review.rating <= 3;
+                const placeId = accountData.business_id || accountData.place_id || '';
+                // Priority: 1. Direct review link from SerpAPI, 2. Google Business Profile, 3. Google Maps
+                const reviewLink = review.link || `https://business.google.com/reviews?hl=fr`;
+                const mapsLink = `https://www.google.com/maps/place/?q=place_id:${placeId}`;
+                const actionLink = review.link || mapsLink;
+                
+                html += `
+                    <div class="review-item ${isBadReview ? 'bad-review' : ''}" 
+                         data-rating="${review.rating}" 
+                         data-response="${review.response ? 'replied' : 'unreplied'}">
+                        <div class="review-header">
+                            <div class="review-author">
+                                <div class="review-avatar">${initial}</div>
+                                <div>
+                                    <div class="review-name">${escapeHtml(review.name)} ${review.local_guide ? '<span class="local-guide-badge" title="Local Guide">🏅</span>' : ''}</div>
+                                    <div class="review-date">${escapeHtml(review.date || '')} ${review.likes > 0 ? `• 👍 ${review.likes}` : ''}</div>
+                        </div>
                     </div>
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <div class="review-rating">${renderStars(review.rating, '0.9rem')}</div>
+                                <a href="${actionLink}" target="_blank" class="view-review-btn" title="Voir l'avis sur Google Maps">🔗</a>
+                                ${!review.response ? `
+                                    <a href="https://business.google.com/reviews?hl=fr" target="_blank" class="reply-btn ${isBadReview ? 'urgent' : ''}" title="Ouvrir Google Business Profile pour répondre">💬 Répondre</a>
+                                ` : ''}
                 </div>
             </div>
-            <p class='muted' style='margin-bottom:1rem;'>Gérez votre configuration et vos résultats.</p>
-            <div class='cards-grid'>
-                <div class='card'>
-                    <h3>Note moyenne</h3>
-                    <div class='stars-container' id='ratingContainer'>
-                        <div class='stars' id='starsDisplay'></div>
-                        <span class='rating-value' id='ratingValue'>–</span>
+                        ${review.description ? `<div class="review-text">${escapeHtml(review.description)}</div>` : ''}
+                        ${review.response ? `
+                            <div class="review-response">
+                                <div class="review-response-label">✅ Votre réponse</div>
+                                <div class="review-response-text">${escapeHtml(review.response)}</div>
                     </div>
-                    <p class='muted'>Note moyenne de votre établissement sur Google.</p>
+                        ` : isBadReview ? `
+                            <div class="review-no-response urgent">
+                                <span>🚨</span> Avis négatif sans réponse - <strong>Action prioritaire recommandée</strong>
                 </div>
-                <div class='card'>
-                    <h3>Nombre d'avis</h3>
-                    <div class='review-count-large' id='totalReviewsCount'>–</div>
-                    <p class='muted'>Total d'avis sur votre établissement Google.</p>
+                        ` : review.rating <= 4 ? `
+                            <div class="review-no-response">
+                                <span>⚠️</span> Avis sans réponse
                 </div>
-                <div class='card'>
-                    <h3>Avis récoltés</h3>
-                    <div class='big-count' id='statsCount'>–</div>
-                    <p class='muted'>Total d'avis générés via votre plaque.</p>
+                        ` : ''}
                 </div>
-                <div class='card'>
-                    <h3>Jeux</h3>
-                    <p>Ajoutez un jeu pour encourager les clients à laisser un avis.</p>
-                    <div style='display:flex; align-items:center; gap:12px; margin:12px 0;'>
-                        <div class='toggle-visual' id='cardGameToggle' style='opacity:0.5; pointer-events:none;'></div>
-                        <span id='currentGameText' style='font-size:14px; color:#4b5563; flex:1; font-weight:600;'>Bientôt</span>
+                `;
+            });
+        } else {
+            html += `
+                <div class="empty-state">
+                    <div class="empty-state-icon">⭐</div>
+                    <p>Aucun avis disponible</p>
                     </div>
-                    <div class='btn-row'>
-                        <span style='color:#6b7280; font-size:0.875rem;'>Cette fonctionnalité sera disponible prochainement</span>
+            `;
+        }
+        
+        html += `
                     </div>
                 </div>
-                <div class='card'>
-                    <h3>Votre établissement</h3>
-                    <iframe id='miniMap' class='mini-map' src='about:blank' loading='lazy' referrerpolicy='no-referrer-when-downgrade'></iframe>
+        `;
+        
+        // ═══════════════════════════════════════════════════════════════════
+        // ROW 6: Contacts
+        // ═══════════════════════════════════════════════════════════════════
+        
+        html += `
+            <div class="card span-12">
+                <div class="card-header">
+                    <span class="card-title">Contacts collectés via NFC</span>
+                    <span class="card-icon green">👥</span>
+                    </div>
+                <div class="contacts-preview" id="contactsContainer">
+                    <div class="empty-state">
+                        <div class="loading-spinner" style="margin: 0 auto;"></div>
                 </div>
             </div>
-            <div class='card' style='margin-top:1.5rem;'>
-                <h3>Contacts</h3>
-                <p>Consultez les contacts collectés via la plaque.</p>
-                <div class='contacts-preview' id='contactsPreview'>
-                    <table class='contacts-preview-table'>
-                        <thead>
-                            <tr>
-                                <th>Nom</th>
-                                <th>Prénom</th>
-                                <th>Email</th>
-                                <th>Date</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id='contactsPreviewBody'>
-                            <tr>
-                                <td colspan='5' class='contacts-preview-empty'>Chargement...</td>
-                            </tr>
-                        </tbody>
-                    </table>
+                <div style="margin-top: 1rem;">
+                    <a href="/contacts.html?id=${accountId}" class="btn btn-primary">Voir tous les contacts →</a>
                 </div>
-                <div class='btn-row'>
-                    <a id='contactsLink' class='btn-primary btn' href='/contacts.html'>Consulter les contacts</a>
                 </div>
+        `;
+        
+        html += `
             </div>
         </div>
     `;
-    const contactsPreviewBodyEl = document.getElementById('contactsPreviewBody');
-    if (contactsPreviewBodyEl) {
-        contactsPreviewBodyEl.addEventListener('click', (event) => {
-            const btn = event.target.closest('.delete-contact-btn');
-            if (!btn) return;
-            const index = parseInt(btn.dataset.index, 10);
-            if (Number.isNaN(index)) return;
-            handleDeletePreviewContact(index);
-        });
+        
+        app.innerHTML = html;
+        
+        // Load contacts
+        loadContacts(accountId);
     }
-
-    // Wait for db-proxy.js to load before using it
-    // Make it available globally for all functions
-    window.waitForDbProxy = async function() {
-        if (window.dbProxy) {
-            return window.dbProxy;
-        }
-        let retries = 0;
-        while (!window.dbProxy && retries < 50) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-            retries++;
-        }
-        if (!window.dbProxy) {
-            throw new Error('db-proxy.js failed to load after 5 seconds');
-        }
-        return window.dbProxy;
-    };
-
-    // Supabase: fetch account row to populate the cards
-    try {
-        console.log('🔄 Starting dashboard data load...');
-        console.log('📋 Account ID:', accountId);
+    
+    // Load contacts
+    async function loadContacts(accountId) {
+        const container = document.getElementById('contactsContainer');
+        if (!container) return;
         
-        // Init menu after DOM is ready
-        setTimeout(() => initStatusMenu(), 0);
-        
-        // Wait for db-proxy to be available
-        console.log('⏳ Waiting for dbProxy...');
+        try {
         const dbProxy = await window.waitForDbProxy();
-        console.log('✅ dbProxy loaded');
+            const { data, error } = await dbProxy.select('accounts', { id: accountId }, { select: ['contact_table'], single: true });
+            
+            if (error || !data) {
+                container.innerHTML = '<div class="empty-state"><p>Erreur de chargement</p></div>';
+                            return;
+                        }
+            
+            let contacts = [];
+            if (data.contact_table) {
+                try {
+                    contacts = typeof data.contact_table === 'string' ? JSON.parse(data.contact_table) : data.contact_table;
+                } catch (e) {
+                    contacts = [];
+                }
+            }
+            
+            if (!Array.isArray(contacts) || contacts.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">👥</div><p>Aucun contact collecté pour le moment</p></div>';
+                            return;
+                        }
+                
+            // Filter out default contact and sort by date
+            const filteredContacts = contacts
+                .filter(c => c.email !== 'goreview.fr@gmail.com')
+                .sort((a, b) => new Date(b.time || b.timestamp || 0) - new Date(a.time || a.timestamp || 0))
+                .slice(0, 5);
+            
+            if (filteredContacts.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">👥</div><p>Aucun contact collecté pour le moment</p></div>';
+                    return;
+                }
+                
+            let tableHtml = `
+                <table class="contacts-table">
+                    <thead>
+                        <tr>
+                            <th>Nom</th>
+                            <th>Prénom</th>
+                            <th>Email</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            filteredContacts.forEach(c => {
+                const dateStr = c.time || c.timestamp;
+                let formattedDate = '–';
+                if (dateStr) {
+                    try {
+                        formattedDate = new Date(dateStr).toLocaleDateString('fr-FR', {
+                            year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+                        });
+                    } catch (e) {}
+                }
+                
+                tableHtml += `
+                    <tr>
+                        <td>${escapeHtml(c.nom || '–')}</td>
+                        <td>${escapeHtml(c.prenom || '–')}</td>
+                        <td><a href="mailto:${escapeHtml(c.email)}">${escapeHtml(c.email || '–')}</a></td>
+                        <td>${formattedDate}</td>
+                    </tr>
+                `;
+            });
+            
+            tableHtml += '</tbody></table>';
+            container.innerHTML = tableHtml;
+            
+        } catch (e) {
+            container.innerHTML = '<div class="empty-state"><p>Erreur de chargement</p></div>';
+        }
+    }
+    
+    // Clipboard function
+    window.copyToClipboard = function(text) {
+        navigator.clipboard.writeText(text).then(() => {
+            alert('Texte copié !');
+        }).catch(() => {
+            alert('Erreur lors de la copie');
+        });
+    };
+    
+    // Review filtering function
+    let currentFilters = {
+        rating: 'all',
+        response: 'all'
+    };
+    
+    window.filterReviews = function(filterType, value) {
+        currentFilters[filterType] = value;
         
-        console.log('📤 Fetching account data for ID:', accountId);
-        dbProxy.select('accounts', { id: accountId }, { limit: 1, single: true })
-            .then(({ data, error }) => {
-                console.log('📥 Account data response received');
-                console.log('📥 Data:', data);
-                console.log('📥 Error:', error);
+        // Update button states
+        document.querySelectorAll(`[data-${filterType}]`).forEach(btn => {
+            if (btn.getAttribute(`data-${filterType}`) === value) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+        
+        // Apply filters to reviews
+        const reviewsList = document.getElementById('reviewsManagementList');
+        if (!reviewsList) return;
+        
+        const allReviews = reviewsList.querySelectorAll('.review-item');
+        
+        allReviews.forEach(reviewEl => {
+            const reviewRating = reviewEl.getAttribute('data-rating');
+            const reviewResponse = reviewEl.getAttribute('data-response');
+            
+            let showReview = true;
+            
+            // Apply rating filter
+            if (currentFilters.rating !== 'all') {
+                const filterRating = parseInt(currentFilters.rating);
+                const itemRating = parseInt(reviewRating);
                 
-                if (error) {
-                    console.error('❌ Database error', error);
-                    return;
-                }
-                if (!data) {
-                    console.error('❌ No data returned from database');
-                    return;
-                }
-                
-                // Check if account is factory reset (all essential fields are null/empty)
-                const isFactoryReset = !data.business_id && 
-                                      !data.company_name && 
-                                      !data.first_name && 
-                                      !data.last_name && 
-                                      !data.redirection_url;
-                
-                if (isFactoryReset) {
-                    console.log('⚠️ Account appears to be factory reset, redirecting to /create?id=' + accountId);
-                    // Redirect to create page to reconfigure
-                    window.location.replace(`/create.html?id=${encodeURIComponent(accountId)}`);
-                    return;
-                }
-                
-                updateStatusMenu(data);
-                // Business name in title
-                const name = data.business_name || data.company_name || data.company_nam || ('#' + accountId);
-                const titleEl = document.getElementById('bizName');
-                if (titleEl) titleEl.textContent = name;
-                
-                // Fetch rating and total reviews from Google Maps API using business_id (place_id)
-                console.log('🔍 Checking for business_id in account data...');
-                console.log('   data.business_id:', data.business_id);
-                console.log('   data.place_id:', data.place_id);
-                console.log('   All data keys:', Object.keys(data));
-                
-                const placeId = data.business_id || data.place_id || null;
-                console.log('📍 Final placeId to use:', placeId);
-                
-                if (placeId) {
-                    console.log('✅ Place ID found, loading place details...');
-                    // Load rating from database (OpenStreetMap doesn't have ratings)
-                    fetchPlaceDetails(placeId);
+                // For ratings 1-3, show exact match. For 4-5, show >= match
+                if (filterRating <= 3) {
+                    showReview = itemRating === filterRating;
                 } else {
-                    console.warn('⚠️ No place_id found in account data, using fallback from database');
-                    // Fallback to Supabase data if no place_id
-                    const rating = parseFloat(data.current_rating) || null;
-                    const totalReviews = parseInt(data.tot_review || '0', 10) || null;
-                    console.log('📦 Using cached data from database:', { rating, totalReviews });
-                    updateRatingDisplay(rating);
-                    updateTotalReviewsDisplay(totalReviews);
+                    showReview = itemRating === filterRating;
                 }
-                
-                // Stats (review_number)
-                const statsEl = document.getElementById('statsCount');
-                if (statsEl) statsEl.textContent = data.review_number || '0';
-                // Load contacts preview
-                loadContactsPreview();
-                // Games card - Show "Bientôt" and disable toggle
-                const cardGameToggle = document.getElementById('cardGameToggle');
-                const currentGameText = document.getElementById('currentGameText');
-                
-                // Disable toggle and show "Bientôt"
-                if (cardGameToggle) {
-                    cardGameToggle.style.opacity = '0.5';
-                    cardGameToggle.style.pointerEvents = 'none';
-                    cardGameToggle.classList.remove('active');
-                }
-                
-                if (currentGameText) {
-                    currentGameText.textContent = 'Bientôt';
-                    currentGameText.style.fontWeight = '600';
-                }
-                // Google Maps card (reuse placeId variable declared above)
-                const mapFrame = document.getElementById('miniMap');
-                if (placeId && mapFrame) {
-                    // Use the Google Maps embed format to avoid X-Frame-Options issues
-                    mapFrame.src = `https://www.google.com/maps?q=place_id:${encodeURIComponent(placeId)}&output=embed`;
-                }
-                
-                // Setup reset button
-                const resetBtn = document.getElementById('resetBtn');
-                const resetPopupOverlay = document.getElementById('resetPopupOverlay');
-                const resetPopupCancel = document.getElementById('resetPopupCancel');
-                const resetPopupContinue = document.getElementById('resetPopupContinue');
-                
-                // Function to show reset popup
-                function showResetPopup() {
-                    if (resetPopupOverlay) {
-                        resetPopupOverlay.classList.add('show');
-                    }
-                }
-                
-                // Function to hide reset popup
-                function hideResetPopup() {
-                    if (resetPopupOverlay) {
-                        resetPopupOverlay.classList.remove('show');
-                    }
-                }
-                
-                // Function to perform factory reset
-                async function performFactoryReset() {
-                    if (resetBtn) {
-                        resetBtn.disabled = true;
-                        resetBtn.textContent = 'Réinitialisation...';
-                    }
-                    
-                    if (resetPopupContinue) {
-                        resetPopupContinue.disabled = true;
-                        resetPopupContinue.textContent = 'Réinitialisation en cours...';
-                    }
+            }
+            
+            // Apply response filter
+            if (showReview && currentFilters.response !== 'all') {
+                showReview = reviewResponse === currentFilters.response;
+            }
+            
+            // Show or hide review
+            reviewEl.style.display = showReview ? 'block' : 'none';
+        });
+    };
+    
+    // Sorting function for reviews
+    window.sortReviews = function(sortBy) {
+        const reviewsList = document.getElementById('reviewsManagementList');
+        if (!reviewsList) return;
+        
+        const reviewsArray = Array.from(reviewsList.querySelectorAll('.review-item'));
+        
+        reviewsArray.sort((a, b) => {
+            const aRating = parseInt(a.getAttribute('data-rating')) || 0;
+            const bRating = parseInt(b.getAttribute('data-rating')) || 0;
+            const aDate = a.querySelector('.review-date')?.textContent || '';
+            const bDate = b.querySelector('.review-date')?.textContent || '';
+            
+            switch (sortBy) {
+                case 'rating-asc':
+                    return aRating - bRating;
+                case 'rating-desc':
+                    return bRating - aRating;
+                case 'date-desc':
+                    // Parse French dates or ISO dates
+                    return parseFrenchDate(bDate) - parseFrenchDate(aDate);
+                case 'date-asc':
+                    return parseFrenchDate(aDate) - parseFrenchDate(bDate);
+                default:
+                    return 0;
+            }
+        });
+        
+        // Re-append in sorted order
+        reviewsArray.forEach(review => reviewsList.appendChild(review));
+    };
+    
+    // Helper to parse dates (handles various formats)
+    function parseFrenchDate(dateStr) {
+        if (!dateStr) return 0;
+        
+        // Remove emojis and extra info
+        const cleanDate = dateStr.split('•')[0].trim();
+        
+        // Try to parse relative dates like "il y a 2 jours", "il y a 1 mois"
+        const relativeMatch = cleanDate.match(/il y a (\d+) (jour|semaine|mois|an)/i);
+        if (relativeMatch) {
+            const num = parseInt(relativeMatch[1]);
+            const unit = relativeMatch[2].toLowerCase();
+            const now = Date.now();
+            if (unit.includes('jour')) return now - (num * 24 * 60 * 60 * 1000);
+            if (unit.includes('semaine')) return now - (num * 7 * 24 * 60 * 60 * 1000);
+            if (unit.includes('mois')) return now - (num * 30 * 24 * 60 * 60 * 1000);
+            if (unit.includes('an')) return now - (num * 365 * 24 * 60 * 60 * 1000);
+        }
+        
+        // Try standard date parsing
+        const parsed = Date.parse(cleanDate);
+        if (!isNaN(parsed)) return parsed;
+        
+        return 0;
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // MAIN INIT
+    // ═══════════════════════════════════════════════════════════════════
                     
                     try {
                             const dbProxy = await window.waitForDbProxy();
                             
-                            // Factory reset values
-                            const factoryResetData = {
-                                email: null,
-                                first_name: null,
-                                last_name: null,
-                                company_name: null,
-                                source_id: null,
-                                redirection_url: null,
-                                games: null,
-                                wich_game: null,
-                                review_number: null,
-                                contact_table: JSON.stringify([{
-                                    nom: 'go',
-                                    prenom: 'Review',
-                                    email: 'goreview.fr@gmail.com',
-                                    time: '2025-11-02T15:28:44.088Z'
-                                }]),
-                                games_details: null,
-                                business_id: null,
-                                tot_review: null,
-                                current_rating: null,
-                                updated_at: new Date().toISOString()
-                            };
-                            
-                            const { error } = await dbProxy.update('accounts', factoryResetData, { id: accountId });
-                            
-                            if (error) {
-                                throw new Error(error.message || 'Erreur lors de la réinitialisation');
-                            }
-                            
-                            // No cookies to delete (system doesn't use cookies anymore)
-                            console.log('✅ Reset completed (no cookies to delete)');
-                            
-                            // Hide popup and redirect
-                            hideResetPopup();
-                            
-                            // Small delay to show success state
-                            await new Promise(resolve => setTimeout(resolve, 500));
-                            
-                            // Redirect to create page instead of reloading dashboard
+        const { data: accountData, error } = await dbProxy.select('accounts', { id: accountId }, { single: true });
+        
+        if (error || !accountData) {
+            document.getElementById('loadingStatus').innerHTML = '❌ Compte introuvable';
+            return;
+        }
+        
+        // Check if factory reset
+        if (!accountData.business_id && !accountData.company_name && !accountData.redirection_url) {
                             window.location.replace(`/create.html?id=${encodeURIComponent(accountId)}`);
-                        } catch (err) {
-                            console.error('Reset failed:', err);
-                            
-                            // Re-enable buttons
-                            if (resetBtn) {
-                                resetBtn.disabled = false;
-                                resetBtn.textContent = 'Réinitialiser la plaque';
-                            }
-                            if (resetPopupContinue) {
-                                resetPopupContinue.disabled = false;
-                                resetPopupContinue.textContent = 'Continuer';
-                            }
-                            
-                            // Show error in popup
-                            const warningEl = document.querySelector('.reset-popup-warning');
-                            if (warningEl) {
-                                warningEl.style.background = '#fee2e2';
-                                warningEl.style.borderLeftColor = '#ef4444';
-                                warningEl.innerHTML = `<p style="color:#991b1b;"><strong>Erreur :</strong> ${err.message || 'Une erreur est survenue lors de la réinitialisation.'}</p>`;
-                            }
-                        }
-                    }
-                
-                // Event listeners
-                if (resetBtn) {
-                    resetBtn.addEventListener('click', function() {
-                        showResetPopup();
-                    });
-                }
-                
-                if (resetPopupCancel) {
-                    resetPopupCancel.addEventListener('click', function() {
-                        hideResetPopup();
-                    });
-                }
-                
-                if (resetPopupContinue) {
-                    resetPopupContinue.addEventListener('click', function() {
-                        performFactoryReset();
-                    });
-                }
-                
-                // Close popup when clicking outside
-                if (resetPopupOverlay) {
-                    resetPopupOverlay.addEventListener('click', function(e) {
-                        if (e.target === resetPopupOverlay) {
-                            hideResetPopup();
-                        }
-                    });
-                }
-                
-                // Close popup with Escape key
-                document.addEventListener('keydown', function(e) {
-                    if (e.key === 'Escape' && resetPopupOverlay && resetPopupOverlay.classList.contains('show')) {
-                        hideResetPopup();
-                    }
-                });
-            });
+            return;
+        }
+        
+        // Fetch enriched data
+        const placeId = accountData.business_id || accountData.place_id;
+        const enrichedData = placeId ? await fetchEnrichedData(placeId) : null;
+        
+        // Render dashboard
+        await renderDashboard(accountData, enrichedData);
+        
     } catch (e) {
-        console.error('Supabase init failed', e);
+        console.error('Dashboard error:', e);
+        document.getElementById('loadingStatus').innerHTML = '❌ Erreur de chargement';
     }
 })();
 </script>
 </body>
 </html>
-

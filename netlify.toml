@@ -136,6 +136,19 @@
   status = 200
   force = false
 
+# Businesses map page
+[[redirects]]
+  from = "/businesses"
+  to = "/businesses.html"
+  status = 200
+  force = false
+
+[[redirects]]
+  from = "/businesses/"
+  to = "/businesses.html"
+  status = 200
+  force = false
+
 # SPA fallback (if needed in future)
 # [[redirects]]
 #   from = "/*"

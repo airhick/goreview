@@ -6,9 +6,10 @@ Usage: python3 server.py
 
 import http.server
 import socketserver
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse, parse_qs, urlencode
 from urllib import error as urllib_error
 import os
+import time
 
 PORT = 8000
 
@@ -88,6 +89,418 @@ class RedirectHandler(http.server.SimpleHTTPRequestHandler):
             # The SimpleHTTPRequestHandler will serve the file automatically
             self.path = config_path
             return super().do_GET()
+        
+        # Handle Serp API reviews endpoint (with 24h cache) - ENRICHED VERSION
+        # Returns: rating, reviews, popular_times, user_reviews, competitors, etc.
+        if path == '/api/serp-reviews':
+            import urllib.request
+            import json
+            import datetime
+            from urllib.parse import urlencode
+            
+            print(f"[SERP] Received request for reviews: {path}?{query}")
+            
+            query_params = parse_qs(query)
+            account_id = query_params.get('account_id', [None])[0]
+            business_id = query_params.get('business_id', [None])[0]
+            
+            if not account_id:
+                print("[SERP] Error: account_id parameter is required")
+                self.send_response(400)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({'error': 'account_id parameter is required'}).encode())
+                return
+            
+            # Serp API configuration
+            SERP_API_KEY = '5bc189964fa257cc0b795902e7f773cee227f8aecd33902ecfc37ff185070bc6'
+            SERP_API_URL = 'https://serpapi.com/search.json'
+            SUPABASE_URL = 'https://vigutqmfosxbpncussie.supabase.co'
+            SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ3V0cW1mb3N4YnBuY3Vzc2llIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTU4NDc1MiwiZXhwIjoyMDc3MTYwNzUyfQ.WPhspJ5LQ7E6k9sUFJsaISU6eVcJnIPGYv0GPGQfd98'
+            
+            # Initialize cache variables
+            cached_rating = None
+            cached_reviews = None
+            cached_business_details = None
+            
+            try:
+                # First, check Supabase for cached data
+                supabase_url = f"{SUPABASE_URL}/rest/v1/accounts?id=eq.{account_id}&select=*"
+                req = urllib.request.Request(
+                    supabase_url,
+                    headers={
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': f'Bearer {SUPABASE_KEY}',
+                        'Content-Type': 'application/json'
+                    }
+                )
+                
+                with urllib.request.urlopen(req, timeout=10) as response:
+                    account_data = json.loads(response.read().decode('utf-8'))
+                    
+                    if account_data and len(account_data) > 0:
+                        account = account_data[0]
+                        cached_rating_raw = account.get('current_rating')
+                        cached_reviews_raw = account.get('tot_review')
+                        
+                        cached_rating = float(cached_rating_raw) if cached_rating_raw and cached_rating_raw != '' else None
+                        cached_reviews = int(cached_reviews_raw) if cached_reviews_raw and cached_reviews_raw != '' else None
+                        
+                        business_details_edited_at_str = account.get('business_details_edited_at')
+                        review_data_date_str = account.get('review_data_date')
+                        stored_business_id = account.get('business_id') or business_id
+                        cached_business_details = account.get('business_details')
+                        cached_review_data = account.get('review_data')
+                        
+                        print(f"[SERP] Cache check - business_details_edited_at: {business_details_edited_at_str}, review_data_date: {review_data_date_str}")
+                        
+                        # Check business details cache (24h)
+                        business_details_fresh = False
+                        if business_details_edited_at_str and cached_business_details:
+                            try:
+                                last_updated = datetime.datetime.fromisoformat(business_details_edited_at_str.replace('Z', '+00:00'))
+                                now = datetime.datetime.now(datetime.timezone.utc)
+                                hours_since_update = (now - last_updated).total_seconds() / 3600
+                                
+                                if hours_since_update < 24:
+                                    business_details_fresh = True
+                                    print(f"[SERP] ✅ Business details cache fresh ({hours_since_update:.1f}h old)")
+                                else:
+                                    print(f"[SERP] ⚠️ Business details cache expired ({hours_since_update:.1f}h)")
+                            except Exception as e:
+                                print(f"[SERP] ❌ Error parsing business_details timestamp: {e}")
+                        
+                        # Check review data cache (24h)
+                        review_data_fresh = False
+                        if review_data_date_str and cached_review_data:
+                            try:
+                                last_review_update = datetime.datetime.fromisoformat(review_data_date_str.replace('Z', '+00:00'))
+                                now = datetime.datetime.now(datetime.timezone.utc)
+                                hours_since_review_update = (now - last_review_update).total_seconds() / 3600
+                                
+                                if hours_since_review_update < 24:
+                                    review_data_fresh = True
+                                    print(f"[SERP] ✅ Review data cache fresh ({hours_since_review_update:.1f}h old)")
+                                else:
+                                    print(f"[SERP] ⚠️ Review data cache expired ({hours_since_review_update:.1f}h)")
+                            except Exception as e:
+                                print(f"[SERP] ❌ Error parsing review_data timestamp: {e}")
+                        
+                        # If both caches are fresh, return cached data
+                        if business_details_fresh and review_data_fresh:
+                            print(f"[SERP] ✅ Using fully cached data - NO API CALL")
+                                    self.send_response(200)
+                                    self.send_header('Content-Type', 'application/json')
+                                    self.end_headers()
+                            
+                                    cached_details = json.loads(cached_business_details) if cached_business_details else {}
+                            parsed_review_data = json.loads(cached_review_data) if cached_review_data else []
+                                    
+                                    self.wfile.write(json.dumps({
+                                        'success': True,
+                                        'cached': True,
+                                'rating': float(cached_details.get('rating')) if cached_details.get('rating') else (float(cached_rating) if cached_rating else None),
+                                'reviews': int(cached_details.get('reviews')) if cached_details.get('reviews') else (int(cached_reviews) if cached_reviews else None),
+                                        'last_updated': business_details_edited_at_str,
+                                'review_data_updated': review_data_date_str,
+                                'business_details': cached_details,
+                                'popular_times': cached_details.get('popular_times'),
+                                'user_reviews': parsed_review_data,
+                                'rating_summary': cached_details.get('rating_summary'),
+                                'competitors': cached_details.get('competitors'),
+                                'time_spent': cached_details.get('time_spent'),
+                                'extensions': cached_details.get('extensions')
+                                    }).encode())
+                                    return
+                        
+                        if stored_business_id:
+                            business_id = stored_business_id
+                
+                # Fetch from Serp API
+                if not business_id:
+                    print("[SERP] Error: business_id is required")
+                    self.send_response(400)
+                    self.send_header('Content-Type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps({'error': 'business_id is required'}).encode())
+                    return
+                
+                print(f"[SERP] Fetching from Serp API for: {business_id}")
+                
+                # Build Serp API request with French language
+                serp_params = {
+                    'engine': 'google_maps',
+                    'place_id': business_id,
+                    'api_key': SERP_API_KEY,
+                    'hl': 'fr'
+                }
+                
+                serp_url = f"{SERP_API_URL}?{urlencode(serp_params)}"
+                serp_req = urllib.request.Request(serp_url, headers={'User-Agent': 'GoReview/1.0'})
+                
+                with urllib.request.urlopen(serp_req, timeout=30) as serp_response:
+                    serp_data = json.loads(serp_response.read().decode('utf-8'))
+                    
+                    print(f"[SERP] API response keys: {list(serp_data.keys())}")
+                    
+                    rating = None
+                    reviews = None
+                    place_data = None
+                    
+                    if 'place_results' in serp_data:
+                        place_data = serp_data['place_results']
+                    elif 'local_results' in serp_data and isinstance(serp_data['local_results'], list) and len(serp_data['local_results']) > 0:
+                        place_data = serp_data['local_results'][0]
+                    
+                    if place_data and isinstance(place_data, dict):
+                        print(f"[SERP] Place data keys: {list(place_data.keys())}")
+                        
+                        rating = place_data.get('rating')
+                        reviews = place_data.get('reviews')
+                        
+                        # Type conversions
+                        if rating is not None:
+                                try:
+                                rating = float(rating) if isinstance(rating, str) else float(rating)
+                                except:
+                                rating = None
+                        
+                        if reviews is not None:
+                            try:
+                                reviews = int(str(reviews).replace(',', ''))
+                                except:
+                                    reviews = None
+                        
+                    # Extract ALL enriched business details
+                    business_details = {}
+                    if place_data and isinstance(place_data, dict):
+                        # Basic info
+                        if place_data.get('title'):
+                            business_details['name'] = place_data['title']
+                        elif place_data.get('name'):
+                            business_details['name'] = place_data['name']
+                        
+                        if place_data.get('address'):
+                            business_details['address'] = place_data['address']
+                        if place_data.get('phone'):
+                            business_details['phone'] = place_data['phone']
+                        if place_data.get('website'):
+                            business_details['website'] = place_data['website']
+                        if place_data.get('hours'):
+                            business_details['working_hours'] = place_data['hours']
+                        if place_data.get('open_state'):
+                            business_details['open_state'] = place_data['open_state']
+                        if place_data.get('place_id'):
+                            business_details['place_id'] = place_data['place_id']
+                        if place_data.get('gps_coordinates'):
+                            business_details['gps_coordinates'] = place_data['gps_coordinates']
+                        if place_data.get('type'):
+                            business_details['type'] = place_data['type'] if isinstance(place_data['type'], list) else [place_data['type']]
+                        if place_data.get('plus_code'):
+                            business_details['plus_code'] = place_data['plus_code']
+                        if rating:
+                            business_details['rating'] = rating
+                        if reviews:
+                            business_details['reviews'] = reviews
+                        
+                        # ═══════════════════════════════════════════════════════════
+                        # ENRICHED DATA - Module 1: Réputation & IA
+                        # ═══════════════════════════════════════════════════════════
+                        
+                        # User Reviews
+                        if place_data.get('user_reviews') and isinstance(place_data['user_reviews'], list):
+                            business_details['user_reviews'] = [{
+                                'name': r.get('name') or r.get('username') or 'Anonyme',
+                                'rating': r.get('rating'),
+                                'date': r.get('date'),
+                                'iso_date': r.get('iso_date'),
+                                'description': r.get('description') or r.get('snippet') or r.get('text') or '',
+                                'response': r.get('response'),
+                                'likes': r.get('likes', 0),
+                                'images': r.get('images', []),
+                                'local_guide': r.get('local_guide', False),
+                                'link': r.get('link'),
+                                'review_id': r.get('review_id'),
+                                'user_link': r.get('user', {}).get('link') if isinstance(r.get('user'), dict) else r.get('user_link')
+                            } for r in place_data['user_reviews']]
+                            print(f"[SERP] Extracted {len(business_details['user_reviews'])} user reviews")
+                        
+                        # Rating Summary
+                        if place_data.get('rating_summary'):
+                            business_details['rating_summary'] = place_data['rating_summary']
+                            print(f"[SERP] Extracted rating_summary")
+                        
+                        # ═══════════════════════════════════════════════════════════
+                        # ENRICHED DATA - Module 2: Optimisation Opérationnelle
+                        # ═══════════════════════════════════════════════════════════
+                        
+                        # Popular Times
+                        if place_data.get('popular_times'):
+                            business_details['popular_times'] = place_data['popular_times']
+                            print(f"[SERP] Extracted popular_times")
+                        
+                        # Time spent
+                        if place_data.get('time_spent') or place_data.get('typical_time_spent'):
+                            business_details['time_spent'] = place_data.get('time_spent') or place_data.get('typical_time_spent')
+                            print(f"[SERP] Extracted time_spent: {business_details['time_spent']}")
+                        
+                        # Live busyness
+                        if place_data.get('live_busyness') is not None:
+                            business_details['live_busyness'] = place_data['live_busyness']
+                        
+                        # ═══════════════════════════════════════════════════════════
+                        # ENRICHED DATA - Module 3: Benchmark Concurrentiel
+                        # ═══════════════════════════════════════════════════════════
+                        
+                        # Competitors
+                        competitors_data = place_data.get('people_also_search_for') or serp_data.get('people_also_search_for')
+                        if competitors_data and isinstance(competitors_data, list):
+                            business_details['competitors'] = [{
+                                'name': c.get('title') or c.get('name'),
+                                'place_id': c.get('place_id'),
+                                'rating': c.get('rating'),
+                                'reviews': c.get('reviews'),
+                                'type': c.get('type'),
+                                'address': c.get('address'),
+                                'thumbnail': c.get('thumbnail')
+                            } for c in competitors_data]
+                            print(f"[SERP] Extracted {len(business_details['competitors'])} competitors")
+                        
+                        # ═══════════════════════════════════════════════════════════
+                        # ENRICHED DATA - Module 4: Marketing & Communication
+                        # ═══════════════════════════════════════════════════════════
+                        
+                        # Extensions/Attributes
+                        if place_data.get('extensions'):
+                            business_details['extensions'] = place_data['extensions']
+                            print(f"[SERP] Extracted extensions")
+                        
+                        # Service options
+                        if place_data.get('service_options'):
+                            business_details['service_options'] = place_data['service_options']
+                        
+                        # Images
+                        if place_data.get('thumbnail'):
+                            business_details['thumbnail'] = place_data['thumbnail']
+                        if place_data.get('images'):
+                            business_details['images'] = place_data['images']
+                    
+                    # ═══════════════════════════════════════════════════════════
+                    # FETCH ADDITIONAL REVIEWS IF NEEDED
+                    # ═══════════════════════════════════════════════════════════
+                    
+                    if not business_details.get('user_reviews') or len(business_details.get('user_reviews', [])) < 5:
+                        print("[SERP] Fetching additional reviews from google_maps_reviews...")
+                        try:
+                            reviews_params = {
+                                'engine': 'google_maps_reviews',
+                                'place_id': business_id,
+                                'api_key': SERP_API_KEY,
+                                'hl': 'fr',
+                                'sort_by': 'newestFirst'
+                            }
+                            reviews_url = f"{SERP_API_URL}?{urlencode(reviews_params)}"
+                            reviews_req = urllib.request.Request(reviews_url, headers={'User-Agent': 'GoReview/1.0'})
+                            
+                            with urllib.request.urlopen(reviews_req, timeout=30) as reviews_response:
+                                reviews_data = json.loads(reviews_response.read().decode('utf-8'))
+                                
+                                if reviews_data.get('reviews') and isinstance(reviews_data['reviews'], list):
+                                    business_details['user_reviews'] = [{
+                                        'name': r.get('user', {}).get('name') or r.get('username') or 'Anonyme',
+                                        'rating': r.get('rating'),
+                                        'date': r.get('date') or r.get('iso_date'),
+                                        'iso_date': r.get('iso_date'),
+                                        'description': r.get('snippet') or r.get('text') or '',
+                                        'response': (r.get('response', {}) or {}).get('snippet') or (r.get('response', {}) or {}).get('text'),
+                                        'likes': r.get('likes', 0),
+                                        'images': r.get('images', []),
+                                        'local_guide': r.get('user', {}).get('local_guide', False),
+                                        'reviews_count': r.get('user', {}).get('reviews', 0),
+                                        'link': r.get('link'),
+                                        'review_id': r.get('review_id'),
+                                        'user_link': r.get('user', {}).get('link')
+                                    } for r in reviews_data['reviews']]
+                                    print(f"[SERP] Fetched {len(business_details['user_reviews'])} reviews")
+                                
+                                if reviews_data.get('rating_histogram'):
+                                    business_details['rating_summary'] = reviews_data['rating_histogram']
+                        except Exception as e:
+                            print(f"[SERP] Warning: Failed to fetch additional reviews: {e}")
+                
+                # Update Supabase
+                now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+                update_data = {
+                    'business_details': json.dumps(business_details) if business_details else None,
+                    'business_details_edited_at': now_iso,
+                    'review_data': json.dumps(business_details.get('user_reviews', [])) if business_details.get('user_reviews') else None,
+                    'review_data_date': now_iso
+                }
+                
+                if rating is not None:
+                    update_data['current_rating'] = str(rating)
+                if reviews is not None:
+                    update_data['tot_review'] = str(reviews)
+                
+                update_url = f"{SUPABASE_URL}/rest/v1/accounts?id=eq.{account_id}"
+                update_req = urllib.request.Request(
+                    update_url,
+                    data=json.dumps(update_data).encode(),
+                    headers={
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': f'Bearer {SUPABASE_KEY}',
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=representation'
+                    },
+                    method='PATCH'
+                )
+                
+                try:
+                    with urllib.request.urlopen(update_req, timeout=10) as update_response:
+                        print(f"[SERP] Updated Supabase with enriched data")
+                except Exception as e:
+                    print(f"[SERP] Warning: Failed to update Supabase: {e}")
+                
+                # Return enriched response
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({
+                    'success': True,
+                    'cached': False,
+                    'rating': float(rating) if rating else None,
+                    'reviews': int(reviews) if reviews else None,
+                    'last_updated': now_iso,
+                    'business_details': business_details if business_details else None,
+                    'popular_times': business_details.get('popular_times'),
+                    'user_reviews': business_details.get('user_reviews'),
+                    'rating_summary': business_details.get('rating_summary'),
+                    'competitors': business_details.get('competitors'),
+                    'time_spent': business_details.get('time_spent'),
+                    'extensions': business_details.get('extensions')
+                }).encode())
+                return
+                    
+            except urllib_error.HTTPError as e:
+                error_body = e.read().decode('utf-8') if hasattr(e, 'read') else str(e)
+                print(f"[SERP] HTTP Error: {e.code} - {error_body}")
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({
+                    'error': f'Serp API error: {e.code}',
+                    'details': error_body[:200]
+                }).encode())
+                return
+            except Exception as e:
+                print(f"[SERP] Error: {str(e)}")
+                import traceback
+                traceback.print_exc()
+                self.send_response(500)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({'error': str(e)}).encode())
+                return
         
         # Handle Google review page proxy (to bypass X-Frame-Options)
         if path == '/api/google-review-proxy':
@@ -618,6 +1031,7 @@ if __name__ == "__main__":
             print(f"🚀 Serveur démarré sur http://localhost:{PORT}")
             print(f"📄 Landing page: http://localhost:{PORT}/")
             print(f"📊 Dashboard: http://localhost:{PORT}/dashboard")
+            print(f"🗺️  Businesses Map: http://localhost:{PORT}/businesses.html")
             print(f"⚙️  Config: http://localhost:{PORT}/config/?id=100")
             print(f"📝 Create: http://localhost:{PORT}/create/?id=100")
             print(f"🏢 Company: http://localhost:{PORT}/company?id=2")

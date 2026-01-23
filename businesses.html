@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GoReview - Carte des entreprises</title>
+    <link rel="icon" type="image/png" href="/logo.png">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="db-proxy.js"></script>
+    <script type="module">
+        import createGlobe from 'https://cdn.skypack.dev/cobe';
+        window.createGlobe = createGlobe;
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: rgba(26, 26, 36, 0.9);
+            --text-primary: #ffffff;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            --accent-primary: #8b5cf6;
+            --accent-secondary: #a78bfa;
+            --accent-glow: rgba(139, 92, 246, 0.4);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --star-gold: #fbbf24;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .bg-gradient {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(ellipse at 50% 50%, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+            z-index: -1;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 320px;
+            min-width: 320px;
+            background: var(--bg-card);
+            border-right: 1px solid var(--border-color);
+            padding: 24px;
+            overflow-y: auto;
+            backdrop-filter: blur(20px);
+            position: relative;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .logo {
+            height: 36px;
+            width: auto;
+        }
+
+        .logo-text {
+            font-size: 1.25rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-card {
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid var(--accent-primary);
+            border-radius: 12px;
+            padding: 1.25rem;
+        }
+
+        .stat-card h3 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+        }
+
+        .stat-card .value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-card .label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .section-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+            font-weight: 600;
+        }
+
+        .stat-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .stat-list li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .country-flag {
+            font-size: 1.25rem;
+            margin-right: 0.5rem;
+        }
+
+        .stat-list .count {
+            font-weight: 700;
+            color: var(--accent-primary);
+        }
+
+        .activity-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .activity-item {
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            font-size: 0.85rem;
+            border-left: 3px solid var(--accent-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .activity-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .activity-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .activity-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 0.25rem;
+        }
+
+        .activity-location {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .activity-time {
+            color: var(--text-muted);
+            font-size: 0.7rem;
+            margin-top: 4px;
+        }
+
+        /* Globe container */
+        .globe-container {
+            flex: 1;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-primary);
+        }
+
+        .globe-canvas {
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+        }
+
+        .globe-canvas:active {
+            cursor: grabbing;
+        }
+
+        .globe-glow {
+            position: absolute;
+            width: 50%;
+            height: 50%;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: pulse-glow 4s ease-in-out infinite;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.4; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.05); }
+        }
+
+        /* Zoom controls */
+        .zoom-controls {
+            position: absolute;
+            bottom: 2rem;
+            right: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            z-index: 5;
+        }
+
+        .zoom-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            font-size: 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            backdrop-filter: blur(20px);
+        }
+
+        .zoom-btn:hover {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 20px var(--accent-glow);
+            transform: scale(1.05);
+        }
+
+        .zoom-info {
+            position: absolute;
+            bottom: 2rem;
+            left: 340px;
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            border-radius: 2rem;
+            padding: 0.75rem 1.25rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            z-index: 5;
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 1000;
+        }
+
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--accent-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        /* Scrollbar */
+        .sidebar::-webkit-scrollbar,
+        .activity-list::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .sidebar::-webkit-scrollbar-track,
+        .activity-list::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb,
+        .activity-list::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 2px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                display: none;
+            }
+
+            .zoom-info {
+                left: 1rem;
+                right: 1rem;
+                bottom: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-gradient"></div>
+    
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <img src="/logo.png" alt="GoReview" class="logo">
+                <span class="logo-text">GoReview</span>
+            </div>
+
+            <div class="stat-card">
+                <h3>Établissements actifs</h3>
+                <div class="value" id="businessCount">-</div>
+                <div class="label">Clients GoReview</div>
+            </div>
+
+            <div>
+                <h3 class="section-title">Pays</h3>
+                <ul class="stat-list" id="countriesList">
+                    <li>Chargement...</li>
+                </ul>
+            </div>
+
+            <div>
+                <h3 class="section-title">Statistiques globales</h3>
+                <ul class="stat-list">
+                    <li>
+                        <span>Note moyenne</span>
+                        <span class="count" id="avgRating">-</span>
+                    </li>
+                    <li>
+                        <span>Total avis</span>
+                        <span class="count" id="totalReviews">-</span>
+                    </li>
+                </ul>
+            </div>
+
+            <div>
+                <h3 class="section-title">Entreprises récentes</h3>
+                <div class="activity-list" id="activitiesList">
+                    <div class="activity-item">
+                        <div>Chargement...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Globe -->
+        <div class="globe-container">
+            <div class="globe-glow"></div>
+            <canvas class="globe-canvas" id="globeCanvas"></canvas>
+            <div class="loading" id="loading">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">Chargement du globe...</div>
+            </div>
+            
+            <div class="zoom-controls">
+                <button class="zoom-btn" id="zoomInBtn" title="Zoomer">➕</button>
+                <button class="zoom-btn" id="resetBtn" title="Réinitialiser">🌍</button>
+                <button class="zoom-btn" id="zoomOutBtn" title="Dézoomer">➖</button>
+            </div>
+            
+            <div class="zoom-info" id="zoomInfo">
+                💡 Molette pour zoomer | Glisser pour tourner | La rotation s'arrête en zoomant
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ═══════════════════════════════════════════════════════════════════
+        // CONFIGURATION
+        // ═══════════════════════════════════════════════════════════════════
+        
+        const countryFlags = {
+            'france': '🇫🇷', 'fr': '🇫🇷',
+            'belgium': '🇧🇪', 'be': '🇧🇪', 'belgique': '🇧🇪',
+            'germany': '🇩🇪', 'de': '🇩🇪', 'allemagne': '🇩🇪',
+            'switzerland': '🇨🇭', 'ch': '🇨🇭', 'suisse': '🇨🇭',
+            'italy': '🇮🇹', 'it': '🇮🇹', 'italie': '🇮🇹',
+            'spain': '🇪🇸', 'es': '🇪🇸', 'espagne': '🇪🇸',
+            'portugal': '🇵🇹', 'pt': '🇵🇹',
+            'netherlands': '🇳🇱', 'nl': '🇳🇱', 'pays-bas': '🇳🇱',
+            'uk': '🇬🇧', 'united kingdom': '🇬🇧', 'royaume-uni': '🇬🇧',
+            'usa': '🇺🇸', 'united states': '🇺🇸', 'états-unis': '🇺🇸',
+            'canada': '🇨🇦', 'ca': '🇨🇦',
+            'default': '🌍'
+        };
+
+        // ═══════════════════════════════════════════════════════════════════
+        // STATE
+        // ═══════════════════════════════════════════════════════════════════
+        
+        let companies = [];
+        let markers = [];
+        let globe = null;
+        let phi = 0;
+        let pointerInteracting = null;
+        let pointerInteractionMovement = 0;
+        let currentScale = 1;
+        let autoRotate = true;
+
+        // ═══════════════════════════════════════════════════════════════════
+        // DATA FETCHING
+        // ═══════════════════════════════════════════════════════════════════
+        
+        async function waitForDbProxy() {
+            if (window.dbProxy) return window.dbProxy;
+            let retries = 0;
+            while (!window.dbProxy && retries < 50) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                retries++;
+            }
+            if (!window.dbProxy) throw new Error('db-proxy.js failed to load');
+            return window.dbProxy;
+        }
+
+        async function fetchCompanies() {
+            try {
+                const dbProxy = await waitForDbProxy();
+                
+                console.log('🔍 Fetching companies from Supabase...');
+                
+                const { data, error } = await dbProxy.select('accounts', {}, {
+                    select: ['id', 'company_name', 'email', 'business_id', 'current_rating', 'tot_review', 'created_at', 'adress', 'business_details'],
+                    limit: 1000
+                });
+
+                if (error) {
+                    console.error('❌ Supabase error:', error);
+                    return [];
+                }
+                
+                // ✅ FILTER: Only businesses with company_name filled (active GoReview clients)
+                const activeBusinesses = (data || []).filter(b => 
+                    b.company_name && b.company_name.trim() !== ''
+                );
+                
+                console.log(`✅ Filtered: ${activeBusinesses.length} active GoReview businesses (with company_name) out of ${data?.length || 0} total accounts`);
+
+                // Parse business_details and extract coordinates
+                return activeBusinesses.map(company => {
+                    let lat = null, lng = null;
+                    
+                    // Try to get coordinates from business_details
+                    if (company.business_details) {
+                        try {
+                            const details = typeof company.business_details === 'string' 
+                                ? JSON.parse(company.business_details) 
+                                : company.business_details;
+                            
+                            if (details.gps_coordinates) {
+                                lat = details.gps_coordinates.latitude;
+                                lng = details.gps_coordinates.longitude;
+                            }
+                        } catch (e) {
+                            console.warn('Failed to parse business_details for', company.company_name);
+                        }
+                    }
+                    
+                    // Fallback: approximate coordinates based on address
+                    if (!lat || !lng) {
+                        const coords = approximateCoordinates(company.adress);
+                        lat = coords.lat;
+                        lng = coords.lng;
+                    }
+                    
+                    return {
+                        ...company,
+                        lat,
+                        lng,
+                        country: extractCountry(company.adress)
+                    };
+                }).filter(c => c.lat && c.lng);
+
+            } catch (error) {
+                console.error('❌ Error fetching companies:', error);
+                return [];
+            }
+        }
+
+        function extractCountry(address) {
+            if (!address) return 'France';
+            const addressLower = address.toLowerCase();
+            
+            for (const [key] of Object.entries(countryFlags)) {
+                if (addressLower.includes(key)) {
+                    return key.charAt(0).toUpperCase() + key.slice(1);
+                }
+            }
+            return 'France';
+        }
+
+        function getCountryFlag(country) {
+            if (!country) return countryFlags.default;
+            const key = country.toLowerCase();
+            return countryFlags[key] || countryFlags.default;
+        }
+
+        // Approximate coordinates based on address keywords
+        function approximateCoordinates(address) {
+            if (!address) return { lat: 48.8566, lng: 2.3522 }; // Paris default
+            
+            const addressLower = address.toLowerCase();
+            
+            // French cities
+            if (addressLower.includes('paris')) return { lat: 48.8566, lng: 2.3522 };
+            if (addressLower.includes('lyon')) return { lat: 45.764, lng: 4.8357 };
+            if (addressLower.includes('marseille')) return { lat: 43.2965, lng: 5.3698 };
+            if (addressLower.includes('toulouse')) return { lat: 43.6047, lng: 1.4442 };
+            if (addressLower.includes('nice')) return { lat: 43.7102, lng: 7.262 };
+            if (addressLower.includes('bordeaux')) return { lat: 44.8378, lng: -0.5792 };
+            if (addressLower.includes('lille')) return { lat: 50.6292, lng: 3.0573 };
+            
+            // Add slight randomization to spread markers
+            return {
+                lat: 48.8566 + (Math.random() - 0.5) * 2, 
+                lng: 2.3522 + (Math.random() - 0.5) * 4 
+            };
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // GLOBE INITIALIZATION
+        // ═══════════════════════════════════════════════════════════════════
+        
+        async function initGlobe() {
+            const canvas = document.getElementById('globeCanvas');
+            if (!canvas) return;
+
+            // Cleanup previous instance
+            if (globe) {
+                try {
+                    globe.destroy();
+                } catch (e) {
+                    console.warn('Globe destroy failed:', e);
+                }
+                globe = null;
+            }
+
+            const container = canvas.parentElement;
+            const width = container.offsetWidth;
+            const height = container.offsetHeight;
+            
+            canvas.width = width * window.devicePixelRatio;
+            canvas.height = height * window.devicePixelRatio;
+            canvas.style.width = width + 'px';
+            canvas.style.height = height + 'px';
+
+            // Convert companies to markers format
+            markers = companies.map(company => ({
+                location: [company.lat, company.lng],
+                size: 0.06 * currentScale
+            }));
+
+            const globeConfig = {
+                devicePixelRatio: window.devicePixelRatio,
+                width: width * window.devicePixelRatio,
+                height: height * window.devicePixelRatio,
+                phi: phi,
+                theta: 0.3,
+                dark: 1,
+                diffuse: 1.2,
+                scale: currentScale,
+                mapSamples: 16000,
+                mapBrightness: 6,
+                baseColor: [0.3, 0.3, 0.35],
+                markerColor: [0.545, 0.361, 0.965], // Purple accent
+                glowColor: [0.3, 0.2, 0.5],
+                markers: markers,
+                onRender: (state) => {
+                    // Auto-rotate only when not interacting and not zoomed
+                    if (!pointerInteracting && autoRotate && currentScale === 1) {
+                        phi += 0.003;
+                    }
+                    state.phi = phi + pointerInteractionMovement;
+                    state.scale = currentScale;
+                }
+            };
+
+            // Wait for createGlobe to be available
+            let retries = 0;
+            while (!window.createGlobe && retries < 50) {
+                await new Promise(r => setTimeout(r, 100));
+                retries++;
+            }
+            
+            if (!window.createGlobe) {
+                console.error('❌ COBE library not loaded after waiting');
+                return;
+            }
+            
+            console.log(`✅ Creating COBE globe with ${markers.length} markers`);
+            globe = window.createGlobe(canvas, globeConfig);
+
+            // Setup pointer interactions
+            setupInteractions(canvas);
+            
+            // Hide loading
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // INTERACTIONS
+        // ═══════════════════════════════════════════════════════════════════
+        
+        function setupInteractions(canvas) {
+            // Pointer drag
+            canvas.addEventListener('pointerdown', (e) => {
+                pointerInteracting = e.clientX;
+                canvas.style.cursor = 'grabbing';
+            });
+
+            canvas.addEventListener('pointerup', () => {
+                pointerInteracting = null;
+                canvas.style.cursor = 'grab';
+            });
+
+            canvas.addEventListener('pointerout', () => {
+                pointerInteracting = null;
+                canvas.style.cursor = 'grab';
+            });
+
+            canvas.addEventListener('pointermove', (e) => {
+                if (pointerInteracting !== null) {
+                    const delta = e.clientX - pointerInteracting;
+                    pointerInteractionMovement += delta / 200;
+                    pointerInteracting = e.clientX;
+                }
+            });
+
+            // Wheel zoom - stops auto-rotation
+            canvas.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const delta = -e.deltaY * 0.001;
+                currentScale = Math.max(0.8, Math.min(3, currentScale + delta));
+                
+                // Stop auto-rotation when zooming
+                if (currentScale !== 1) {
+                    autoRotate = false;
+                }
+                
+                updateZoomInfo();
+                
+                // Update globe
+                if (globe) {
+                    initGlobe();
+                }
+            }, { passive: false });
+
+            // Touch support
+            canvas.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) {
+                    pointerInteracting = e.touches[0].clientX;
+                }
+            }, { passive: true });
+
+            canvas.addEventListener('touchmove', (e) => {
+                if (pointerInteracting !== null && e.touches.length === 1) {
+                    const delta = e.touches[0].clientX - pointerInteracting;
+                    pointerInteractionMovement += delta / 200;
+                    pointerInteracting = e.touches[0].clientX;
+                }
+            }, { passive: true });
+
+            canvas.addEventListener('touchend', () => {
+                pointerInteracting = null;
+            });
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // ZOOM CONTROLS
+        // ═══════════════════════════════════════════════════════════════════
+        
+        function setupZoomControls() {
+            document.getElementById('zoomInBtn').addEventListener('click', () => {
+                currentScale = Math.min(3, currentScale + 0.3);
+                autoRotate = false;
+                updateZoomInfo();
+                initGlobe();
+            });
+
+            document.getElementById('zoomOutBtn').addEventListener('click', () => {
+                currentScale = Math.max(0.8, currentScale - 0.3);
+                if (currentScale === 1) autoRotate = true;
+                updateZoomInfo();
+                initGlobe();
+            });
+
+            document.getElementById('resetBtn').addEventListener('click', () => {
+                currentScale = 1;
+                phi = 0;
+                pointerInteractionMovement = 0;
+                autoRotate = true;
+                updateZoomInfo();
+                initGlobe();
+            });
+        }
+
+        function updateZoomInfo() {
+            const zoomInfo = document.getElementById('zoomInfo');
+            if (currentScale > 1.2) {
+                zoomInfo.innerHTML = '🔍 Mode zoom | La rotation automatique est désactivée';
+            } else if (!autoRotate) {
+                zoomInfo.innerHTML = '⏸️ Rotation en pause | Réinitialisez pour reprendre';
+            } else {
+                zoomInfo.innerHTML = '💡 Molette pour zoomer | Glisser pour tourner | La rotation s\'arrête en zoomant';
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // UI UPDATES
+        // ═══════════════════════════════════════════════════════════════════
+        
+        function updateStats() {
+            const totalCompanies = companies.length;
+            const countries = {};
+            let totalRating = 0;
+            let ratingCount = 0;
+            let totalReviews = 0;
+            
+            companies.forEach(c => {
+                countries[c.country] = (countries[c.country] || 0) + 1;
+                
+                if (c.current_rating) {
+                    totalRating += parseFloat(c.current_rating);
+                    ratingCount++;
+                }
+                if (c.tot_review) {
+                    totalReviews += parseInt(c.tot_review) || 0;
+                }
+            });
+            
+            const avgRating = ratingCount > 0 ? (totalRating / ratingCount).toFixed(1) : '-';
+            
+            document.getElementById('businessCount').textContent = totalCompanies.toLocaleString('fr-FR');
+            document.getElementById('avgRating').textContent = avgRating;
+            document.getElementById('totalReviews').textContent = totalReviews.toLocaleString('fr-FR');
+
+            // Update countries list
+            const countriesList = document.getElementById('countriesList');
+            const sortedCountries = Object.entries(countries)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10);
+
+            if (sortedCountries.length === 0) {
+                countriesList.innerHTML = '<li>Aucune donnée</li>';
+            } else {
+                countriesList.innerHTML = sortedCountries.map(([country, count]) => `
+                    <li>
+                        <span><span class="country-flag">${getCountryFlag(country)}</span>${country}</span>
+                        <span class="count">${count}</span>
+                    </li>
+                `).join('');
+            }
+        }
+
+        function updateActivityList() {
+            const activityList = document.getElementById('activitiesList');
+            
+            if (companies.length === 0) {
+                activityList.innerHTML = '<div class="activity-item">Aucun établissement trouvé</div>';
+                return;
+            }
+
+            // Show last 5 companies
+            const recentCompanies = companies
+                .filter(c => c.created_at)
+                .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+                .slice(0, 5);
+
+            activityList.innerHTML = recentCompanies.map(company => {
+                const initials = getInitials(company.company_name);
+                const flag = getCountryFlag(company.country);
+                const location = company.adress ? 
+                    company.adress.split(',').slice(-2).join(',').trim() : 
+                    company.country;
+                const timeAgo = getTimeAgo(new Date(company.created_at));
+                
+                return `
+                    <div class="activity-item">
+                        <div class="activity-avatar">${initials}</div>
+                        <div class="activity-content">
+                            <div class="activity-name">${escapeHtml(company.company_name)}</div>
+                            <div class="activity-location">${flag} ${escapeHtml(location)}</div>
+                            <div class="activity-time">${timeAgo}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function getInitials(name) {
+            if (!name) return '?';
+            return name.split(' ')
+                .slice(0, 2)
+                .map(word => word.charAt(0).toUpperCase())
+                .join('');
+        }
+
+        function getTimeAgo(date) {
+            const now = new Date();
+            const diff = now - date;
+            const minutes = Math.floor(diff / 60000);
+            const hours = Math.floor(diff / 3600000);
+            const days = Math.floor(diff / 86400000);
+
+            if (minutes < 1) return 'À l\'instant';
+            if (minutes < 60) return `Il y a ${minutes}min`;
+            if (hours < 24) return `Il y a ${hours}h`;
+            if (days < 30) return `Il y a ${days}j`;
+            return date.toLocaleDateString('fr-FR');
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // INITIALIZATION
+        // ═══════════════════════════════════════════════════════════════════
+        
+        async function init() {
+            console.log('🚀 Initializing businesses map with COBE...');
+            
+            // Fetch companies
+            companies = await fetchCompanies();
+            console.log(`✅ Loaded ${companies.length} active GoReview businesses with coordinates`);
+            
+            // Initialize globe
+            await initGlobe();
+            
+            // Update UI
+            updateStats();
+            updateActivityList();
+            
+            // Setup controls
+            setupZoomControls();
+            
+            // Handle resize
+            window.addEventListener('resize', () => {
+                if (globe) {
+                    initGlobe();
+                }
+            });
+        }
+
+        // Start when ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    </script>
+</body>
+</html>

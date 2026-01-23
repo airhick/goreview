@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/logo.png">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <title>Nos Établissements - GoReview</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script type="module">
+        import createGlobe from 'https://cdn.skypack.dev/cobe';
+        window.createGlobe = createGlobe;
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Dynamic theme - will be set by JS */
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: rgba(26, 26, 36, 0.8);
+            --text-primary: #ffffff;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            --accent-primary: #8b5cf6;
+            --accent-secondary: #a78bfa;
+            --accent-glow: rgba(139, 92, 246, 0.4);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --globe-glow: rgba(139, 92, 246, 0.3);
+        }
+
+        .light-theme {
+            --bg-primary: #f0f4ff;
+            --bg-secondary: #e8eef8;
+            --bg-card: rgba(255, 255, 255, 0.9);
+            --text-primary: #1a1a2e;
+            --text-secondary: #4a5568;
+            --text-muted: #718096;
+            --border-color: rgba(0, 0, 0, 0.1);
+            --globe-glow: rgba(139, 92, 246, 0.2);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            transition: background 0.5s ease, color 0.5s ease;
+        }
+
+        /* Background gradient */
+        .bg-gradient {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(ellipse at 50% 50%, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+            z-index: -2;
+        }
+
+        /* Animated stars background (dark mode only) */
+        .stars {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: -1;
+            opacity: 1;
+            transition: opacity 0.5s ease;
+        }
+
+        .light-theme .stars {
+            opacity: 0;
+        }
+
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            animation: twinkle 3s ease-in-out infinite;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+
+        /* Header */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            padding: 1.5rem 3rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(to bottom, var(--bg-primary) 0%, transparent 100%);
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo {
+            height: 36px;
+            width: auto;
+        }
+
+        .logo-text {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .theme-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle:hover {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        .theme-icon {
+            font-size: 1.25rem;
+        }
+
+        .theme-text {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        /* Main container */
+        .main-container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 6rem 2rem 2rem;
+        }
+
+        /* Title section */
+        .title-section {
+            text-align: center;
+            margin-bottom: 2rem;
+            z-index: 10;
+        }
+
+        .title {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+        }
+
+        /* Globe container */
+        .globe-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .globe-canvas {
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+        }
+
+        .globe-canvas:active {
+            cursor: grabbing;
+        }
+
+        /* Globe glow effect */
+        .globe-glow {
+            position: absolute;
+            width: 70%;
+            height: 70%;
+            background: radial-gradient(circle, var(--globe-glow) 0%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: pulse-glow 4s ease-in-out infinite;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.5; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.05); }
+        }
+
+        /* Stats panel */
+        .stats-panel {
+            position: fixed;
+            bottom: 2rem;
+            left: 2rem;
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            min-width: 280px;
+            z-index: 50;
+        }
+
+        .stats-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .stats-icon {
+            font-size: 1.25rem;
+        }
+
+        .stats-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .stat-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--accent-primary);
+        }
+
+        /* Activity feed */
+        .activity-panel {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            border-radius: 1rem;
+            padding: 1rem;
+            width: 320px;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 50;
+        }
+
+        .activity-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .activity-dot {
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .activity-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .activity-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .activity-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem;
+            background: var(--bg-secondary);
+            border-radius: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .activity-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            flex-shrink: 0;
+        }
+
+        .activity-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .activity-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .activity-location {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .activity-flag {
+            font-size: 1rem;
+        }
+
+        /* Loading state */
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--accent-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header {
+                padding: 1rem 1.5rem;
+            }
+
+            .title {
+                font-size: 2rem;
+            }
+
+            .subtitle {
+                font-size: 1rem;
+            }
+
+            .stats-panel,
+            .activity-panel {
+                position: relative;
+                bottom: auto;
+                left: auto;
+                right: auto;
+                width: 100%;
+                max-width: 400px;
+                margin: 1rem auto;
+            }
+
+            .globe-container {
+                max-width: 100%;
+            }
+        }
+
+        /* Scrollbar styling */
+        .activity-panel::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .activity-panel::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .activity-panel::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Background elements -->
+    <div class="bg-gradient"></div>
+    <div class="stars" id="stars"></div>
+
+    <!-- Header -->
+    <header class="header">
+        <a href="/" class="logo-container">
+            <img src="/logo.png" alt="GoReview" class="logo">
+            <span class="logo-text">GoReview</span>
+        </a>
+        <button class="theme-toggle" id="themeToggle">
+            <span class="theme-icon" id="themeIcon">🌙</span>
+            <span class="theme-text" id="themeText">Mode sombre</span>
+        </button>
+    </header>
+
+    <!-- Main content -->
+    <main class="main-container">
+        <div class="title-section">
+            <h1 class="title">Nos Établissements</h1>
+            <p class="subtitle">Découvrez les entreprises qui font confiance à GoReview</p>
+        </div>
+
+        <div class="globe-container" id="globeContainer">
+            <div class="globe-glow"></div>
+            <canvas class="globe-canvas" id="globeCanvas"></canvas>
+        </div>
+    </main>
+
+    <!-- Zoom indicator -->
+    <div style="position: fixed; top: 50%; right: 2rem; transform: translateY(-50%); background: var(--bg-card); backdrop-filter: blur(20px); border: 1px solid var(--border-color); border-radius: 1rem; padding: 1rem; z-index: 50; text-align: center;">
+        <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.5rem;">ZOOM</div>
+        <div id="zoomIndicator" style="font-size: 1.25rem; font-weight: 700; color: var(--accent-primary); opacity: 0.5;">100%</div>
+        <div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 0.5rem;">Scroll pour zoomer<br>Double-clic pour reset</div>
+    </div>
+
+    <!-- Stats panel -->
+    <div class="stats-panel" id="statsPanel">
+        <div class="stats-header">
+            <span class="stats-icon">📊</span>
+            <span class="stats-title">Statistiques</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Établissements</span>
+            <span class="stat-value" id="statCompanies">-</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Pays</span>
+            <span class="stat-value" id="statCountries">-</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Avis collectés</span>
+            <span class="stat-value" id="statReviews">-</span>
+        </div>
+    </div>
+
+    <!-- Activity panel -->
+    <div class="activity-panel" id="activityPanel">
+        <div class="activity-header">
+            <div class="activity-dot"></div>
+            <span class="activity-title">Établissements récents</span>
+        </div>
+        <div class="activity-list" id="activityList">
+            <div class="loading">
+                <div class="loading-spinner"></div>
+                <span class="loading-text">Chargement...</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ═══════════════════════════════════════════════════════════════════
+        // CONFIGURATION
+        // ═══════════════════════════════════════════════════════════════════
+        
+        const SUPABASE_URL = 'https://vigutqmfosxbpncussie.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpZ3V0cW1mb3N4YnBuY3Vzc2llIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTU4NDc1MiwiZXhwIjoyMDc3MTYwNzUyfQ.WPhspJ5LQ7E6k9sUFJsaISU6eVcJnIPGYv0GPGQfd98';
+        
+        // Country flag emojis
+        const countryFlags = {
+            'france': '🇫🇷', 'fr': '🇫🇷',
+            'belgium': '🇧🇪', 'be': '🇧🇪', 'belgique': '🇧🇪',
+            'germany': '🇩🇪', 'de': '🇩🇪', 'allemagne': '🇩🇪',
+            'switzerland': '🇨🇭', 'ch': '🇨🇭', 'suisse': '🇨🇭',
+            'italy': '🇮🇹', 'it': '🇮🇹', 'italie': '🇮🇹',
+            'spain': '🇪🇸', 'es': '🇪🇸', 'espagne': '🇪🇸',
+            'portugal': '🇵🇹', 'pt': '🇵🇹',
+            'netherlands': '🇳🇱', 'nl': '🇳🇱', 'pays-bas': '🇳🇱',
+            'uk': '🇬🇧', 'united kingdom': '🇬🇧', 'royaume-uni': '🇬🇧', 'angleterre': '🇬🇧',
+            'usa': '🇺🇸', 'united states': '🇺🇸', 'états-unis': '🇺🇸',
+            'canada': '🇨🇦', 'ca': '🇨🇦',
+            'default': '🌍'
+        };
+
+        // ═══════════════════════════════════════════════════════════════════
+        // STATE
+        // ═══════════════════════════════════════════════════════════════════
+        
+        let companies = [];
+        let markers = [];
+        let globe = null;
+        let isDarkTheme = true;
+
+        // ═══════════════════════════════════════════════════════════════════
+        // THEME MANAGEMENT
+        // ═══════════════════════════════════════════════════════════════════
+        
+        function isFranceDaytime() {
+            // Get current time in France (Europe/Paris)
+            const now = new Date();
+            const franceTime = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Paris' }));
+            const hour = franceTime.getHours();
+            // Daytime: 7am - 7pm
+            return hour >= 7 && hour < 19;
+        }
+
+        async function setTheme(dark) {
+            isDarkTheme = dark;
+            document.body.classList.toggle('light-theme', !dark);
+            document.getElementById('themeIcon').textContent = dark ? '🌙' : '☀️';
+            document.getElementById('themeText').textContent = dark ? 'Mode sombre' : 'Mode clair';
+            
+            // Reinitialize globe with new theme
+            if (globe) {
+                await initGlobe();
+            }
+        }
+
+        function toggleTheme() {
+            setTheme(!isDarkTheme);
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // STARS BACKGROUND
+        // ═══════════════════════════════════════════════════════════════════
+        
+        function createStars() {
+            const starsContainer = document.getElementById('stars');
+            const starCount = 150;
+            
+            for (let i = 0; i < starCount; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                star.style.width = Math.random() * 2 + 1 + 'px';
+                star.style.height = star.style.width;
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                star.style.animationDelay = Math.random() * 3 + 's';
+                starsContainer.appendChild(star);
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // DATA FETCHING
+        // ═══════════════════════════════════════════════════════════════════
+        
+        async function fetchCompanies() {
+            try {
+                const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                
+                console.log('Fetching companies from Supabase...');
+                
+                const { data, error } = await supabaseClient
+                    .from('accounts')
+                    .select('*');
+
+                if (error) {
+                    console.error('Supabase error:', error);
+                    console.error('Error details:', JSON.stringify(error));
+                    return [];
+                }
+                
+                console.log('Fetched', data?.length || 0, 'companies from Supabase');
+
+                // Parse business_details and extract coordinates
+                return data.map(company => {
+                    let lat = null, lng = null;
+                    
+                    // Try to get coordinates from business_details
+                    if (company.business_details) {
+                        try {
+                            const details = typeof company.business_details === 'string' 
+                                ? JSON.parse(company.business_details) 
+                                : company.business_details;
+                            
+                            if (details.gps_coordinates) {
+                                lat = details.gps_coordinates.latitude;
+                                lng = details.gps_coordinates.longitude;
+                            }
+                        } catch (e) {
+                            console.warn('Failed to parse business_details for', company.company_name);
+                        }
+                    }
+                    
+                    // Fallback: geocode address or use default
+                    if (!lat || !lng) {
+                        // Use approximate location based on address if available
+                        const coords = approximateCoordinates(company.adress);
+                        lat = coords.lat;
+                        lng = coords.lng;
+                    }
+                    
+                    return {
+                        ...company,
+                        lat,
+                        lng,
+                        country: extractCountry(company.adress)
+                    };
+                }).filter(c => c.lat && c.lng && c.company_name && c.company_name.trim() !== '');
+
+            } catch (error) {
+                console.error('Error fetching companies:', error);
+                return [];
+            }
+        }
+
+        function extractCountry(address) {
+            if (!address) return 'France';
+            const addressLower = address.toLowerCase();
+            
+            for (const [key, flag] of Object.entries(countryFlags)) {
+                if (addressLower.includes(key)) {
+                    return key.charAt(0).toUpperCase() + key.slice(1);
+                }
+            }
+            return 'France';
+        }
+
+        function getCountryFlag(country) {
+            if (!country) return countryFlags.default;
+            const key = country.toLowerCase();
+            return countryFlags[key] || countryFlags.default;
+        }
+
+        // Approximate coordinates based on address keywords
+        function approximateCoordinates(address) {
+            if (!address) return { lat: 48.8566, lng: 2.3522 }; // Paris default
+            
+            const addressLower = address.toLowerCase();
+            
+            // French cities
+            if (addressLower.includes('paris')) return { lat: 48.8566, lng: 2.3522 };
+            if (addressLower.includes('lyon')) return { lat: 45.764, lng: 4.8357 };
+            if (addressLower.includes('marseille')) return { lat: 43.2965, lng: 5.3698 };
+            if (addressLower.includes('toulouse')) return { lat: 43.6047, lng: 1.4442 };
+            if (addressLower.includes('nice')) return { lat: 43.7102, lng: 7.262 };
+            if (addressLower.includes('nantes')) return { lat: 47.2184, lng: -1.5536 };
+            if (addressLower.includes('strasbourg')) return { lat: 48.5734, lng: 7.7521 };
+            if (addressLower.includes('montpellier')) return { lat: 43.6108, lng: 3.8767 };
+            if (addressLower.includes('bordeaux')) return { lat: 44.8378, lng: -0.5792 };
+            if (addressLower.includes('lille')) return { lat: 50.6292, lng: 3.0573 };
+            if (addressLower.includes('rennes')) return { lat: 48.1173, lng: -1.6778 };
+            
+            // Belgian cities
+            if (addressLower.includes('bruxelles') || addressLower.includes('brussels')) return { lat: 50.8503, lng: 4.3517 };
+            if (addressLower.includes('anvers') || addressLower.includes('antwerp')) return { lat: 51.2194, lng: 4.4025 };
+            
+            // Swiss cities
+            if (addressLower.includes('genève') || addressLower.includes('geneva')) return { lat: 46.2044, lng: 6.1432 };
+            if (addressLower.includes('zurich')) return { lat: 47.3769, lng: 8.5417 };
+            
+            // German cities
+            if (addressLower.includes('berlin')) return { lat: 52.52, lng: 13.405 };
+            if (addressLower.includes('munich') || addressLower.includes('münchen')) return { lat: 48.1351, lng: 11.582 };
+            
+            // Add slight randomization for default to spread out markers
+            return { 
+                lat: 48.8566 + (Math.random() - 0.5) * 2, 
+                lng: 2.3522 + (Math.random() - 0.5) * 4 
+            };
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // GLOBE INITIALIZATION
+        // ═══════════════════════════════════════════════════════════════════
+        
+        async function initGlobe() {
+            const canvas = document.getElementById('globeCanvas');
+            if (!canvas) return;
+
+            // Cleanup previous instance
+            if (globe) {
+                globe();
+                globe = null;
+            }
+
+            const container = document.getElementById('globeContainer');
+            const width = container.offsetWidth;
+            const height = container.offsetHeight;
+            
+            canvas.width = width * window.devicePixelRatio;
+            canvas.height = height * window.devicePixelRatio;
+            canvas.style.width = width + 'px';
+            canvas.style.height = height + 'px';
+
+            let phi = 0;
+            let theta = 0.3;
+            let pointerInteracting = null;
+            let pointerInteractionMovement = 0;
+            let currentScale = 1;
+            let isZoomed = false;
+            const MIN_SCALE = 1;
+            const MAX_SCALE = 4;
+
+            // Convert companies to markers format
+            markers = companies.map(company => ({
+                location: [company.lat, company.lng],
+                size: 0.06
+            }));
+
+            const globeConfig = {
+                devicePixelRatio: window.devicePixelRatio,
+                width: width * window.devicePixelRatio,
+                height: height * window.devicePixelRatio,
+                phi: 0,
+                theta: theta,
+                scale: currentScale,
+                dark: isDarkTheme ? 1 : 0,
+                diffuse: isDarkTheme ? 1.2 : 3,
+                mapSamples: 16000,
+                mapBrightness: isDarkTheme ? 6 : 1.5,
+                baseColor: isDarkTheme ? [0.3, 0.3, 0.35] : [0.9, 0.9, 0.95],
+                markerColor: [0.545, 0.361, 0.965], // Purple accent
+                glowColor: isDarkTheme ? [0.3, 0.2, 0.5] : [0.8, 0.7, 0.95],
+                markers: markers,
+                onRender: (state) => {
+                    // Stop rotation when zoomed or interacting
+                    if (!pointerInteracting && !isZoomed) {
+                        phi += 0.003;
+                    }
+                    state.phi = phi + pointerInteractionMovement;
+                    state.theta = theta;
+                    state.scale = currentScale;
+                }
+            };
+
+            // Wait for createGlobe to be available
+            let retries = 0;
+            while (!window.createGlobe && retries < 50) {
+                await new Promise(r => setTimeout(r, 100));
+                retries++;
+            }
+            
+            if (!window.createGlobe) {
+                console.error('COBE library not loaded after waiting');
+                return;
+            }
+            
+            console.log('COBE library loaded, creating globe with', markers.length, 'markers');
+            globe = window.createGlobe(canvas, globeConfig);
+
+            // Pointer interaction for drag-to-rotate
+            canvas.addEventListener('pointerdown', (e) => {
+                pointerInteracting = e.clientX;
+                canvas.style.cursor = 'grabbing';
+            });
+
+            canvas.addEventListener('pointerup', () => {
+                pointerInteracting = null;
+                canvas.style.cursor = 'grab';
+            });
+
+            canvas.addEventListener('pointerout', () => {
+                pointerInteracting = null;
+                canvas.style.cursor = 'grab';
+            });
+
+            canvas.addEventListener('pointermove', (e) => {
+                if (pointerInteracting !== null) {
+                    const delta = e.clientX - pointerInteracting;
+                    pointerInteractionMovement += delta / 200;
+                    pointerInteracting = e.clientX;
+                }
+            });
+
+            // Touch support
+            canvas.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) {
+                    pointerInteracting = e.touches[0].clientX;
+                }
+            }, { passive: true });
+
+            canvas.addEventListener('touchmove', (e) => {
+                if (pointerInteracting !== null && e.touches.length === 1) {
+                    const delta = e.touches[0].clientX - pointerInteracting;
+                    pointerInteractionMovement += delta / 200;
+                    pointerInteracting = e.touches[0].clientX;
+                }
+            }, { passive: true });
+
+            canvas.addEventListener('touchend', () => {
+                pointerInteracting = null;
+            });
+
+            // Zoom with mouse wheel
+            canvas.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const delta = e.deltaY > 0 ? -0.15 : 0.15;
+                currentScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, currentScale + delta));
+                isZoomed = currentScale > 1.1;
+                
+                // Update zoom indicator
+                const zoomIndicator = document.getElementById('zoomIndicator');
+                if (zoomIndicator) {
+                    zoomIndicator.textContent = `${Math.round(currentScale * 100)}%`;
+                    zoomIndicator.style.opacity = isZoomed ? '1' : '0.5';
+                }
+            }, { passive: false });
+
+            // Pinch to zoom on touch devices
+            let lastTouchDistance = 0;
+            canvas.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 2) {
+                    const dx = e.touches[0].clientX - e.touches[1].clientX;
+                    const dy = e.touches[0].clientY - e.touches[1].clientY;
+                    lastTouchDistance = Math.sqrt(dx * dx + dy * dy);
+                }
+            }, { passive: true });
+
+            canvas.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 2) {
+                    const dx = e.touches[0].clientX - e.touches[1].clientX;
+                    const dy = e.touches[0].clientY - e.touches[1].clientY;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    const delta = (distance - lastTouchDistance) * 0.01;
+                    currentScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, currentScale + delta));
+                    isZoomed = currentScale > 1.1;
+                    lastTouchDistance = distance;
+                }
+            }, { passive: true });
+
+            // Double-click to reset zoom
+            canvas.addEventListener('dblclick', () => {
+                currentScale = 1;
+                isZoomed = false;
+                const zoomIndicator = document.getElementById('zoomIndicator');
+                if (zoomIndicator) {
+                    zoomIndicator.textContent = '100%';
+                    zoomIndicator.style.opacity = '0.5';
+                }
+            });
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // UI UPDATES
+        // ═══════════════════════════════════════════════════════════════════
+        
+        function updateStats() {
+            const totalCompanies = companies.length;
+            const countries = new Set(companies.map(c => c.country)).size;
+            const totalReviews = companies.reduce((sum, c) => sum + (parseInt(c.tot_review) || 0), 0);
+            
+            document.getElementById('statCompanies').textContent = totalCompanies.toLocaleString('fr-FR');
+            document.getElementById('statCountries').textContent = countries;
+            document.getElementById('statReviews').textContent = totalReviews.toLocaleString('fr-FR');
+        }
+
+        function updateActivityList() {
+            const activityList = document.getElementById('activityList');
+            
+            if (companies.length === 0) {
+                activityList.innerHTML = `
+                    <div class="loading">
+                        <span class="loading-text">Aucun établissement trouvé</span>
+                    </div>
+                `;
+                return;
+            }
+
+            // Show last 10 companies
+            const recentCompanies = companies.slice(0, 10);
+            
+            activityList.innerHTML = recentCompanies.map(company => {
+                const initials = getInitials(company.company_name);
+                const flag = getCountryFlag(company.country);
+                const location = company.adress ? company.adress.split(',').slice(-2).join(',').trim() : company.country;
+                
+                return `
+                    <div class="activity-item">
+                        <div class="activity-avatar">${initials}</div>
+                        <div class="activity-content">
+                            <div class="activity-name">${escapeHtml(company.company_name || 'Établissement')}</div>
+                            <div class="activity-location">${escapeHtml(location)}</div>
+                        </div>
+                        <span class="activity-flag">${flag}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function getInitials(name) {
+            if (!name) return '?';
+            return name.split(' ')
+                .slice(0, 2)
+                .map(word => word.charAt(0).toUpperCase())
+                .join('');
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // INITIALIZATION
+        // ═══════════════════════════════════════════════════════════════════
+        
+        async function init() {
+            // Create stars background
+            createStars();
+            
+            // Set initial theme based on France time
+            setTheme(!isFranceDaytime());
+            
+            // Setup theme toggle
+            document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+            
+            // Fetch companies
+            companies = await fetchCompanies();
+            console.log(`Loaded ${companies.length} companies with coordinates`);
+            
+            // Initialize globe
+            initGlobe();
+            
+            // Update UI
+            updateStats();
+            updateActivityList();
+            
+            // Handle resize
+            window.addEventListener('resize', () => {
+                if (globe) {
+                    initGlobe();
+                }
+            });
+        }
+
+        // Wait for Supabase to load
+        if (typeof supabase !== 'undefined') {
+            init();
+        } else {
+            window.addEventListener('load', init);
+        }
+    </script>
+</body>
+</html>
