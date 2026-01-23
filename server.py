@@ -189,19 +189,19 @@ class RedirectHandler(http.server.SimpleHTTPRequestHandler):
                         # If both caches are fresh, return cached data
                         if business_details_fresh and review_data_fresh:
                             print(f"[SERP] ✅ Using fully cached data - NO API CALL")
-                                    self.send_response(200)
-                                    self.send_header('Content-Type', 'application/json')
-                                    self.end_headers()
+                            self.send_response(200)
+                            self.send_header('Content-Type', 'application/json')
+                            self.end_headers()
                             
-                                    cached_details = json.loads(cached_business_details) if cached_business_details else {}
+                            cached_details = json.loads(cached_business_details) if cached_business_details else {}
                             parsed_review_data = json.loads(cached_review_data) if cached_review_data else []
-                                    
-                                    self.wfile.write(json.dumps({
-                                        'success': True,
-                                        'cached': True,
+                            
+                            self.wfile.write(json.dumps({
+                                'success': True,
+                                'cached': True,
                                 'rating': float(cached_details.get('rating')) if cached_details.get('rating') else (float(cached_rating) if cached_rating else None),
                                 'reviews': int(cached_details.get('reviews')) if cached_details.get('reviews') else (int(cached_reviews) if cached_reviews else None),
-                                        'last_updated': business_details_edited_at_str,
+                                'last_updated': business_details_edited_at_str,
                                 'review_data_updated': review_data_date_str,
                                 'business_details': cached_details,
                                 'popular_times': cached_details.get('popular_times'),
@@ -210,8 +210,8 @@ class RedirectHandler(http.server.SimpleHTTPRequestHandler):
                                 'competitors': cached_details.get('competitors'),
                                 'time_spent': cached_details.get('time_spent'),
                                 'extensions': cached_details.get('extensions')
-                                    }).encode())
-                                    return
+                            }).encode())
+                            return
                         
                         if stored_business_id:
                             business_id = stored_business_id
