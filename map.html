@@ -49,18 +49,36 @@
             overflow: hidden;
         }
         
-        /* Navigation */
+        /* Navigation - Liquid Glass Effect */
         .navbar {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
-            background: rgba(10, 10, 15, 0.85);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(30px) saturate(180%);
+            -webkit-backdrop-filter: blur(30px) saturate(180%);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
             z-index: 1000;
             padding: 0.75rem 1.5rem;
+        }
+        
+        .navbar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(
+                180deg,
+                rgba(255, 255, 255, 0.1) 0%,
+                rgba(255, 255, 255, 0.05) 50%,
+                rgba(255, 255, 255, 0.02) 100%
+            );
+            pointer-events: none;
+            border-radius: 0 0 20px 20px;
         }
         
         .nav-content {
@@ -124,9 +142,9 @@
         
         .btn-primary {
             padding: 0.625rem 1.25rem;
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            color: white;
-            border: none;
+            background: white;
+            color: black;
+            border: 2px solid black;
             border-radius: 0.5rem;
             font-size: 0.875rem;
             font-weight: 600;
@@ -138,11 +156,13 @@
         
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
+            background: black;
+            color: white;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
         }
         
-        /* Map Container */
-        #map {
+        /* Halo lumineux autour du globe - wrapper */
+        .map-wrapper {
             position: fixed;
             top: 0;
             left: 0;
@@ -150,6 +170,93 @@
             bottom: 0;
             width: 100%;
             height: 100%;
+            overflow: hidden;
+        }
+        
+        /* Map Container */
+        #map {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        
+        .map-wrapper::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 140%;
+            height: 140%;
+            background: radial-gradient(
+                circle at center,
+                rgba(99, 102, 241, 0.2) 0%,
+                rgba(139, 92, 246, 0.15) 25%,
+                rgba(99, 102, 241, 0.1) 40%,
+                rgba(139, 92, 246, 0.05) 55%,
+                transparent 70%
+            );
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 0;
+            animation: pulse-halo-outer 5s ease-in-out infinite;
+            filter: blur(40px);
+        }
+        
+        .map-wrapper::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 120%;
+            height: 120%;
+            background: radial-gradient(
+                circle at center,
+                transparent 0%,
+                transparent 35%,
+                rgba(139, 92, 246, 0.25) 50%,
+                rgba(99, 102, 241, 0.15) 65%,
+                rgba(139, 92, 246, 0.08) 80%,
+                transparent 100%
+            );
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 0;
+            animation: pulse-halo-inner 4s ease-in-out infinite;
+            filter: blur(30px);
+        }
+        
+        @keyframes pulse-halo-outer {
+            0%, 100% {
+                opacity: 0.7;
+                transform: translate(-50%, -50%) scale(1);
+            }
+            50% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1.08);
+            }
+        }
+        
+        @keyframes pulse-halo-inner {
+            0%, 100% {
+                opacity: 0.8;
+                transform: translate(-50%, -50%) scale(1);
+            }
+            50% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1.05);
+            }
+        }
+        
+        #map {
+            position: relative;
+            z-index: 1;
         }
         
         /* Loading Overlay */
@@ -246,6 +353,13 @@
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
+            overflow: hidden;
+        }
+        
+        .popup-logo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
         
         .popup-icon svg {
@@ -319,29 +433,154 @@
             opacity: 0.5;
         }
         
+        .popup-goreview-stats {
+            margin-top: 1rem;
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .popup-stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+        }
+        
+        .popup-stat-value-small {
+            font-weight: 700;
+            color: white;
+        }
+        
+        .popup-actions {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .popup-button {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.625rem 1rem;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            width: 100%;
+            justify-content: center;
+        }
+        
+        .popup-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+        }
+        
+        /* Marker Details - Forms around the marker itself */
+        .marker-details-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .marker-details-content {
+            position: fixed;
+            background: rgba(15, 15, 20, 0.98);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 16px;
+            padding: 1.25rem;
+            min-width: 300px;
+            max-width: 360px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+            opacity: 0;
+            pointer-events: none;
+            transform: translateX(-50%) translateY(-10px) scale(0.95);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1000;
+        }
+        
+        .marker-details-wrapper.expanded .marker-details-content {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateX(-50%) translateY(0) scale(1);
+        }
+        
+        .marker-details-content .close-btn {
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: rgba(255, 255, 255, 0.7);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            font-size: 18px;
+            line-height: 1;
+        }
+        
+        .marker-details-content .close-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+        
         /* Custom Marker */
         .custom-marker {
-            width: 36px;
-            height: 36px;
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            border: 3px solid rgba(255, 255, 255, 0.9);
+            width: 48px;
+            height: 48px;
+            background: transparent;
+            border: 2px solid rgba(255, 255, 255, 0.95);
             border-radius: 50%;
             cursor: pointer;
-            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.5);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            box-shadow: none;
+        }
+        
+        .custom-marker:hover {
+            transform: scale(1.15);
+            border-color: rgba(255, 255, 255, 1);
+        }
+        
+        .marker-logo-container {
+            width: 100%;
+            height: 100%;
             display: flex;
             align-items: center;
             justify-content: center;
         }
         
-        .custom-marker:hover {
-            transform: scale(1.2);
-            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.6);
+        .marker-logo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+        
+        .marker-icon-fallback {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
         .custom-marker svg {
-            width: 16px;
-            height: 16px;
+            width: 20px;
+            height: 20px;
             color: white;
         }
         
@@ -392,30 +631,10 @@
             color: rgba(255, 255, 255, 0.5);
         }
         
-        /* Globe controls hint */
-        .controls-hint {
-            position: fixed;
-            bottom: 2rem;
-            right: 2rem;
-            background: rgba(15, 15, 20, 0.8);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            padding: 1rem;
-            z-index: 100;
-            font-size: 0.75rem;
-            color: rgba(255, 255, 255, 0.6);
-            max-width: 180px;
-        }
-        
-        .controls-hint strong {
-            color: white;
-            display: block;
-            margin-bottom: 0.5rem;
-        }
-        
-        .controls-hint p {
-            margin: 0.25rem 0;
+        /* Hide Mapbox logo and attributions */
+        .mapboxgl-ctrl-logo,
+        .mapboxgl-ctrl-attrib {
+            display: none !important;
         }
         
         /* Responsive */
@@ -433,13 +652,9 @@
                 padding: 1rem;
             }
             
-            .controls-hint {
-                display: none;
-            }
-            
-            .logo-text {
-                display: none;
-            }
+        .logo-text {
+            display: none !important;
+        }
         }
     </style>
 </head>
@@ -455,19 +670,7 @@
         <div class="nav-content">
             <a href="/" class="nav-logo">
                 <img src="logo.png" alt="GoReview Logo" class="logo-img">
-                <span class="logo-text">GoReview</span>
             </a>
-            
-            <div class="nav-stats">
-                <div class="stat-item">
-                    <span class="stat-value" id="totalEstablishments">-</span>
-                    <span class="stat-label">Établissements</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-value" id="totalCountries">-</span>
-                    <span class="stat-label">Pays</span>
-                </div>
-            </div>
             
             <div class="nav-actions">
                 <a href="/" class="btn-primary">Obtenir ma plaque</a>
@@ -476,15 +679,10 @@
     </nav>
     
     <!-- Map -->
-    <div id="map"></div>
-    
-    <!-- Controls Hint -->
-    <div class="controls-hint">
-        <strong>🌍 Navigation</strong>
-        <p>🖱️ Glisser pour tourner</p>
-        <p>🔍 Molette pour zoomer</p>
-        <p>📍 Cliquer sur un point</p>
+    <div class="map-wrapper">
+        <div id="map"></div>
     </div>
+    
 
     <script>
         // ═══════════════════════════════════════════════════════════════════
@@ -519,8 +717,8 @@
                 map = new mapboxgl.Map({
                     container: 'map',
                     style: 'mapbox://styles/mapbox/satellite-v9',
-                    center: [2.3522, 46.6034], // France center
-                    zoom: 4,
+                    center: [0, 0], // Start at world view
+                    zoom: 1, // Start zoomed out to show entire globe
                     projection: 'globe', // Enable globe projection
                     maxPitch: 85
                 });
@@ -533,14 +731,21 @@
                     }
                 });
                 
-                // Add atmosphere and fog for globe effect
+                // Add atmosphere and fog for globe effect with luminous halo
                 map.on('style.load', () => {
                     map.setFog({
                         color: 'rgb(10, 10, 15)',
-                        'high-color': 'rgb(36, 36, 60)',
-                        'horizon-blend': 0.1,
-                        'space-color': 'rgb(10, 10, 15)',
-                        'star-intensity': 0.6
+                        'high-color': 'rgb(60, 50, 100)', // More purple/blue for luminous effect
+                        'horizon-blend': 0.3, // Increased for smoother glow
+                        'space-color': 'rgb(20, 15, 35)', // Slightly lighter space color
+                        'star-intensity': 0.8 // Brighter stars
+                    });
+                    
+                    // Add additional glow effect through lighting
+                    map.setLight({
+                        'anchor': 'viewport',
+                        'color': 'white',
+                        'intensity': 0.8
                     });
                 });
                 
@@ -548,6 +753,9 @@
                 map.addControl(new mapboxgl.NavigationControl({
                     visualizePitch: true
                 }), 'top-right');
+                
+                // Markers are automatically synchronized by Mapbox
+                // No additional handling needed - Mapbox handles positioning during zoom/move
                 
                 // Wait for map to load
                 map.on('load', async () => {
@@ -588,82 +796,168 @@
             `;
         }
         
+        // Geocode address using Nominatim (OpenStreetMap)
+        async function geocodeAddress(address) {
+            if (!address || address.trim() === '') return null;
+            
+            try {
+                const response = await fetch(
+                    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`,
+                    {
+                        headers: {
+                            'User-Agent': 'GoReview/1.0'
+                        }
+                    }
+                );
+                
+                if (!response.ok) return null;
+                
+                const data = await response.json();
+                if (data && data.length > 0) {
+                    return {
+                        latitude: parseFloat(data[0].lat),
+                        longitude: parseFloat(data[0].lon)
+                    };
+                }
+            } catch (error) {
+                console.warn('Erreur géocodage:', address, error);
+            }
+            return null;
+        }
+        
         // Fetch establishments from Supabase
         async function loadEstablishments() {
             try {
                 const { data, error } = await supabaseClient
                     .from('accounts')
-                    .select('id, name, email, business_details, current_rating, tot_review');
+                    .select('id, company_name, email, business_details, adress, created_at, contact_table, business_id, longitude_latitude, profile_picture');
                 
                 if (error) {
                     console.error('Erreur Supabase:', error);
+                    console.error('Détails:', JSON.stringify(error, null, 2));
                     return;
                 }
                 
                 console.log(`✅ ${data.length} établissements chargés`);
                 
-                // Filter establishments with coordinates
-                const establishmentsWithCoords = data.filter(est => {
-                    if (!est.business_details) return false;
+                // Filter establishments with company_name
+                const establishmentsWithName = data.filter(est => {
+                    return est.company_name && est.company_name.trim() !== '';
+                });
+                
+                console.log(`🏢 ${establishmentsWithName.length} avec nom d'entreprise`);
+                
+                // Process establishments to get coordinates from longitude_latitude column
+                const establishmentsWithCoords = [];
+                let fromColumnCount = 0;
+                let geocodedCount = 0;
+                
+                for (let i = 0; i < establishmentsWithName.length; i++) {
+                    const est = establishmentsWithName[i];
+                    let coords = null;
                     
-                    let details;
-                    try {
-                        details = typeof est.business_details === 'string' 
-                            ? JSON.parse(est.business_details) 
-                            : est.business_details;
-                    } catch (e) {
-                        return false;
+                    // Priority 1: Use longitude_latitude column (format: "longitude;latitude")
+                    if (est.longitude_latitude && est.longitude_latitude.trim() !== '') {
+                        try {
+                            const parts = est.longitude_latitude.split(';');
+                            if (parts.length === 2) {
+                                const longitude = parseFloat(parts[0].trim());
+                                const latitude = parseFloat(parts[1].trim());
+                                
+                                if (!isNaN(longitude) && !isNaN(latitude) && 
+                                    longitude >= -180 && longitude <= 180 &&
+                                    latitude >= -90 && latitude <= 90) {
+                                    coords = {
+                                        longitude: longitude,
+                                        latitude: latitude
+                                    };
+                                    fromColumnCount++;
+                                }
+                            }
+                        } catch (e) {
+                            console.warn('Erreur parsing longitude_latitude pour', est.company_name, e);
+                        }
                     }
                     
-                    return details.gps_coordinates && 
-                           details.gps_coordinates.latitude && 
-                           details.gps_coordinates.longitude;
-                });
-                
-                console.log(`📍 ${establishmentsWithCoords.length} avec coordonnées GPS`);
-                
-                // Update stats
-                document.getElementById('totalEstablishments').textContent = establishmentsWithCoords.length;
-                
-                // Count unique countries (simplified - count based on rough coordinates)
-                const countries = new Set();
-                establishmentsWithCoords.forEach(est => {
-                    const details = typeof est.business_details === 'string' 
-                        ? JSON.parse(est.business_details) 
-                        : est.business_details;
-                    const lat = details.gps_coordinates.latitude;
-                    const lng = details.gps_coordinates.longitude;
+                    // Priority 2: Fallback to business_details GPS if longitude_latitude not available
+                    if (!coords && est.business_details) {
+                        try {
+                            const details = typeof est.business_details === 'string' 
+                                ? JSON.parse(est.business_details) 
+                                : est.business_details;
+                            
+                            if (details.gps_coordinates && 
+                                details.gps_coordinates.latitude && 
+                                details.gps_coordinates.longitude) {
+                                coords = {
+                                    longitude: details.gps_coordinates.longitude,
+                                    latitude: details.gps_coordinates.latitude
+                                };
+                            }
+                        } catch (e) {
+                            console.warn('Erreur parsing business_details pour', est.company_name);
+                        }
+                    }
                     
-                    // Simple country detection based on coordinates
-                    if (lat >= 41 && lat <= 51 && lng >= -5 && lng <= 10) countries.add('France');
-                    else if (lat >= 45 && lat <= 48 && lng >= 5 && lng <= 11) countries.add('Suisse');
-                    else if (lat >= 36 && lat <= 44 && lng >= -10 && lng <= 4) countries.add('Espagne');
-                    else if (lat >= 36 && lat <= 47 && lng >= 6 && lng <= 19) countries.add('Italie');
-                    else if (lat >= 47 && lat <= 55 && lng >= 5 && lng <= 15) countries.add('Allemagne');
-                    else if (lat >= 49 && lat <= 52 && lng >= 2 && lng <= 7) countries.add('Belgique');
-                    else countries.add('Autre');
-                });
-                document.getElementById('totalCountries').textContent = countries.size;
+                    // Priority 3: Fallback to geocoding if no coordinates found
+                    if (!coords) {
+                        const addressToGeocode = est.adress || (est.business_details && (() => {
+                            try {
+                                const details = typeof est.business_details === 'string' 
+                                    ? JSON.parse(est.business_details) 
+                                    : est.business_details;
+                                return details.address;
+                            } catch (e) {
+                                return null;
+                            }
+                        })());
+                        
+                        if (addressToGeocode) {
+                            coords = await geocodeAddress(addressToGeocode);
+                            if (coords) {
+                                geocodedCount++;
+                                // Rate limiting: wait 1 second between geocoding requests
+                                await new Promise(resolve => setTimeout(resolve, 1000));
+                            }
+                        }
+                    }
+                    
+                    if (coords) {
+                        establishmentsWithCoords.push({
+                            ...est,
+                            _coords: coords
+                        });
+                    }
+                    
+                    // Show progress every 50 establishments
+                    if ((i + 1) % 50 === 0) {
+                        console.log(`⏳ Traitement: ${i + 1}/${establishmentsWithName.length}... (${establishmentsWithCoords.length} avec coordonnées)`);
+                    }
+                }
+                
+                console.log(`📍 ${establishmentsWithCoords.length} établissements avec coordonnées (${fromColumnCount} depuis longitude_latitude, ${geocodedCount} géocodées)`);
                 
                 // Add markers to map
                 addMarkers(establishmentsWithCoords);
                 
-                // Fit bounds to show all markers
+                // Animated sequence: directly fly to France
                 if (establishmentsWithCoords.length > 0) {
-                    const bounds = new mapboxgl.LngLatBounds();
-                    establishmentsWithCoords.forEach(est => {
-                        const details = typeof est.business_details === 'string' 
-                            ? JSON.parse(est.business_details) 
-                            : est.business_details;
-                        bounds.extend([
-                            details.gps_coordinates.longitude,
-                            details.gps_coordinates.latitude
-                        ]);
+                    // Directly fly to France (center of France coordinates)
+                    map.flyTo({
+                        center: [2.3522, 46.6034], // France center
+                        zoom: 5.5,
+                        duration: 2500,
+                        essential: true,
+                        pitch: 0,
+                        bearing: 0
                     });
-                    
-                    map.fitBounds(bounds, {
-                        padding: 100,
-                        maxZoom: 12
+                } else {
+                    // If no establishments, just fly to France
+                    map.flyTo({
+                        center: [2.3522, 46.6034],
+                        zoom: 5.5,
+                        duration: 2500,
+                        essential: true
                     });
                 }
                 
@@ -672,45 +966,98 @@
             }
         }
         
+        // Calculate statistics for an establishment
+        function calculateStats(est) {
+            const details = typeof est.business_details === 'string' 
+                ? JSON.parse(est.business_details) 
+                : (est.business_details || {});
+            
+            // Ancienneté à GoReview
+            const createdAt = est.created_at ? new Date(est.created_at) : null;
+            const daysSinceCreation = createdAt ? Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+            const anciennete = daysSinceCreation > 365 
+                ? `${Math.floor(daysSinceCreation / 365)} an${Math.floor(daysSinceCreation / 365) > 1 ? 's' : ''}`
+                : daysSinceCreation > 30
+                ? `${Math.floor(daysSinceCreation / 30)} mois`
+                : `${daysSinceCreation} jour${daysSinceCreation > 1 ? 's' : ''}`;
+            
+            // Avis récoltés via GoReview (depuis business_details ou 0 par défaut)
+            // Note: review_number n'existe pas dans la table, on utilise 0 par défaut
+            // ou on pourrait extraire depuis business_details si disponible
+            const reviewsGoReview = 0; // À mettre à jour si une colonne existe ou si stocké dans business_details
+            
+            // Avis par jour
+            const reviewsPerDay = daysSinceCreation > 0 ? (reviewsGoReview / daysSinceCreation).toFixed(2) : 0;
+            
+            // Boost de prix d'avis (rating actuel vs rating initial - à estimer)
+            const currentRating = parseFloat(details.rating) || null;
+            const boost = currentRating ? `${currentRating.toFixed(1)}/5` : 'N/A';
+            
+            // Nombre de contacts récoltés
+            let contactsCount = 0;
+            if (est.contact_table) {
+                try {
+                    const contacts = typeof est.contact_table === 'string' 
+                        ? JSON.parse(est.contact_table) 
+                        : est.contact_table;
+                    contactsCount = Array.isArray(contacts) ? contacts.length : 0;
+                } catch (e) {
+                    contactsCount = 0;
+                }
+            }
+            
+            return {
+                anciennete,
+                reviewsGoReview,
+                reviewsPerDay,
+                boost,
+                contactsCount,
+                currentRating,
+                totalReviews: parseInt(details.reviews) || 0
+            };
+        }
+        
         // Add markers to map
         function addMarkers(establishments) {
             establishments.forEach(est => {
                 const details = typeof est.business_details === 'string' 
                     ? JSON.parse(est.business_details) 
-                    : est.business_details;
+                    : (est.business_details || {});
                 
-                const coords = details.gps_coordinates;
-                const name = details.name || est.name || 'Établissement';
-                const address = details.address || '';
+                const coords = est._coords; // Use the processed coordinates
+                const name = details.name || est.company_name || 'Établissement';
+                const address = details.address || est.adress || '';
                 const type = details.type ? (Array.isArray(details.type) ? details.type[0] : details.type) : '';
-                const rating = details.rating || est.current_rating || null;
-                const reviews = details.reviews || est.tot_review || null;
+                const rating = details.rating || null;
+                const reviews = details.reviews || null;
+                const placeId = est.business_id || details.place_id || null;
                 
-                // Create custom marker element
-                const markerEl = document.createElement('div');
-                markerEl.className = 'custom-marker';
-                markerEl.innerHTML = `
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                        <circle cx="12" cy="10" r="3"></circle>
-                    </svg>
-                `;
+                // Calculate stats
+                const stats = calculateStats(est);
                 
-                // Create popup content
+                // Google Maps link
+                const googleMapsLink = placeId 
+                    ? `https://www.google.com/maps/place/?q=place_id:${placeId}`
+                    : address 
+                    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`
+                    : null;
+                
+                // Try to use profile_picture first, then business_details, then fallback
+                const logoUrl = est.profile_picture || details.thumbnail || details.logo || '/logo.png';
+                
+                // Create popup content with all stats (must be defined before use)
                 const popupContent = `
                     <div class="popup-content">
                         <div class="popup-header">
                             <div class="popup-icon">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M3 21l1.65-3.8a9 9 0 1 1 3.4 2.9L3 21"></path>
-                                    <path d="M9 10a.5.5 0 0 0 1 0V9a.5.5 0 0 0-1 0v1zm0 0a5 5 0 0 0 5 5m0 0a.5.5 0 0 0 0-1 .5.5 0 0 0 0 1z"></path>
-                                </svg>
+                                <img src="${logoUrl}" alt="${escapeHtml(name)}" class="popup-logo" onerror="this.style.display='none';">
                             </div>
                             <div class="popup-title">
                                 <h3>${escapeHtml(name)}</h3>
                                 ${type ? `<span class="popup-type">${escapeHtml(type)}</span>` : ''}
                             </div>
                         </div>
+                        
                         ${(rating || reviews) ? `
                         <div class="popup-stats">
                             ${rating ? `
@@ -722,11 +1069,35 @@
                             ${reviews ? `
                             <div class="popup-stat">
                                 <span class="popup-stat-value">${parseInt(reviews).toLocaleString('fr-FR')}</span>
-                                <span class="popup-stat-label">avis</span>
+                                <span class="popup-stat-label">avis Google</span>
                             </div>
                             ` : ''}
                         </div>
                         ` : ''}
+                        
+                        <div class="popup-goreview-stats">
+                            <div class="popup-stat-row">
+                                <span class="popup-stat-label">📅 Ancienneté GoReview</span>
+                                <span class="popup-stat-value-small">${stats.anciennete}</span>
+                            </div>
+                            <div class="popup-stat-row">
+                                <span class="popup-stat-label">⭐ Avis via GoReview</span>
+                                <span class="popup-stat-value-small">${stats.reviewsGoReview.toLocaleString('fr-FR')}</span>
+                            </div>
+                            <div class="popup-stat-row">
+                                <span class="popup-stat-label">📈 Avis/jour</span>
+                                <span class="popup-stat-value-small">${stats.reviewsPerDay}</span>
+                            </div>
+                            <div class="popup-stat-row">
+                                <span class="popup-stat-label">📞 Contacts récoltés</span>
+                                <span class="popup-stat-value-small" style="color: var(--success-color);">${stats.contactsCount.toLocaleString('fr-FR')}</span>
+                            </div>
+                            <div class="popup-stat-row">
+                                <span class="popup-stat-label">🚀 Note actuelle</span>
+                                <span class="popup-stat-value-small">${stats.boost}</span>
+                            </div>
+                        </div>
+                        
                         ${address ? `
                         <div class="popup-address">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -736,22 +1107,115 @@
                             <span>${escapeHtml(address)}</span>
                         </div>
                         ` : ''}
+                        
+                        ${googleMapsLink ? `
+                        <div class="popup-actions">
+                            <a href="${googleMapsLink}" target="_blank" class="popup-button">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px; margin-right: 6px;">
+                                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                                    <polyline points="15 3 21 3 21 9"></polyline>
+                                    <line x1="10" y1="14" x2="21" y2="3"></line>
+                                </svg>
+                                Voir sur Google Maps
+                            </a>
+                        </div>
+                        ` : ''}
                     </div>
                 `;
                 
-                // Create popup
-                const popup = new mapboxgl.Popup({
-                    offset: 25,
-                    closeButton: true,
-                    closeOnClick: true,
-                    maxWidth: '320px'
-                }).setHTML(popupContent);
+                // Create marker wrapper with details
+                const markerWrapper = document.createElement('div');
+                markerWrapper.className = 'marker-details-wrapper';
+                
+                // Create custom marker element with logo
+                const markerEl = document.createElement('div');
+                markerEl.className = 'custom-marker';
+                markerEl.innerHTML = `
+                    <div class="marker-logo-container">
+                        <img src="${logoUrl}" alt="${escapeHtml(name)}" class="marker-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="marker-icon-fallback" style="display: none;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                                <circle cx="12" cy="10" r="3"></circle>
+                            </svg>
+                        </div>
+                    </div>
+                `;
+                
+                // Create details content
+                const detailsContent = document.createElement('div');
+                detailsContent.className = 'marker-details-content';
+                detailsContent.innerHTML = `
+                    <button class="close-btn" onclick="this.closest('.marker-details-wrapper').classList.remove('expanded')">×</button>
+                    ${popupContent}
+                `;
+                
+                // Assemble wrapper
+                markerWrapper.appendChild(markerEl);
+                markerWrapper.appendChild(detailsContent);
                 
                 // Create marker and add to map
-                const marker = new mapboxgl.Marker(markerEl)
+                // Use markerEl directly for accurate positioning - wrapper only for structure
+                const marker = new mapboxgl.Marker(markerEl, {
+                    anchor: 'center'
+                })
                     .setLngLat([coords.longitude, coords.latitude])
-                    .setPopup(popup)
                     .addTo(map);
+                
+                // Store marker reference for positioning details
+                marker._detailsWrapper = markerWrapper;
+                marker._detailsContent = detailsContent;
+                
+                // Handle marker click to expand details around the marker
+                markerEl.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    
+                    // Close any other expanded markers
+                    document.querySelectorAll('.marker-details-wrapper.expanded').forEach(wrapper => {
+                        if (wrapper !== markerWrapper) {
+                            wrapper.classList.remove('expanded');
+                        }
+                    });
+                    
+                    // Toggle this marker's details
+                    markerWrapper.classList.toggle('expanded');
+                    
+                    // Position details content relative to marker
+                    if (markerWrapper.classList.contains('expanded')) {
+                        updateDetailsPosition(marker);
+                    }
+                });
+                
+                // Update details position on map move/zoom
+                const updateDetailsPosition = (markerInstance) => {
+                    if (!markerInstance._detailsWrapper.classList.contains('expanded')) return;
+                    
+                    const markerRect = markerInstance._element.getBoundingClientRect();
+                    const detailsContent = markerInstance._detailsContent;
+                    
+                    // Position details below marker, centered
+                    detailsContent.style.left = `${markerRect.left + (markerRect.width / 2)}px`;
+                    detailsContent.style.top = `${markerRect.bottom + 12}px`;
+                };
+                
+                map.on('move', () => {
+                    if (markerWrapper.classList.contains('expanded')) {
+                        updateDetailsPosition(marker);
+                    }
+                });
+                
+                map.on('zoom', () => {
+                    if (markerWrapper.classList.contains('expanded')) {
+                        updateDetailsPosition(marker);
+                    }
+                });
+                
+                // Close details when clicking outside
+                map.getContainer().addEventListener('click', (e) => {
+                    if (!markerWrapper.contains(e.target) && !detailsContent.contains(e.target)) {
+                        markerWrapper.classList.remove('expanded');
+                    }
+                });
                 
                 markers.push(marker);
             });

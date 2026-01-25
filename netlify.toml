@@ -139,13 +139,25 @@
 # Businesses map page
 [[redirects]]
   from = "/businesses"
-  to = "/businesses.html"
+  to = "/map.html"
   status = 200
   force = false
 
 [[redirects]]
   from = "/businesses/"
-  to = "/businesses.html"
+  to = "/map.html"
+  status = 200
+  force = false
+
+[[redirects]]
+  from = "/etablissement"
+  to = "/map.html"
+  status = 200
+  force = false
+
+[[redirects]]
+  from = "/etablissement/"
+  to = "/map.html"
   status = 200
   force = false
 

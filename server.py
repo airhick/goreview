@@ -260,16 +260,16 @@ class RedirectHandler(http.server.SimpleHTTPRequestHandler):
                         
                         # Type conversions
                         if rating is not None:
-                                try:
+                            try:
                                 rating = float(rating) if isinstance(rating, str) else float(rating)
-                                except:
+                            except:
                                 rating = None
                         
                         if reviews is not None:
                             try:
                                 reviews = int(str(reviews).replace(',', ''))
-                                except:
-                                    reviews = None
+                            except:
+                                reviews = None
                         
                     # Extract ALL enriched business details
                     business_details = {}
