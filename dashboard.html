@@ -1901,7 +1901,9 @@
             };
             
             extensions.slice(0, 8).forEach(attr => {
-                const attrLower = (attr || '').toLowerCase();
+                // Convert attr to string safely
+                const attrStr = typeof attr === 'string' ? attr : (attr && typeof attr === 'object' ? JSON.stringify(attr) : String(attr || ''));
+                const attrLower = attrStr.toLowerCase();
                 let icon = '✓';
                 Object.keys(attrIcons).forEach(key => {
                     if (attrLower.includes(key)) icon = attrIcons[key];
@@ -1910,7 +1912,7 @@
                 html += `
                     <div class="attribute-tag">
                         <span class="icon">${icon}</span>
-                        ${escapeHtml(attr)}
+                        ${escapeHtml(attrStr)}
                     </div>
                 `;
             });
