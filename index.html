@@ -350,22 +350,71 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                             </button>
                         </div>
                 </div>
-                <div class="product-details">
-                    <h3>Questions que l’on nous pose toujours</h3>
+                <div class="product-details product-faq">
+                    <div class="faq-header">
+                        <span class="faq-badge">FAQ</span>
+                        <h3>Questions fréquentes</h3>
+                    </div>
                     <div class="detail-grid">
                         <div class="detail-item">
-                            <span class="detail-title">« Que se passe-t-il après le scan ? »</span>
-                            <p>Le client ouvre Google Avis, se connecte en 1 clic et laisse son avis. Son nom, email et téléphone sont automatiquement stockés dans votre dashboard.</p>
+                            <div class="detail-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path>
+                                </svg>
+                            </div>
+                            <div class="detail-content">
+                                <span class="detail-title">Après le scan ?</span>
+                                <p>Google Avis s'ouvre, le client se connecte en 1 clic et laisse son avis. Ses coordonnées sont automatiquement enregistrées.</p>
+                            </div>
                         </div>
                         <div class="detail-item">
-                            <span class="detail-title">« Je reçois quoi côté dashboard ? »</span>
-                            <p>Toutes vos plaques connectées sur le même espace : contacts triés, export CSV en 1 clic, bouton pour rappeler un prospect ou relancer par email.</p>
+                            <div class="detail-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                    <line x1="3" y1="9" x2="21" y2="9"></line>
+                                    <line x1="9" y1="21" x2="9" y2="9"></line>
+                                </svg>
+                            </div>
+                            <div class="detail-content">
+                                <span class="detail-title">Le dashboard ?</span>
+                                <p>Tous vos contacts triés, export CSV en 1 clic, bouton pour rappeler ou relancer par email.</p>
+                            </div>
                         </div>
                         <div class="detail-item">
-                            <span class="detail-title">« Et le coût caché ? »</span>
-                            <p>Aucun. Plaque, dashboard, envoi, support : tout est inclus. Une seule plaque par établissement pour garder l’offre gratuite.</p>
+                            <div class="detail-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="12" y1="1" x2="12" y2="23"></line>
+                                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                                </svg>
+                            </div>
+                            <div class="detail-content">
+                                <span class="detail-title">Coûts cachés ?</span>
+                                <p>Aucun. Plaque + dashboard + envoi + support = tout inclus. 100% gratuit.</p>
+                            </div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Map Section with Mac Window Style -->
+    <section id="map-section" class="map-section section-padding">
+        <div class="container">
+            <h2>Ils nous font confiance</h2>
+            <p class="map-subtitle">Rejoignez + de 600 établissements qui utilisent GoReview</p>
+            
+            <div class="mac-window">
+                <div class="mac-window-header">
+                    <div class="mac-window-buttons">
+                        <span class="mac-btn mac-btn-close"></span>
+                        <span class="mac-btn mac-btn-minimize"></span>
+                        <span class="mac-btn mac-btn-maximize"></span>
+                    </div>
+                    <div class="mac-window-title">GoReview - Carte Mondiale</div>
+                </div>
+                <div class="mac-window-content">
+                    <iframe src="/map.html?embed=true" title="Carte des établissements GoReview" loading="lazy"></iframe>
                 </div>
             </div>
         </div>
@@ -374,33 +423,88 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <!-- Schema Section -->
     <section id="schema" class="schema-section section-padding">
         <div class="container">
-            <h2>Comment ça marche ?</h2>
+            <div class="schema-header">
+                <span class="schema-badge">Comment ça marche</span>
+                <h2>3 étapes simples</h2>
+            </div>
             <div class="schema-flow">
                 <div class="schema-flow-item">
+                    <div class="schema-step-number">1</div>
+                    <div class="schema-step-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                            <line x1="12" y1="18" x2="12.01" y2="18"></line>
+                        </svg>
+                    </div>
                     <h3>Votre client scanne</h3>
-                    <p>Il approche son téléphone de la plaque NFC. La page Google Avis s'ouvre automatiquement.</p>
+                    <p>Il approche son téléphone de la plaque NFC. Google Avis s'ouvre automatiquement.</p>
+                </div>
+                <div class="schema-flow-connector">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M5 12h14M12 5l7 7-7 7"></path>
+                    </svg>
                 </div>
                 <div class="schema-flow-item">
+                    <div class="schema-step-number">2</div>
+                    <div class="schema-step-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                        </svg>
+                    </div>
                     <h3>Il laisse un avis</h3>
                     <p>Connexion Google en 1 clic, puis rédaction de l'avis. Simple et rapide.</p>
                 </div>
+                <div class="schema-flow-connector">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M5 12h14M12 5l7 7-7 7"></path>
+                    </svg>
+                </div>
                 <div class="schema-flow-item">
+                    <div class="schema-step-number">3</div>
+                    <div class="schema-step-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                        </svg>
+                    </div>
                     <h3>Vous récupérez le contact</h3>
-                    <p>Nom, email et téléphone sont automatiquement enregistrés dans votre dashboard GoReview.</p>
+                    <p>Nom, email et téléphone enregistrés automatiquement dans votre dashboard.</p>
                 </div>
             </div>
             <div class="schema-stats">
                 <div class="schema-stat-card">
+                    <div class="stat-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                            <polyline points="17 6 23 6 23 12"></polyline>
+                        </svg>
+                    </div>
                     <span class="schema-stat-value">+48%</span>
-                    <p>de nouveaux avis en moyenne après 6 semaines</p>
+                    <p>d'avis en plus après 6 semaines</p>
                 </div>
                 <div class="schema-stat-card">
-                    <span class="schema-stat-value">3 clients sur 4</span>
-                    <p>consultent Google avant de choisir un commerce</p>
+                    <div class="stat-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                        </svg>
+                    </div>
+                    <span class="schema-stat-value">3/4</span>
+                    <p>clients consultent Google avant d'acheter</p>
                 </div>
                 <div class="schema-stat-card">
-                    <span class="schema-stat-value">Meilleure visibilité</span>
-                    <p>Plus d'avis = meilleure position dans les résultats Google</p>
+                    <div class="stat-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <path d="m21 21-4.35-4.35"></path>
+                        </svg>
+                    </div>
+                    <span class="schema-stat-value">Top 3</span>
+                    <p>Plus d'avis = meilleure visibilité Google</p>
                 </div>
             </div>
         </div>
@@ -443,4 +547,3 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <script src="script.js"></script>
 </body>
 </html>
-

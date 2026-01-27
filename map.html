@@ -704,6 +704,16 @@
             display: none !important;
         }
         }
+        
+        /* Embed mode - hide navbar and halo effects */
+        body.embed-mode .navbar {
+            display: none !important;
+        }
+        
+        body.embed-mode .map-wrapper::before,
+        body.embed-mode .map-wrapper::after {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -733,6 +743,25 @@
     
 
     <script>
+        // Check if embedded mode (hide navbar in embed)
+        const urlParams = new URLSearchParams(window.location.search);
+        const isEmbedded = urlParams.get('embed') === 'true';
+        
+        if (isEmbedded) {
+            // Hide navbar and adjust map in embed mode
+            document.addEventListener('DOMContentLoaded', () => {
+                const navbar = document.querySelector('.navbar');
+                if (navbar) navbar.style.display = 'none';
+                
+                // Make map wrapper start from top
+                const mapWrapper = document.querySelector('.map-wrapper');
+                if (mapWrapper) mapWrapper.style.paddingTop = '0';
+                
+                // Add embed class to body for any additional styling
+                document.body.classList.add('embed-mode');
+            });
+        }
+        
         // ═══════════════════════════════════════════════════════════════════
         // MAPBOX ACCESS TOKEN - IMPORTANT!
         // ═══════════════════════════════════════════════════════════════════
@@ -789,12 +818,16 @@
                         'star-intensity': 0.8 // Brighter stars
                     });
                     
-                    // Add additional glow effect through lighting
-                    map.setLight({
-                        'anchor': 'viewport',
-                        'color': 'white',
-                        'intensity': 0.8
-                    });
+                    // Add additional glow effect through lighting (using new API)
+                    map.setLights([{
+                        'id': 'flat-light',
+                        'type': 'flat',
+                        'properties': {
+                            'anchor': 'viewport',
+                            'color': 'white',
+                            'intensity': 0.8
+                        }
+                    }]);
                 });
                 
                 // Add navigation controls
@@ -1090,8 +1123,40 @@
                     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`
                     : null;
                 
-                // Try to use profile_picture first, then business_details, then fallback
-                const logoUrl = est.profile_picture || details.thumbnail || details.logo || '/logo.png';
+                // Try to use profile_picture first, then business_details fields, then fallback
+                // Check multiple possible image sources from Serp API data
+                let logoUrl = null;
+                
+                // Check all possible image sources
+                if (est.profile_picture && est.profile_picture.startsWith('http')) {
+                    logoUrl = est.profile_picture;
+                } else if (details.thumbnail && details.thumbnail.startsWith('http')) {
+                    logoUrl = details.thumbnail;
+                } else if (details.images && Array.isArray(details.images) && details.images.length > 0) {
+                    logoUrl = details.images[0];
+                } else if (details.photos && Array.isArray(details.photos) && details.photos.length > 0) {
+                    logoUrl = typeof details.photos[0] === 'string' ? details.photos[0] : details.photos[0]?.url;
+                } else if (details.logo && details.logo.startsWith('http')) {
+                    logoUrl = details.logo;
+                } else if (details.main_image && details.main_image.startsWith('http')) {
+                    logoUrl = details.main_image;
+                }
+                
+                // Use fallback if no valid image found
+                if (!logoUrl) {
+                    logoUrl = '/logo.png';
+                }
+                
+                // Debug: log image sources for first few establishments
+                if (markers.length < 10) {
+                    console.log(`🖼️ ${name}:`, {
+                        profile_picture: est.profile_picture,
+                        thumbnail: details.thumbnail,
+                        images: details.images,
+                        photos: details.photos,
+                        using: logoUrl
+                    });
+                }
                 
                 // Create popup content - simplified with only essential info
                 const popupContent = `
