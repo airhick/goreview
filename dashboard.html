@@ -14,12 +14,39 @@
             const script = document.createElement('script');
             script.src = `db-proxy.js?v=${Date.now()}`;
             script.async = false;
+            script.onerror = function() {
+                console.error('Failed to load db-proxy.js - 404 error');
+            };
+            script.onload = function() {
+                console.log('db-proxy.js loaded successfully');
+            };
             document.head.appendChild(script);
         })();
     </script>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
         :root {
+            /* Light theme (default) */
+            --bg-primary: #ffffff;
+            --bg-secondary: #f9fafb;
+            --bg-card: #ffffff;
+            --bg-card-hover: #f3f4f6;
+            --border-color: #e5e7eb;
+            --text-primary: #111827;
+            --text-secondary: #4b5563;
+            --text-muted: #6b7280;
+            --accent-primary: #8b5cf6;
+            --accent-secondary: #a78bfa;
+            --accent-glow: rgba(139, 92, 246, 0.1);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+            --star-gold: #fbbf24;
+        }
+        
+        /* Dark theme */
+        body.dark-mode {
             --bg-primary: #0a0a0f;
             --bg-secondary: #12121a;
             --bg-card: #1a1a24;
@@ -28,14 +55,7 @@
             --text-primary: #ffffff;
             --text-secondary: #9ca3af;
             --text-muted: #6b7280;
-            --accent-primary: #8b5cf6;
-            --accent-secondary: #a78bfa;
             --accent-glow: rgba(139, 92, 246, 0.3);
-            --success: #10b981;
-            --warning: #f59e0b;
-            --danger: #ef4444;
-            --info: #3b82f6;
-            --star-gold: #fbbf24;
         }
         
         * {
@@ -159,6 +179,56 @@
             background: var(--bg-card-hover);
             border-color: var(--accent-primary);
             color: var(--accent-primary);
+        }
+        
+        /* Theme Toggle */
+        .theme-toggle {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .theme-toggle:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+        }
+        
+        .theme-icon {
+            width: 20px;
+            height: 20px;
+            position: absolute;
+            transition: all 0.3s ease;
+        }
+        
+        .sun-icon {
+            opacity: 1;
+            transform: rotate(0deg) scale(1);
+        }
+        
+        .moon-icon {
+            opacity: 0;
+            transform: rotate(90deg) scale(0);
+        }
+        
+        body.dark-mode .sun-icon {
+            opacity: 0;
+            transform: rotate(90deg) scale(0);
+        }
+        
+        body.dark-mode .moon-icon {
+            opacity: 1;
+            transform: rotate(0deg) scale(1);
         }
         
         /* Grid Layout */
@@ -1096,6 +1166,15 @@
     </style>
 </head>
 <body>
+<script>
+    // Load theme immediately to prevent flash
+    (function() {
+        const savedTheme = localStorage.getItem('dashboard-theme');
+        if (savedTheme === 'dark') {
+            document.body.classList.add('dark-mode');
+        }
+    })();
+</script>
 <div id="app">
     <div class="loading-screen">
         <div class="loading-content">
@@ -1119,6 +1198,43 @@
         const parts = value.split(`; ${name}=`);
         if (parts.length === 2) return decodeURIComponent(parts.pop().split(';').shift());
         return null;
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // THEME MANAGEMENT
+    // ═══════════════════════════════════════════════════════════════════
+    
+    // Load theme preference from localStorage
+    function loadTheme() {
+        const savedTheme = localStorage.getItem('dashboard-theme');
+        if (savedTheme === 'dark') {
+            document.body.classList.add('dark-mode');
+        } else {
+            document.body.classList.remove('dark-mode');
+        }
+    }
+    
+    // Toggle theme
+    function toggleTheme() {
+        const isDark = document.body.classList.contains('dark-mode');
+        if (isDark) {
+            document.body.classList.remove('dark-mode');
+            localStorage.setItem('dashboard-theme', 'light');
+        } else {
+            document.body.classList.add('dark-mode');
+            localStorage.setItem('dashboard-theme', 'dark');
+        }
+    }
+    
+    // Initialize theme on load
+    loadTheme();
+    
+    // Add event listener for theme toggle (will be attached after DOM is ready)
+    function initThemeToggle() {
+        const themeToggle = document.getElementById('themeToggle');
+        if (themeToggle) {
+            themeToggle.addEventListener('click', toggleTheme);
+        }
     }
     
     const params = new URLSearchParams(window.location.search);
@@ -1182,17 +1298,31 @@
     
     // Fetch enriched data from Serp API
     async function fetchEnrichedData(placeId) {
-            const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-            const apiUrl = isLocalhost 
+        // Check if accountId is defined
+        if (!accountId) {
+            console.warn('fetchEnrichedData: accountId is not defined');
+            return null;
+        }
+        
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const apiUrl = isLocalhost 
             ? `/api/serp-reviews?account_id=${encodeURIComponent(accountId)}&business_id=${encodeURIComponent(placeId || '')}`
             : `/.netlify/functions/serp-reviews?account_id=${encodeURIComponent(accountId)}&business_id=${encodeURIComponent(placeId || '')}`;
-            
+        
         try {
+            console.log('Fetching enriched data from:', apiUrl);
             const response = await fetch(apiUrl);
-            if (!response.ok) throw new Error('API Error');
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error(`API Error (${response.status}):`, errorText);
+                throw new Error(`API Error: ${response.status} ${response.statusText}`);
+            }
+            
             return await response.json();
         } catch (e) {
             console.error('Failed to fetch enriched data:', e);
+            // Return null instead of throwing to allow dashboard to continue loading
             return null;
         }
     }
@@ -1371,6 +1501,22 @@
                 </div>
                 <div class="header-right">
                     ${lastUpdated ? `<span class="last-updated">Mis à jour: ${new Date(lastUpdated).toLocaleString('fr-FR')}</span>` : ''}
+                    <button class="theme-toggle" id="themeToggle" title="Basculer le thème">
+                        <svg class="theme-icon sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="5"></circle>
+                            <line x1="12" y1="1" x2="12" y2="3"></line>
+                            <line x1="12" y1="21" x2="12" y2="23"></line>
+                            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                            <line x1="1" y1="12" x2="3" y2="12"></line>
+                            <line x1="21" y1="12" x2="23" y2="12"></line>
+                            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                        </svg>
+                        <svg class="theme-icon moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                        </svg>
+                    </button>
                     <button class="settings-btn" onclick="window.location.href='/config.html?id=${accountId}'">⚙️</button>
                 </div>
             </header>
@@ -1947,6 +2093,9 @@
     `;
         
         app.innerHTML = html;
+        
+        // Initialize theme toggle
+        initThemeToggle();
         
         // Load contacts
         loadContacts(accountId);
